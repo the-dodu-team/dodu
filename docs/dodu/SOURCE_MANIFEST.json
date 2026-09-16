@@ -1,0 +1,27 @@
+{
+  "baseline": "v2.5",
+  "sources": [
+    {
+      "original_filename": "붙여넣은 마크다운(1).md",
+      "packaged_path": "docs/dodu/sources/PRD_v2.5.md",
+      "sha256": "e8522f0b85be991c8a0e55efd6a4e88a50b803bdcb6b8fc56342e6da4bd46734",
+      "size_bytes": 30225,
+      "transformation": "none; byte-identical copy"
+    },
+    {
+      "original_filename": "붙여넣은 마크다운(2).md",
+      "packaged_path": "docs/dodu/sources/SERVICE_POLICY_v2.5.md",
+      "sha256": "b25d468b370fe8598215b8def6de5aa0c88501f38eb5b7dae7c4e0f7ce83787e",
+      "size_bytes": 27345,
+      "transformation": "none; byte-identical copy"
+    },
+    {
+      "original_filename": "붙여넣은 마크다운(3).md",
+      "packaged_path": "docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md",
+      "sha256": "4ed72e5112fc8deb17e71324d44173b1da0dd30def09eb8b7312371674ba4e3c",
+      "size_bytes": 17165,
+      "transformation": "none; byte-identical copy"
+    }
+  ],
+  "derived_documents_status": "Implementation aid; proposals require decisions; source policies authoritative"
+}
