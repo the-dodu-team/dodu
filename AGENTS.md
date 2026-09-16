@@ -9,6 +9,7 @@
 2. `docs/dodu/OPEN_DECISIONS.md`
 3. 작업에 관련된 원문: `docs/dodu/sources/PRD_v2.5.md`, `SERVICE_POLICY_v2.5.md`, `FLOW_LOG_MAPPING_v2.5.md`
 4. 검증 시 `docs/dodu/ACCEPTANCE_CHECKLIST.md`
+5. 작업에 관련된 원문은 업데이트 될 수 있으므로, notion 기준 페이지를 작업을 진행하는 해당 일자의 최신 버전을 참조한다. (일 1회)
 
 원문을 읽지 않고 요약만으로 정책을 구현하지 않는다. 문서의 ‘1차 배포’는 기준 문서 공유 단계이며 제품 배포 지시가 아니다.
 
