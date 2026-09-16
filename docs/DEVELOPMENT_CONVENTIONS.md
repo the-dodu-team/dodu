@@ -131,6 +131,8 @@ com.dodu.promise
 - type은 `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`를 사용합니다.
   예: `docs: 개발 컨벤션과 실행 안내 정리`.
 - 하나의 커밋에는 검토 가능한 하나의 목적을 담습니다. 관련 lockfile·계약 문서도 함께 반영합니다.
+- 매 커밋마다 [Decisions.md](../Decisions.md)에 배경·결정·근거·검토한 대안·영향·검증을 기록하고 같은 커밋에 포함합니다. 문서·설정 변경도 예외가 아닙니다.
+- 영문 `<type>: <summary>` 제목 뒤 빈 줄과 영문 변경 사항 목록을 작성하는 형식을 허용합니다. `Co-authored-by` 등 공동 작성자 표기는 추가하지 않습니다.
 - `.tools/`, `node_modules/`, `target/`, `dist/`, 로그·비밀값은 커밋하지 않습니다.
 - 생성된 Maven Wrapper 파일은 재현 가능한 빌드를 위해 포함합니다.
 - PR은 문제와 변경 후 동작을 먼저 설명하고, 영향·검증·정책 근거·남은 D-ID를 적습니다.
