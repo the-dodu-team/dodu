@@ -1,0 +1,348 @@
+{
+  "metadata": {
+    "preparedAt": "2026-09-20",
+    "sourceSnapshotDate": "2026-09-16",
+    "liveJiraChecked": false,
+    "registrationStatus": "DRAFT_NOT_CREATED",
+    "reason": "Atlassian connection is not authenticated; recheck live parents, subtasks, fields, workflow, and assignees before creating issues.",
+    "notionStatus": "UNAUTHORIZED",
+    "estimateNote": "예상 인일은 계획상 참고값이며 확정 일정이 아니다. 리뷰·학습 시간을 별도로 확보한다.",
+    "sprintId": null
+  },
+  "items": [
+    {
+      "localId": "SPLIT-15-1",
+      "parentJiraKey": "DODU-15",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "Elle Yoo",
+      "reviewerDisplayName": "mono",
+      "accountId": "712020:9f3ff673-3dec-41b6-90eb-200e05e21eef",
+      "summary": "FE 개발환경 재현과 시작 안내 보완",
+      "estimatePersonDays": 0.5,
+      "dependencies": [],
+      "scope": [
+        "새 checkout에서 README를 따라 npm ci 및 통합 개발 실행을 재현한다.",
+        "화면·health 연결, 종료, Node/JDK 버전과 막힌 지점을 기록한다."
+      ],
+      "acceptanceCriteria": [
+        "실행한 커밋·환경·화면 증거와 재현 절차를 남긴다.",
+        "기존 환경을 다시 구현하지 않고 mono가 결과를 확인한다."
+      ],
+      "deliverable": "환경 재현 기록과 필요한 README 수정",
+      "openDecisions": [],
+      "references": [
+        "README.md",
+        "docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증"
+      ]
+    },
+    {
+      "localId": "SPLIT-15-2",
+      "parentJiraKey": "DODU-15",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "문은서",
+      "reviewerDisplayName": "mono",
+      "accountId": "712020:f5950b57-9e9a-4322-a0ce-4baa73b43fcd",
+      "summary": "BE 개발환경 재현과 통합 JAR 확인",
+      "estimatePersonDays": 0.5,
+      "dependencies": [],
+      "scope": [
+        "기존 Maven Wrapper와 루트 verify/build 명령을 재현한다.",
+        "JAR의 화면·정적 파일·health 응답 및 종료를 확인한다."
+      ],
+      "acceptanceCriteria": [
+        "명령과 실제 성공/실패 결과를 기록한다.",
+        "비밀값·캐시를 커밋하지 않고 mono가 재현 결과를 확인한다."
+      ],
+      "deliverable": "백엔드·통합 JAR 재현 기록",
+      "openDecisions": [],
+      "references": [
+        "README.md",
+        "docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증"
+      ]
+    },
+    {
+      "localId": "SPLIT-15-3",
+      "parentJiraKey": "DODU-15",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "mono",
+      "reviewerDisplayName": "문은서",
+      "accountId": "712020:c35d5f9c-a4d6-4e17-918a-66e005e2ce4d",
+      "summary": "무료 사용 조건을 확인한 Dodu CI 구성",
+      "estimatePersonDays": 1,
+      "dependencies": [],
+      "scope": [
+        "GitHub Actions의 무료 한도·초과 과금 차단을 확인한 뒤 Dodu lint·빌드·테스트를 구성한다.",
+        "표준 Linux runner, timeout, 중복 실행 취소와 최소 권한을 검토한다. 기존 데모 검사와 역할을 구분한다."
+      ],
+      "acceptanceCriteria": [
+        "실행 전 과금 차단 확인 근거가 있다. 확인 전에는 자동 실행을 활성화하지 않는다.",
+        "npm ci 및 npm run verify 성공과 검증 실패가 실패로 표시되는 것을 확인한다.",
+        "실행 URL과 적용 커밋을 공유한다. 앱 테스트 통과를 제품 QA 완료로 해석하지 않는다."
+      ],
+      "deliverable": "CI 변경 PR·성공/실패 실행 링크·무료 사용 확인 기록",
+      "openDecisions": [],
+      "references": [
+        "README.md",
+        "docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증"
+      ]
+    },
+    {
+      "localId": "SPLIT-15-4",
+      "parentJiraKey": "DODU-15",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "mono",
+      "reviewerDisplayName": "문은서",
+      "accountId": "712020:c35d5f9c-a4d6-4e17-918a-66e005e2ce4d",
+      "summary": "작업별 팀 확인 절차와 결과 공유 양식 정리",
+      "estimatePersonDays": 0.5,
+      "dependencies": [],
+      "scope": [
+        "이 분할안과 완료 증거 양식을 팀이 리뷰한다.",
+        "Jira 실제 상태·하위 작업 지원 여부를 확인하고 개발 완료와 팀 확인 완료를 구분한다."
+      ],
+      "acceptanceCriteria": [
+        "담당자·검토자·확인 링크·판정·남은 문제를 기록할 양식이 있다.",
+        "팀이 한 개 작업을 예로 들며 재현·피드백 절차를 확인한다.",
+        "자동 알림·새 Jira 상태가 이미 설정됐다고 주장하지 않는다."
+      ],
+      "deliverable": "팀 확인 절차 문서와 리뷰 기록",
+      "openDecisions": [],
+      "references": [
+        "README.md",
+        "docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증"
+      ]
+    },
+    {
+      "localId": "SPLIT-16-1",
+      "parentJiraKey": "DODU-16",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "문은서",
+      "reviewerDisplayName": "mono",
+      "accountId": "712020:f5950b57-9e9a-4322-a0ce-4baa73b43fcd",
+      "summary": "공통 API 응답·오류 계약 초안",
+      "estimatePersonDays": 0.5,
+      "dependencies": [],
+      "scope": [
+        "health 실구현과 신규 API 기술 제안을 구분하여 요청·응답·오류 표현을 작성한다.",
+        "입력오류·권한·충돌·기술오류 구분과 안전한 메시지를 정의한다."
+      ],
+      "acceptanceCriteria": [
+        "FE가 정상·실패 흐름을 이해할 예시가 있다.",
+        "미결정 제품 상태·이벤트 키·시간 경계를 D05/D08/D11로 표시한다."
+      ],
+      "deliverable": "API 계약 문서 PR",
+      "openDecisions": [
+        "D05",
+        "D08",
+        "D11"
+      ],
+      "references": [
+        "docs/dodu/sources/SERVICE_POLICY_v2.5.md: §0·§8",
+        "docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md: §3~4"
+      ]
+    },
+    {
+      "localId": "SPLIT-16-2",
+      "parentJiraKey": "DODU-16",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "문은서",
+      "reviewerDisplayName": "mono",
+      "accountId": "712020:f5950b57-9e9a-4322-a0ce-4baa73b43fcd",
+      "summary": "FE 검토용 응답 fixture 작성",
+      "estimatePersonDays": 0.5,
+      "dependencies": [
+        "SPLIT-16-1"
+      ],
+      "scope": [
+        "계약에 맞는 정상·입력오류·기술오류 JSON 예시를 작성한다.",
+        "실데이터 없이 잘못된 응답 예시도 구분해 제공한다."
+      ],
+      "acceptanceCriteria": [
+        "예시가 JSON으로 파싱되고 계약과 일치한다.",
+        "Elle Yoo가 예시를 읽고 화면에서 필요한 정보가 있는지 피드백한다. 최종 기술 검토는 mono가 한다."
+      ],
+      "deliverable": "fixture 파일과 FE 확인 기록",
+      "openDecisions": [
+        "D05",
+        "D08"
+      ],
+      "references": [
+        "docs/dodu/sources/SERVICE_POLICY_v2.5.md: §0·§8",
+        "docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md: §3~4"
+      ]
+    },
+    {
+      "localId": "SPLIT-16-3",
+      "parentJiraKey": "DODU-16",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "문은서",
+      "reviewerDisplayName": "mono",
+      "accountId": "712020:f5950b57-9e9a-4322-a0ce-4baa73b43fcd",
+      "summary": "시간 표현·Clock 기술 계약 정리",
+      "estimatePersonDays": 0.5,
+      "dependencies": [
+        "SPLIT-16-1"
+      ],
+      "scope": [
+        "서버 기준 시각, 오프셋 포함 직렬화, KST 표시 변환과 시간 공급원 교체 방향을 작성한다.",
+        "테스트 기반 구현은 DODU-24로 넘기고 이 작업은 계약만 다룬다."
+      ],
+      "acceptanceCriteria": [
+        "오프셋 포함 예시와 UTC/KST 변환 예시를 제공한다.",
+        "T+30·공식 종료의 포함/제외 연산은 D11 승인 대기로 남긴다."
+      ],
+      "deliverable": "시간 계약과 변환 예시",
+      "openDecisions": [
+        "D11"
+      ],
+      "references": [
+        "docs/dodu/sources/SERVICE_POLICY_v2.5.md: §0·§8",
+        "docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md: §3~4"
+      ]
+    },
+    {
+      "localId": "SPLIT-17-1",
+      "parentJiraKey": "DODU-17",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "Elle Yoo",
+      "reviewerDisplayName": "mono",
+      "accountId": "712020:9f3ff673-3dec-41b6-90eb-200e05e21eef",
+      "summary": "공통 화면 틀과 반응형 배치",
+      "estimatePersonDays": 0.5,
+      "dependencies": [],
+      "scope": [
+        "기존 준비 화면에서 헤더·본문·안내 영역을 분리한다.",
+        "새 UI 라이브러리 도입 없이 기존 스타일로 우선 구성한다."
+      ],
+      "acceptanceCriteria": [
+        "좁은 화면과 데스크톱에서 가로 넘침이 없고 화면을 비교할 수 있다.",
+        "기존 health 연결 확인 동작을 유지한다."
+      ],
+      "deliverable": "화면 변경 PR·두 화면 폭의 확인 자료",
+      "openDecisions": [],
+      "references": [
+        "docs/dodu/sources/PRD_v2.5.md: §19",
+        "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조"
+      ]
+    },
+    {
+      "localId": "SPLIT-17-2",
+      "parentJiraKey": "DODU-17",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "Elle Yoo",
+      "reviewerDisplayName": "mono",
+      "accountId": "712020:9f3ff673-3dec-41b6-90eb-200e05e21eef",
+      "summary": "버튼·입력 컴포넌트와 키보드 접근",
+      "estimatePersonDays": 0.75,
+      "dependencies": [
+        "SPLIT-17-1"
+      ],
+      "scope": [
+        "실제 사용할 버튼·입력 컴포넌트를 작은 예제로 구성한다.",
+        "label, focus, disabled, 오류 설명 연결을 확인한다."
+      ],
+      "acceptanceCriteria": [
+        "키보드만으로 예제 입력과 버튼에 접근할 수 있다.",
+        "미확정 예약 검증이나 실제 저장 기능을 넣지 않는다."
+      ],
+      "deliverable": "컴포넌트 PR·키보드 확인 절차",
+      "openDecisions": [],
+      "references": [
+        "docs/dodu/sources/PRD_v2.5.md: §19",
+        "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조"
+      ]
+    },
+    {
+      "localId": "SPLIT-17-3",
+      "parentJiraKey": "DODU-17",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "Elle Yoo",
+      "reviewerDisplayName": "mono",
+      "accountId": "712020:9f3ff673-3dec-41b6-90eb-200e05e21eef",
+      "summary": "로딩·빈 결과·오류 안내 예제",
+      "estimatePersonDays": 0.75,
+      "dependencies": [
+        "SPLIT-17-2"
+      ],
+      "scope": [
+        "각 상태를 눈으로 전환·검토할 수 있는 개발 예제를 만든다.",
+        "데이터 없음과 기술오류를 서로 다른 안내로 표현한다."
+      ],
+      "acceptanceCriteria": [
+        "정상·로딩·빈 결과·오류 상태의 재현 절차가 있다.",
+        "접근 가능한 상태 안내를 제공하고 가상 저장을 실제 완료로 표시하지 않는다."
+      ],
+      "deliverable": "상태별 화면 PR·재현 절차",
+      "openDecisions": [],
+      "references": [
+        "docs/dodu/sources/PRD_v2.5.md: §19",
+        "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조"
+      ]
+    },
+    {
+      "localId": "SPLIT-18-1",
+      "parentJiraKey": "DODU-18",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "mono",
+      "reviewerDisplayName": "문은서",
+      "accountId": "712020:c35d5f9c-a4d6-4e17-918a-66e005e2ce4d",
+      "summary": "공통 API 호출과 오류·취소 처리",
+      "estimatePersonDays": 0.75,
+      "dependencies": [
+        "DODU-16"
+      ],
+      "scope": [
+        "합의된 계약으로 상대 경로 API 호출·응답 검증·오류·취소를 처리한다.",
+        "기존 health 연결을 적용 예제로 사용한다."
+      ],
+      "acceptanceCriteria": [
+        "잘못된 응답과 네트워크 실패를 성공으로 표시하지 않는다.",
+        "취소·늦은 응답 등 실제 위험을 검증하고 결과를 남긴다."
+      ],
+      "deliverable": "API 호출 기반 PR·검증 결과",
+      "openDecisions": [],
+      "references": [
+        "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조·API 계약"
+      ]
+    },
+    {
+      "localId": "SPLIT-18-2",
+      "parentJiraKey": "DODU-18",
+      "jiraKey": null,
+      "registrationStatus": "DRAFT_NOT_CREATED",
+      "assigneeDisplayName": "mono",
+      "reviewerDisplayName": "문은서",
+      "accountId": "712020:c35d5f9c-a4d6-4e17-918a-66e005e2ce4d",
+      "summary": "개발 fixture 연결 예제와 FE 인수",
+      "estimatePersonDays": 0.75,
+      "dependencies": [
+        "SPLIT-18-1",
+        "SPLIT-16-2"
+      ],
+      "scope": [
+        "FE가 정상·실패 상태를 독립 재현할 개발 fixture 연결 예제를 제공한다.",
+        "가상 응답과 실제 서버 응답의 사용 범위를 문서화한다."
+      ],
+      "acceptanceCriteria": [
+        "Elle Yoo가 예제로 정상·오류를 재현해 확인 기록을 남긴다.",
+        "개발 예제를 예약 저장·알림·인증 기능으로 오인하지 않는다."
+      ],
+      "deliverable": "fixture 사용 예제 PR·FE 인수 기록",
+      "openDecisions": [],
+      "references": [
+        "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조·API 계약"
+      ]
+    }
+  ]
+}
