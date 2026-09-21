@@ -8,7 +8,7 @@
 
 - [전체 티켓 명세](TICKETS.md): 담당·리뷰·작업 범위·완료 기준·의존성·근거.
 - [구조화된 티켓 데이터](tickets.json): 검증된 Jira 키·URL·accountId·에픽·선행 키를 기록한 원본.
-- [다음 작업·세분화 초안](WORK_BREAKDOWN.md): 2026-09-20 현재 첫 작업 묶음 12개와 담당·검토·결과물. Jira 최신 조회 및 등록 전 초안입니다.
+- [다음 작업·세분화 결과](WORK_BREAKDOWN.md): 2026-09-21 등록·검증한 DODU-38~DODU-49의 담당·검토·결과물과 차단 관계입니다.
 - [분할 데이터](work-breakdown.json) / [작업 결과 확인 양식](templates/WORK_REVIEW.md): 작업별 팀 확인에 사용할 자료입니다.
 
 ## 배분 원칙

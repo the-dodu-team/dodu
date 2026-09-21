@@ -1,9 +1,9 @@
 # 다음 작업과 팀 확인 단위
 
-작성: 2026-09-20. **분할 초안이며 Jira에 생성하지 않았습니다.**
+작성: 2026-09-21. **하위 작업 12개를 Jira에 등록하고 재조회로 검증했습니다.**
 기준 티켓은 2026-09-16에 등록·검증한 [기존 명세](TICKETS.md)입니다.
-현재 Jira는 인증되지 않아 최신 담당·상태·하위 작업을 재조회하지 못했습니다.
-Notion도 401로 최신 본문·하위 문서를 확인하지 못했습니다. 등록 전에 반드시 최신 정보와 중복을 확인합니다.
+Jira에서 부모·담당자·상태·설명·라벨과 차단 관계를 확인했습니다.
+Notion은 401로 최신 본문·하위 문서를 확인하지 못했으므로 기존 v2.5 기준을 유지하며 OPEN 항목을 확정 정책으로 취급하지 않습니다.
 
 ## 먼저 진행할 작업
 
@@ -22,24 +22,24 @@ Ruleset은 요금제 제한으로 API 생성에 실패했으므로 보호가 적
 목표는 각 작업에서 독립적으로 확인 가능한 결과물을 만드는 것입니다. 작은 작업 하나를 PR 하나로 검토하되,
 문서·환경 재현 작업은 결과 기록 PR로 확인합니다. 0.5~1일 전후는 계획상 크기이며 일정 약속이 아닙니다.
 
-| 로컬 초안 ID | 기존 상위 티켓 | 담당 | 작업 | 팀이 볼 결과물 | 예상 인일 |
+| 작업 ID / Jira | 기존 상위 티켓 | 담당 | 작업 | 팀이 볼 결과물 | 예상 인일 |
 |---|---|---|---|---|---:|
-| SPLIT-15-1 | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | Elle Yoo | FE 개발환경 재현과 시작 안내 보완 | 환경 재현 기록과 필요한 README 수정 | 0.5 |
-| SPLIT-15-2 | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | 문은서 | BE 개발환경 재현과 통합 JAR 확인 | 백엔드·통합 JAR 재현 기록 | 0.5 |
-| SPLIT-15-3 | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | mono | 무료 사용 조건을 확인한 Dodu CI 구성 | CI 변경 PR·성공/실패 실행 링크·무료 사용 확인 기록 | 1 |
-| SPLIT-15-4 | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | mono | 작업별 팀 확인 절차와 결과 공유 양식 정리 | 팀 확인 절차 문서와 리뷰 기록 | 0.5 |
-| SPLIT-16-1 | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | 공통 API 응답·오류 계약 초안 | API 계약 문서 PR | 0.5 |
-| SPLIT-16-2 | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | FE 검토용 응답 fixture 작성 | fixture 파일과 FE 확인 기록 | 0.5 |
-| SPLIT-16-3 | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | 시간 표현·Clock 기술 계약 정리 | 시간 계약과 변환 예시 | 0.5 |
-| SPLIT-17-1 | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 공통 화면 틀과 반응형 배치 | 화면 변경 PR·두 화면 폭의 확인 자료 | 0.5 |
-| SPLIT-17-2 | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 버튼·입력 컴포넌트와 키보드 접근 | 컴포넌트 PR·키보드 확인 절차 | 0.75 |
-| SPLIT-17-3 | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 로딩·빈 결과·오류 안내 예제 | 상태별 화면 PR·재현 절차 | 0.75 |
-| SPLIT-18-1 | [DODU-18](https://dodu-app.atlassian.net/browse/DODU-18) | mono | 공통 API 호출과 오류·취소 처리 | API 호출 기반 PR·검증 결과 | 0.75 |
-| SPLIT-18-2 | [DODU-18](https://dodu-app.atlassian.net/browse/DODU-18) | mono | 개발 fixture 연결 예제와 FE 인수 | fixture 사용 예제 PR·FE 인수 기록 | 0.75 |
+| [SPLIT-15-1 / DODU-38](https://dodu-app.atlassian.net/browse/DODU-38) | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | Elle Yoo | FE 개발환경 재현과 시작 안내 보완 | 환경 재현 기록과 필요한 README 수정 | 0.5 |
+| [SPLIT-15-2 / DODU-39](https://dodu-app.atlassian.net/browse/DODU-39) | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | 문은서 | BE 개발환경 재현과 통합 JAR 확인 | 백엔드·통합 JAR 재현 기록 | 0.5 |
+| [SPLIT-15-3 / DODU-40](https://dodu-app.atlassian.net/browse/DODU-40) | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | mono | 무료 사용 조건을 확인한 Dodu CI 구성 | CI 변경 PR·성공/실패 실행 링크·무료 사용 확인 기록 | 1 |
+| [SPLIT-15-4 / DODU-41](https://dodu-app.atlassian.net/browse/DODU-41) | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | mono | 작업별 팀 확인 절차와 결과 공유 양식 정리 | 팀 확인 절차 문서와 리뷰 기록 | 0.5 |
+| [SPLIT-16-1 / DODU-42](https://dodu-app.atlassian.net/browse/DODU-42) | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | 공통 API 응답·오류 계약 초안 | API 계약 문서 PR | 0.5 |
+| [SPLIT-16-2 / DODU-43](https://dodu-app.atlassian.net/browse/DODU-43) | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | FE 검토용 응답 fixture 작성 | fixture 파일과 FE 확인 기록 | 0.5 |
+| [SPLIT-16-3 / DODU-44](https://dodu-app.atlassian.net/browse/DODU-44) | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | 시간 표현·Clock 기술 계약 정리 | 시간 계약과 변환 예시 | 0.5 |
+| [SPLIT-17-1 / DODU-45](https://dodu-app.atlassian.net/browse/DODU-45) | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 공통 화면 틀과 반응형 배치 | 화면 변경 PR·두 화면 폭의 확인 자료 | 0.5 |
+| [SPLIT-17-2 / DODU-46](https://dodu-app.atlassian.net/browse/DODU-46) | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 버튼·입력 컴포넌트와 키보드 접근 | 컴포넌트 PR·키보드 확인 절차 | 0.75 |
+| [SPLIT-17-3 / DODU-47](https://dodu-app.atlassian.net/browse/DODU-47) | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 로딩·빈 결과·오류 안내 예제 | 상태별 화면 PR·재현 절차 | 0.75 |
+| [SPLIT-18-1 / DODU-48](https://dodu-app.atlassian.net/browse/DODU-48) | [DODU-18](https://dodu-app.atlassian.net/browse/DODU-18) | mono | 공통 API 호출과 오류·취소 처리 | API 호출 기반 PR·검증 결과 | 0.75 |
+| [SPLIT-18-2 / DODU-49](https://dodu-app.atlassian.net/browse/DODU-49) | [DODU-18](https://dodu-app.atlassian.net/browse/DODU-18) | mono | 개발 fixture 연결 예제와 FE 인수 | fixture 사용 예제 PR·FE 인수 기록 | 0.75 |
 
 상세 범위·완료 기준·선행 작업·D-ID·기존 담당자 accountId는 [work-breakdown.json](work-breakdown.json)에 있습니다.
-새 Jira 번호를 임의로 만들지 않았습니다. 기존 상위 담당자를 일괄 변경하지 않으며, 하위 작업별 담당을 지정하는 안입니다.
-부모와 자식의 예상 시간을 합산하지 않습니다. 이 분할안은 기존 예상의 세부화이며 최신 상태 확인 후 재추정합니다.
+DODU-38~DODU-49를 Subtask로 생성했으며 기존 상위 담당자는 변경하지 않았습니다. 모든 하위 작업은 `할 일` 상태입니다.
+부모와 자식의 예상 시간을 합산하지 않습니다. 예상 인일은 계획 참고값이며 일정이나 Story Point로 등록하지 않았습니다.
 
 - mono: CI·리뷰 절차·API 호출·fixture 인수. 기술 리뷰는 문은서.
 - 문은서: 환경 재현·응답/오류 계약·fixture·시간 계약. 기술 리뷰는 mono.
@@ -108,11 +108,11 @@ Actions의 무료 한도는 조직 전체 사용과 함께 확인합니다. 타�
 - [서비스 운영 정책](../dodu/sources/SERVICE_POLICY_v2.5.md) §0
 - [미결정 사항](../dodu/OPEN_DECISIONS.md), [수용 기준](../dodu/ACCEPTANCE_CHECKLIST.md)
 
-## Jira 반영 전 확인
+## Jira 등록 검증 결과
 
-- 기존 부모·하위 작업·담당·상태를 재조회하고 완료된 범위를 제외합니다.
-- 프로젝트에서 Subtask 유형과 부모 설정을 지원하는지 확인합니다. 지원하지 않으면 임의로 에픽 하위에 복제하지 말고 연결 Task 방식으로 재설계합니다.
-- 분할 ID로 중복 검사 후 생성하며 실제 키를 JSON에 기록합니다.
-- 기존 선행 의존성을 보존하고 하위 작업 간 순환이 없는지 확인합니다.
-- 날짜·Sprint·Story Point·제품 승인 상태는 임의 지정하지 않습니다.
-- 생성 결과와 담당자·부모·링크를 재조회한 뒤에만 등록 완료로 표시합니다.
+- 분할 ID 라벨로 중복이 없음을 확인한 뒤 DODU-38~DODU-49를 생성했습니다.
+- 프로젝트의 Subtask 유형, 부모 연결, 세 담당자의 할당 가능 여부를 확인했습니다.
+- 생성 후 12개 티켓의 부모·담당자·상태·설명·라벨을 다시 조회했습니다.
+- 7개 차단 관계를 연결하고 재조회했으며 하위 작업 간 순환은 없습니다.
+- 날짜·Sprint·Story Point·제품 승인 상태는 지정하지 않았습니다.
+- 실제 키·URL·변환된 선행 키는 [work-breakdown.json](work-breakdown.json)에 기록했습니다.

@@ -1,20 +1,24 @@
 {
   "metadata": {
-    "preparedAt": "2026-09-20",
+    "preparedAt": "2026-09-21",
     "sourceSnapshotDate": "2026-09-16",
-    "liveJiraChecked": false,
-    "registrationStatus": "DRAFT_NOT_CREATED",
-    "reason": "Atlassian connection is not authenticated; recheck live parents, subtasks, fields, workflow, and assignees before creating issues.",
+    "liveJiraChecked": true,
+    "registrationStatus": "CREATED_VERIFIED",
+    "reason": "Created 12 Subtasks after duplicate, parent, assignee, and issue-type checks; re-read all created issues and verified 7 blocking links.",
     "notionStatus": "UNAUTHORIZED",
     "estimateNote": "예상 인일은 계획상 참고값이며 확정 일정이 아니다. 리뷰·학습 시간을 별도로 확보한다.",
-    "sprintId": null
+    "sprintId": null,
+    "registeredAt": "2026-09-21",
+    "createdIssueCount": 12,
+    "verifiedLinkCount": 7,
+    "issueType": "Subtask"
   },
   "items": [
     {
       "localId": "SPLIT-15-1",
       "parentJiraKey": "DODU-15",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-38",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "Elle Yoo",
       "reviewerDisplayName": "mono",
       "accountId": "712020:9f3ff673-3dec-41b6-90eb-200e05e21eef",
@@ -34,13 +38,16 @@
       "references": [
         "README.md",
         "docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증"
-      ]
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-38",
+      "jiraStatus": "할 일",
+      "dependencyKeys": []
     },
     {
       "localId": "SPLIT-15-2",
       "parentJiraKey": "DODU-15",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-39",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "문은서",
       "reviewerDisplayName": "mono",
       "accountId": "712020:f5950b57-9e9a-4322-a0ce-4baa73b43fcd",
@@ -60,13 +67,16 @@
       "references": [
         "README.md",
         "docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증"
-      ]
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-39",
+      "jiraStatus": "할 일",
+      "dependencyKeys": []
     },
     {
       "localId": "SPLIT-15-3",
       "parentJiraKey": "DODU-15",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-40",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "mono",
       "reviewerDisplayName": "문은서",
       "accountId": "712020:c35d5f9c-a4d6-4e17-918a-66e005e2ce4d",
@@ -87,13 +97,16 @@
       "references": [
         "README.md",
         "docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증"
-      ]
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-40",
+      "jiraStatus": "할 일",
+      "dependencyKeys": []
     },
     {
       "localId": "SPLIT-15-4",
       "parentJiraKey": "DODU-15",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-41",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "mono",
       "reviewerDisplayName": "문은서",
       "accountId": "712020:c35d5f9c-a4d6-4e17-918a-66e005e2ce4d",
@@ -114,13 +127,16 @@
       "references": [
         "README.md",
         "docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증"
-      ]
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-41",
+      "jiraStatus": "할 일",
+      "dependencyKeys": []
     },
     {
       "localId": "SPLIT-16-1",
       "parentJiraKey": "DODU-16",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-42",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "문은서",
       "reviewerDisplayName": "mono",
       "accountId": "712020:f5950b57-9e9a-4322-a0ce-4baa73b43fcd",
@@ -144,13 +160,16 @@
       "references": [
         "docs/dodu/sources/SERVICE_POLICY_v2.5.md: §0·§8",
         "docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md: §3~4"
-      ]
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-42",
+      "jiraStatus": "할 일",
+      "dependencyKeys": []
     },
     {
       "localId": "SPLIT-16-2",
       "parentJiraKey": "DODU-16",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-43",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "문은서",
       "reviewerDisplayName": "mono",
       "accountId": "712020:f5950b57-9e9a-4322-a0ce-4baa73b43fcd",
@@ -175,13 +194,18 @@
       "references": [
         "docs/dodu/sources/SERVICE_POLICY_v2.5.md: §0·§8",
         "docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md: §3~4"
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-43",
+      "jiraStatus": "할 일",
+      "dependencyKeys": [
+        "DODU-42"
       ]
     },
     {
       "localId": "SPLIT-16-3",
       "parentJiraKey": "DODU-16",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-44",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "문은서",
       "reviewerDisplayName": "mono",
       "accountId": "712020:f5950b57-9e9a-4322-a0ce-4baa73b43fcd",
@@ -205,13 +229,18 @@
       "references": [
         "docs/dodu/sources/SERVICE_POLICY_v2.5.md: §0·§8",
         "docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md: §3~4"
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-44",
+      "jiraStatus": "할 일",
+      "dependencyKeys": [
+        "DODU-42"
       ]
     },
     {
       "localId": "SPLIT-17-1",
       "parentJiraKey": "DODU-17",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-45",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "Elle Yoo",
       "reviewerDisplayName": "mono",
       "accountId": "712020:9f3ff673-3dec-41b6-90eb-200e05e21eef",
@@ -231,13 +260,16 @@
       "references": [
         "docs/dodu/sources/PRD_v2.5.md: §19",
         "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조"
-      ]
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-45",
+      "jiraStatus": "할 일",
+      "dependencyKeys": []
     },
     {
       "localId": "SPLIT-17-2",
       "parentJiraKey": "DODU-17",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-46",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "Elle Yoo",
       "reviewerDisplayName": "mono",
       "accountId": "712020:9f3ff673-3dec-41b6-90eb-200e05e21eef",
@@ -259,13 +291,18 @@
       "references": [
         "docs/dodu/sources/PRD_v2.5.md: §19",
         "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조"
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-46",
+      "jiraStatus": "할 일",
+      "dependencyKeys": [
+        "DODU-45"
       ]
     },
     {
       "localId": "SPLIT-17-3",
       "parentJiraKey": "DODU-17",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-47",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "Elle Yoo",
       "reviewerDisplayName": "mono",
       "accountId": "712020:9f3ff673-3dec-41b6-90eb-200e05e21eef",
@@ -287,13 +324,18 @@
       "references": [
         "docs/dodu/sources/PRD_v2.5.md: §19",
         "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조"
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-47",
+      "jiraStatus": "할 일",
+      "dependencyKeys": [
+        "DODU-46"
       ]
     },
     {
       "localId": "SPLIT-18-1",
       "parentJiraKey": "DODU-18",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-48",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "mono",
       "reviewerDisplayName": "문은서",
       "accountId": "712020:c35d5f9c-a4d6-4e17-918a-66e005e2ce4d",
@@ -314,13 +356,18 @@
       "openDecisions": [],
       "references": [
         "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조·API 계약"
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-48",
+      "jiraStatus": "할 일",
+      "dependencyKeys": [
+        "DODU-16"
       ]
     },
     {
       "localId": "SPLIT-18-2",
       "parentJiraKey": "DODU-18",
-      "jiraKey": null,
-      "registrationStatus": "DRAFT_NOT_CREATED",
+      "jiraKey": "DODU-49",
+      "registrationStatus": "CREATED_VERIFIED",
       "assigneeDisplayName": "mono",
       "reviewerDisplayName": "문은서",
       "accountId": "712020:c35d5f9c-a4d6-4e17-918a-66e005e2ce4d",
@@ -342,6 +389,12 @@
       "openDecisions": [],
       "references": [
         "docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조·API 계약"
+      ],
+      "jiraUrl": "https://dodu-app.atlassian.net/browse/DODU-49",
+      "jiraStatus": "할 일",
+      "dependencyKeys": [
+        "DODU-48",
+        "DODU-43"
       ]
     }
   ]
