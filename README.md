@@ -138,6 +138,8 @@ Maven 프로필만 직접 실행하면 최신 React 빌드를 보장하지 않�
 4. [서비스 운영 정책 v2.5](docs/dodu/sources/SERVICE_POLICY_v2.5.md): 시간·횟수·권한·보관 조건.
 5. [Flow·로그 매핑 v2.5](docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md): 흐름·관찰 사실·지표와 이벤트 제안.
 6. [수용 기준](docs/dodu/ACCEPTANCE_CHECKLIST.md): 기능 구현 후 검증할 시나리오.
+7. [논리 ERD](docs/dodu/DATA_MODEL.md) / [ERD 설명서](docs/dodu/DATA_MODEL_GUIDE.md): 관계·제약·생성 및 삭제 흐름과 OPEN 영향.
+8. [유지보수 준비 순서](docs/MAINTENANCE_PLAN.md): CI·브랜치 보호·DB 및 배포 운영의 후속 작업.
 
 OPEN 항목의 제안은 승인된 제품 정책이 아닙니다. 영향을 받는 기능은 보류하고 독립적인 작업을 진행합니다.
 예약 날짜·시간 경계(D06/D11), 인증 비동기 처리(D04/D05/D08/D10), 설문(D01/D02/D03/D07/D12),
