@@ -45,6 +45,15 @@ public final class InterventionWindowPolicy {
         return ScheduleDecision.ALLOWED;
     }
 
+    /**
+     * Returns whether a new intervention may be created at the server's current instant.
+     * The official end instant is closed for new intervention creation.
+     */
+    public boolean isNewInterventionOpen(Instant officialEndAt) {
+        Objects.requireNonNull(officialEndAt, "officialEndAt must not be null");
+        return clock.instant().isBefore(officialEndAt);
+    }
+
     public enum ScheduleDecision {
         ALLOWED,
         TOO_EARLY,

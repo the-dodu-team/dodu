@@ -1,6 +1,8 @@
 package com.dodu.intervention;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -53,6 +55,13 @@ class InterventionWindowPolicyTests {
         assertEquals(
                 InterventionWindowPolicy.ScheduleDecision.ALLOWED,
                 policy.validatePromiseSchedule(scheduledAt, scheduledAt.plus(Duration.ofMinutes(30))));
+    }
+
+    @Test
+    void closesNewInterventionCreationAtOfficialEnd() {
+        assertTrue(policy.isNewInterventionOpen(NOW.plusSeconds(1)));
+        assertFalse(policy.isNewInterventionOpen(NOW));
+        assertFalse(policy.isNewInterventionOpen(NOW.minusSeconds(1)));
     }
 
 }
