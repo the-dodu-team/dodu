@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20260928-03 — 공식 종료 시각의 신규 개입 생성 차단
+
+- 날짜: 2026-09-28
+- 관련 커밋 제목 / Jira: `feat(SCRUM-64): close intervention creation at official end` / SCRUM-64
+- 변경 파일: `backend/src/main/java/com/dodu/intervention/InterventionWindowPolicy.java`, `backend/src/test/java/com/dodu/intervention/InterventionWindowPolicyTests.java`, `Decisions.md`
+- 배경: D03에 따라 공식 행동검증 종료 후에는 신규 약속과 신규 개입을 중단해야 하며, 이 규칙을 일정 유효성 검증과 별도 소단위로 구현합니다.
+- 결정: 서버 `Clock`의 현재 시각이 공식 종료 시각보다 엄격히 이전일 때만 신규 개입 생성을 허용합니다. 종료 시각과 종료 이후는 모두 차단합니다.
+- 근거: Notion 및 LOCKED 기준의 D03 최종 결정. 공식 종료 후 신규 약속·수정·재생성·기술복구·신규 개입을 중단합니다.
+- 대안 및 선택 이유: 기존 예약의 T+30 접수·판정 완료 규칙이나 API/DB 연결을 이번 커밋에 포함하지 않고, 신규 개입 생성 게이트만 독립적으로 검증합니다.
+- 영향·주의점: 현재는 정책 함수와 단위 테스트만 추가되어 실제 생성 API에 연결되지는 않았습니다. 기존 약속의 사후 판정 허용은 별도 사진 제출 정책 작업에서 다룹니다.
+- 검증: `backend\\mvnw.cmd test` 실행 결과 테스트 5건, 실패 0건으로 BUILD SUCCESS; `git diff --check` 통과.
+
 ## DEV-20260928-02 — 서버 약속 일정 경계 검증 함수 도입
 
 - 날짜: 2026-09-28
