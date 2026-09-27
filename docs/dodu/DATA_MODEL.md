@@ -17,6 +17,7 @@
 - 사진 파일은 DB 밖의 비공개 저장 영역에 두는 기술안을 제안한다. 특정 객체 저장 서비스는 선택하지 않았으며 DB에는 파일 키와 삭제 작업 상태를 둔다.
 - 알림 발송, 사용자 진입, 사진 제출, 판정 결과, 자기보고는 서로 다른 관찰 사실로 기록한다.
 - 철회와 과거 데이터 삭제 요청을 구분한다. 삭제 작업은 여러 저장소에 걸쳐 추적할 수 있어야 한다.
+- 참가자 코드는 여러 기기에서 재사용할 수 있지만, 참가자별 활성 기기·세션은 하나만 유지한다. 새 기기 진입은 이전 세션과 알림 구독을 종료하고 새 활성 기기를 만든다.
 - 모든 업무 시각은 UTC 순간으로 저장하고 KST 날짜 계산 결과가 필요한 레코드에는 별도 날짜를 보존한다.
 - `D01`~`D13`은 2026-09-27 확정된 제품 정책이다. API·DB·스케줄러의 구체 구현은 기술설계에서 정하되, 관찰 사실과 상태 구분을 유지한다.
 
@@ -26,6 +27,10 @@
 erDiagram
     STUDY_PERIOD ||--o{ PARTICIPANT : enrolls
     PARTICIPANT ||--o{ ACCESS_CREDENTIAL : authenticates_with
+    PARTICIPANT ||--o{ PARTICIPANT_DEVICE : recognizes
+    PARTICIPANT ||--o{ PARTICIPANT_SESSION : opens
+    PARTICIPANT_DEVICE ||--o{ PARTICIPANT_SESSION : hosts
+    PARTICIPANT_SESSION ||--o{ NOTIFICATION_SUBSCRIPTION : owns
     PARTICIPANT ||--o{ PARTICIPANT_PERMISSION : reports
     PARTICIPANT ||--o{ PROMISE : creates
     PARTICIPANT |o--o{ DATA_REQUEST : requests_until_erasure
@@ -80,6 +85,37 @@ erDiagram
         timestamp expires_at
         timestamp revoked_at
         uuid replaces_credential_id FK, UK
+    }
+    PARTICIPANT_DEVICE {
+        uuid id PK
+        uuid participant_id FK
+        string device_key_hash
+        string lifecycle_status
+        timestamp first_seen_at
+        timestamp last_seen_at
+        timestamp deactivated_at
+    }
+    PARTICIPANT_SESSION {
+        uuid id PK
+        uuid participant_id FK
+        uuid participant_device_id FK
+        string session_token_hash UK
+        string lifecycle_status
+        timestamp issued_at
+        timestamp last_seen_at
+        timestamp expires_at
+        timestamp revoked_at
+        string revoke_reason
+    }
+    NOTIFICATION_SUBSCRIPTION {
+        uuid id PK
+        uuid participant_id FK
+        uuid participant_session_id FK
+        string subscription_key_hash UK
+        string lifecycle_status
+        timestamp activated_at
+        timestamp last_seen_at
+        timestamp deactivated_at
     }
     PARTICIPANT_PERMISSION {
         uuid id PK
@@ -223,6 +259,9 @@ erDiagram
 | `POLICY_VERSION` | 운영값 변경 전후 데이터 구분 | 약속 생성 시 적용 버전을 고정 |
 | `PARTICIPANT` | 식별 가능한 참가자와 참여 생명주기 | 철회와 접근 만료를 구분 |
 | `ACCESS_CREDENTIAL` | 재발급·폐기 가능한 접근 자격 | 평문 비밀값 저장 금지, 재발급 시 이전 자격 폐기 |
+| `PARTICIPANT_DEVICE` | 참가자별로 기억하는 불투명한 기기 식별 상태 | 같은 참가자의 재진입에서 코드 재입력을 줄이고, 다른 참가자와 기기 식별값을 섞지 않음 |
+| `PARTICIPANT_SESSION` | 참가자별 현재·과거 접근 세션 | 참가자당 활성 세션 1개; 새 기기 활성화 시 이전 세션 종료 |
+| `NOTIFICATION_SUBSCRIPTION` | 활성 세션에 연결된 알림 구독 | 새 기기 활성화 시 이전 구독 비활성화 후 새 세션 기준으로 갱신 |
 | `PARTICIPANT_PERMISSION` | 실제 관찰한 알림·카메라 권한 상태 | 권한 거부를 인증 실패로 변환하지 않음 |
 | `PROMISE` | 최종 예정 시각과 현재 진행 상태 | 참가자별 활성 1개, KST 예정일별 사용 원장과 파생 약속 연결 |
 | `PROMISE_SCHEDULE_REVISION` | 동일 `promise_id`의 일정 변경 이력 | 버전 증가, 수정 전후 시각 보존 |
@@ -248,6 +287,9 @@ erDiagram
 8. `PHOTO_ASSET.auth_attempt_id`와 `VALIDATION_SURVEY.promise_id`는 각각 FK이면서 UK다. 선택적 1:1 관계를 실제 제약으로 보장한다.
 9. 이벤트에 시도 ID가 있으면 약속 ID도 있어야 하며, 시도→약속→참가자의 소유자가 이벤트의 FK와 일치해야 한다. 단일 FK의 존재 확인만으로는 충분하지 않다.
 10. `DATA_REQUEST.participant_id`는 처리 중 필수이고 완전 삭제 완료 후 NULL로 지운다. 완료 행에는 식별자·작업명·파일 키가 없는 상태·시각·안전한 오류 코드만 두고 `purge_after`에 따라 정리한다. 실제 보존 기간은 보안 계약에서 결정한다.
+11. `PARTICIPANT_DEVICE`의 `device_key_hash`는 참가자 범위에서만 유일해야 하며, 참가자당 `PARTICIPANT_SESSION.lifecycle_status=Active`는 최대 1개다. 동일 기기 재진입은 기존 식별 상태를 사용하고, 새 기기 진입은 기존 활성 세션을 철회한 뒤 새 세션을 활성화한다.
+12. `NOTIFICATION_SUBSCRIPTION`은 활성 세션에만 연결할 수 있다. 새 기기 세션이 활성화되면 이전 세션의 구독을 비활성화하고 새 기기의 구독을 등록하며, 약속·인증·자기보고·행동로그의 소유자는 계속 `participant_id`로 유지한다.
+13. 참가자 코드 분실·노출 시 기존 `ACCESS_CREDENTIAL`을 폐기하고 새 자격을 발급한다. `replaces_credential_id`로 교체 관계를 남기되, 기존 세션·기기 식별 상태의 처리 여부는 재발급 유스케이스에서 명시적으로 결정한다.
 
 ## 확정 결정과 스키마 영향
 
