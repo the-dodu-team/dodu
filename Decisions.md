@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20260928-01 — D01~D13 최종 결정에 따른 파생 문서·ERD·Sprint 2 갱신
+
+- 날짜: 2026-09-28
+- 관련 커밋 제목 / Jira: `docs: align implementation docs with locked v2.5 decisions` / SCRUM-55~65
+- 변경 파일: `README.md`, `docs/dodu/IMPLEMENTATION_CONTEXT.md`, `docs/dodu/OPEN_DECISIONS.md`, `docs/dodu/DATA_MODEL.md`, `docs/dodu/DATA_MODEL_GUIDE.md`, `docs/dodu/ACCEPTANCE_CHECKLIST.md`
+- 배경: Notion의 2026-09-27 LOCKED D01~D13 최종 결정문이 확정되었으나 파생 문서에는 D01~D13이 OPEN으로 남아 있었고, 예약 +30분·자기보고 48시간·동일 날짜 재생성 불가 등 이전 기준이 남아 있었습니다. 기존 Sprint 2 티켓만으로는 자기보고 스케줄과 공식 행동검증 종료 경계의 백엔드 작업이 분리되지 않았습니다.
+- 결정: 파생 문서와 논리 ERD를 최신 결정에 맞춰 갱신합니다. 예약은 `now+5분~+72시간`, 사진 접수는 `T ≤ server_received_at < T+30`, 자기보고는 최종 T 기준 18:00/다음날 11:00·Push 1회·인앱 재안내 1회·24시간 만료로 기록합니다. ERD에 약속 날짜 사용 원장, 자기보고 대상/재안내 필드, 파생 약속 연결, 정책·모델·분석 제외 메타데이터를 추가합니다. Jira에는 SCRUM-63(자기보고 백엔드), SCRUM-64(공식 종료 경계), SCRUM-65(D13 QA 근거)를 추가하고 SCRUM-55~62의 설명과 완료 조건을 갱신했습니다.
+- 근거: 사용자가 전달한 D01~D13 최종 결정문, Notion `MVP v2.5 — 개발 질의 D01~D13 최종 결정문` 및 LOCKED PRD/운영정책/Flow 기준.
+- 대안 및 선택 이유: 원문 `docs/dodu/sources/`를 수정하는 대신 파생 문서만 갱신했습니다. API·DB·스케줄러의 구체 구현은 제품 정책과 분리된 기술설계로 남겼습니다.
+- 영향·주의점: 실제 DB 드라이버·ORM·마이그레이션과 앱 코드는 아직 변경하지 않았습니다. Jira 티켓은 모두 `해야 할 일` 상태이며 구현 착수 시 진행 중으로 전환합니다. D13의 Go/부분 Go/판단 보류/No-go는 제품 상태가 아니라 검증 기록으로 관리합니다.
+- 검증: `git diff --check`, 관련 JSON 파싱, 문서 내 구 기준 검색을 실행했습니다. 애플리케이션 테스트와 실제 DB 검증은 문서·Jira 변경만 수행했으므로 실행하지 않았습니다.
+
 ## DEV-20260922-02 — 설명 검토에 따른 ERD 관계·삭제 수명주기 보완
 
 - 날짜: 2026-09-22
