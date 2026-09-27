@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20260928-02 — 서버 약속 일정 경계 검증 함수 도입
+
+- 날짜: 2026-09-28
+- 관련 커밋 제목 / Jira: `feat(SCRUM-64): validate promise schedule window` / SCRUM-64
+- 변경 파일: `backend/src/main/java/com/dodu/intervention/InterventionWindowPolicy.java`, `backend/src/test/java/com/dodu/intervention/InterventionWindowPolicyTests.java`, `Decisions.md`
+- 배경: SCRUM-64의 공식 행동검증 종료 경계 작업을 사용자의 요청대로 작은 기능 단위로 분리해, 첫 커밋은 약속 일정 유효성 검증만 구현합니다.
+- 결정: 서버 `Clock`을 주입받는 정책 함수가 예약 가능 범위 `현재+5분~현재+72시간`과 전체 인증 구간 `T+30 ≤ 공식 종료시각`을 함께 검증하고, HTTP 예외 대신 도메인 결정 enum을 반환합니다.
+- 근거: Notion 및 LOCKED 기준의 D03·D11 최종 결정. 모든 시간 경계는 서버 시간이 기준이며, 약속은 T부터 T+30까지 온전히 받을 수 있어야 합니다.
+- 대안 및 선택 이유: 이번 커밋에 컨트롤러·DB·공식 종료 후 신규 개입 차단을 함께 넣지 않고, 동일 정책을 호출할 후속 소단위 작업으로 분리해 커밋과 검증 범위를 명확히 합니다.
+- 영향·주의점: 현재는 순수 정책 함수와 단위 테스트만 추가되어 API·DB 동작은 아직 연결되지 않았습니다. 다음 커밋에서 공식 종료 이후 신규 개입 차단을 별도 구현합니다.
+- 검증: `backend\\mvnw.cmd test` 실행 결과 테스트 4건, 실패 0건으로 BUILD SUCCESS; `git diff --check` 통과.
+
 ## DEV-20260928-01 — D01~D13 최종 결정에 따른 파생 문서·ERD·Sprint 2 갱신
 
 - 날짜: 2026-09-28
