@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20260928-05 — 사진 신규 제출의 T/T+30 서버 경계 검증
+
+- 날짜: 2026-09-28
+- 관련 커밋 제목 / Jira: `feat(SCRUM-64): validate photo submission window` / SCRUM-64
+- 변경 파일: `backend/src/main/java/com/dodu/intervention/InterventionWindowPolicy.java`, `backend/src/test/java/com/dodu/intervention/InterventionWindowPolicyTests.java`, `Decisions.md`
+- 배경: D04·D11에 따라 사진 신규 제출은 약속 시각 T부터 T+30 직전까지만 허용하고, 마감 전에 정상 접수된 시도는 이후 판정할 수 있어야 합니다.
+- 결정: 서버 `Clock`의 접수 시각을 기준으로 정확히 T는 허용하고, T 이전은 `BEFORE_START`, 정확히 T+30 이상은 `WINDOW_EXPIRED`로 판정합니다.
+- 근거: Notion 및 LOCKED 기준의 D04·D10·D11 최종 결정. 클라이언트 시각이나 업로드 완료 시각이 아니라 서버 접수 시각을 사용합니다.
+- 대안 및 선택 이유: 이번 커밋에는 사진 저장·판정 콜백·마감 후 기존 시도 처리까지 넣지 않고, 신규 제출 가능 여부라는 순수 정책 함수만 분리했습니다.
+- 영향·주의점: 현재는 정책 함수와 단위 테스트만 추가되어 실제 업로드 API에 연결되지는 않았습니다. 다음 사진 관련 작업에서 접수 attempt와 판정 상태에 연결합니다.
+- 검증: `backend\\mvnw.cmd test` 실행 결과 테스트 6건, 실패 0건으로 BUILD SUCCESS; `git diff --check` 통과.
+
 ## DEV-20260928-04 — 참가자 코드의 단일 활성 기기·세션 정책 반영
 
 - 날짜: 2026-09-28

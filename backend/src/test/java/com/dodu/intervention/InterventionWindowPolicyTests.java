@@ -64,4 +64,28 @@ class InterventionWindowPolicyTests {
         assertFalse(policy.isNewInterventionOpen(NOW.minusSeconds(1)));
     }
 
+    @Test
+    void acceptsTAndRejectsExactlyTPlusThirtyForNewPhotoSubmission() {
+        Instant scheduledAt = NOW;
+
+        assertEquals(
+                InterventionWindowPolicy.PhotoSubmissionDecision.ALLOWED,
+                policy.validateNewPhotoSubmission(scheduledAt));
+        assertEquals(
+                InterventionWindowPolicy.PhotoSubmissionDecision.ALLOWED,
+                new InterventionWindowPolicy(Clock.fixed(
+                                NOW.plus(Duration.ofMinutes(29)).plusSeconds(59), ZoneOffset.UTC))
+                        .validateNewPhotoSubmission(scheduledAt));
+        assertEquals(
+                InterventionWindowPolicy.PhotoSubmissionDecision.WINDOW_EXPIRED,
+                new InterventionWindowPolicy(Clock.fixed(
+                                NOW.plus(Duration.ofMinutes(30)), ZoneOffset.UTC))
+                        .validateNewPhotoSubmission(scheduledAt));
+        assertEquals(
+                InterventionWindowPolicy.PhotoSubmissionDecision.BEFORE_START,
+                new InterventionWindowPolicy(Clock.fixed(
+                                NOW.minusSeconds(1), ZoneOffset.UTC))
+                        .validateNewPhotoSubmission(scheduledAt));
+    }
+
 }

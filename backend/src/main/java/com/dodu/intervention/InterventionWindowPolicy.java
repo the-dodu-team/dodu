@@ -54,10 +54,33 @@ public final class InterventionWindowPolicy {
         return clock.instant().isBefore(officialEndAt);
     }
 
+    /**
+     * Validates a new photo submission using the server receive instant.
+     * The scheduled instant is inclusive and the T+30 instant is exclusive.
+     */
+    public PhotoSubmissionDecision validateNewPhotoSubmission(Instant scheduledAt) {
+        Objects.requireNonNull(scheduledAt, "scheduledAt must not be null");
+
+        Instant serverReceivedAt = clock.instant();
+        if (serverReceivedAt.isBefore(scheduledAt)) {
+            return PhotoSubmissionDecision.BEFORE_START;
+        }
+        if (!serverReceivedAt.isBefore(scheduledAt.plus(AUTHENTICATION_WINDOW))) {
+            return PhotoSubmissionDecision.WINDOW_EXPIRED;
+        }
+        return PhotoSubmissionDecision.ALLOWED;
+    }
+
     public enum ScheduleDecision {
         ALLOWED,
         TOO_EARLY,
         TOO_LATE,
         PAST_INTERVENTION_END
+    }
+
+    public enum PhotoSubmissionDecision {
+        ALLOWED,
+        BEFORE_START,
+        WINDOW_EXPIRED
     }
 }
