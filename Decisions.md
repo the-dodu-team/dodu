@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20261003-02 — 사진 제출 retry와 새 attempt 식별
+
+- 날짜: 2026-10-03
+- 관련 커밋 제목 / Jira: `feat(SCRUM-64): classify photo attempt identity` / SCRUM-64
+- 변경 파일: `backend/src/main/java/com/dodu/intervention/PhotoAttemptIdentityPolicy.java`, `backend/src/test/java/com/dodu/intervention/PhotoAttemptIdentityPolicyTests.java`, `Decisions.md`
+- 배경: D08에 따라 네트워크 retry는 새 attempt가 아니고, 거절 후 새 사진 제출은 새 attempt로 기록해야 합니다.
+- 결정: 동일 약속 안에서 `client_request_id`와 `request_fingerprint`가 모두 같으면 `RETRY_EXISTING`, request ID가 다르면 `NEW_ATTEMPT`, request ID는 같지만 fingerprint가 다르면 `CONFLICT`로 분류합니다.
+- 근거: Notion LOCKED D08 및 논리 ERD의 `(promise_id, client_request_id)` 유일 키와 `request_fingerprint` 비교 규칙.
+- 대안 및 선택 이유: 이번 커밋은 저장소·API·파일 업로드를 포함하지 않고 attempt 생성 전에 사용할 순수 식별 정책만 구현해 재전송과 신규 제출의 기준을 먼저 고정합니다.
+- 영향·주의점: 실제 DB에서는 `promise_id`와 `client_request_id` 복합 유일 제약 및 충돌 시 원자적 처리가 필요합니다. 서로 다른 request ID가 실제 새 사진인지 확인하는 입력 계약은 업로드 유스케이스에서 검증합니다.
+- 검증: `backend\\mvnw.cmd test` 실행 결과 테스트 10건, 실패 0건으로 BUILD SUCCESS; `git diff --check` 통과.
+
 ## DEV-20261003-01 — Evaluating 중 추가 사진 제출 차단
 
 - 날짜: 2026-10-03
