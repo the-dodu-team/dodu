@@ -71,6 +71,13 @@ public final class InterventionWindowPolicy {
         return PhotoSubmissionDecision.ALLOWED;
     }
 
+    /**
+     * Prevents a second photo submission while the promise already has one evaluation in flight.
+     */
+    public boolean isAdditionalPhotoSubmissionAllowed(boolean evaluationInProgress) {
+        return !evaluationInProgress;
+    }
+
     public enum ScheduleDecision {
         ALLOWED,
         TOO_EARLY,
