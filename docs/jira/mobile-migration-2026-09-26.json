@@ -1,0 +1,255 @@
+{
+  "date": "2026-09-26",
+  "source": "docs/jira/tickets.json (2026-09-16)",
+  "target": "https://dodu-mobile.atlassian.net",
+  "mapping": {
+    "DODU-15": "SCRUM-6",
+    "DODU-16": "SCRUM-7",
+    "DODU-17": "SCRUM-8",
+    "DODU-18": "SCRUM-9",
+    "DODU-19": "SCRUM-10",
+    "DODU-20": "SCRUM-11",
+    "DODU-21": "SCRUM-12",
+    "DODU-22": "SCRUM-13",
+    "DODU-23": "SCRUM-14",
+    "DODU-24": "SCRUM-15",
+    "DODU-25": "SCRUM-16",
+    "DODU-26": "SCRUM-17",
+    "DODU-27": "SCRUM-18",
+    "DODU-28": "SCRUM-19",
+    "DODU-29": "SCRUM-20",
+    "DODU-30": "SCRUM-21",
+    "DODU-31": "SCRUM-22",
+    "DODU-32": "SCRUM-23",
+    "DODU-33": "SCRUM-24",
+    "DODU-34": "SCRUM-25",
+    "DODU-35": "SCRUM-26",
+    "DODU-36": "SCRUM-27",
+    "DODU-37": "SCRUM-28"
+  },
+  "verifiedTicketCount": 23,
+  "successfulDependencyLinkCreations": 43,
+  "limitations": [
+    "Old DODU project unavailable; original epics/stories and later additions not restored.",
+    "Notion returned 401; latest policy not verified.",
+    "Only mono assignable. Other planned assignees preserved in descriptions.",
+    "Existing statuses, sprint assignments, comments and attachments not migrated."
+  ],
+  "links": [
+    {
+      "from": "SCRUM-7",
+      "to": "SCRUM-9",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-7",
+      "to": "SCRUM-10",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-8",
+      "to": "SCRUM-11",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-7",
+      "to": "SCRUM-12",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-10",
+      "to": "SCRUM-12",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-8",
+      "to": "SCRUM-13",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-9",
+      "to": "SCRUM-13",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-7",
+      "to": "SCRUM-15",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-11",
+      "to": "SCRUM-16",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-13",
+      "to": "SCRUM-16",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-6",
+      "to": "SCRUM-17",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-9",
+      "to": "SCRUM-17",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-14",
+      "to": "SCRUM-17",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-10",
+      "to": "SCRUM-17",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-12",
+      "to": "SCRUM-17",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-15",
+      "to": "SCRUM-17",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-16",
+      "to": "SCRUM-17",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-14",
+      "to": "SCRUM-21",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-10",
+      "to": "SCRUM-22",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-12",
+      "to": "SCRUM-22",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-18",
+      "to": "SCRUM-22",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-19",
+      "to": "SCRUM-22",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-22",
+      "to": "SCRUM-23",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-18",
+      "to": "SCRUM-23",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-19",
+      "to": "SCRUM-23",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-13",
+      "to": "SCRUM-24",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-22",
+      "to": "SCRUM-24",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-23",
+      "to": "SCRUM-24",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-23",
+      "to": "SCRUM-25",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-19",
+      "to": "SCRUM-25",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-21",
+      "to": "SCRUM-25",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-24",
+      "to": "SCRUM-26",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-20",
+      "to": "SCRUM-26",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-21",
+      "to": "SCRUM-26",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-28",
+      "to": "SCRUM-26",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-22",
+      "to": "SCRUM-27",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-19",
+      "to": "SCRUM-27",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-20",
+      "to": "SCRUM-27",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-23",
+      "to": "SCRUM-28",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-18",
+      "to": "SCRUM-28",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-19",
+      "to": "SCRUM-28",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-20",
+      "to": "SCRUM-28",
+      "ok": true
+    },
+    {
+      "from": "SCRUM-21",
+      "to": "SCRUM-28",
+      "ok": true
+    }
+  ]
+}
