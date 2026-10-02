@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20261003-01 — Evaluating 중 추가 사진 제출 차단
+
+- 날짜: 2026-10-03
+- 관련 커밋 제목 / Jira: `feat(SCRUM-64): block concurrent photo submission` / SCRUM-64
+- 변경 파일: `backend/src/main/java/com/dodu/intervention/InterventionWindowPolicy.java`, `backend/src/test/java/com/dodu/intervention/InterventionWindowPolicyTests.java`, `Decisions.md`
+- 배경: D10에 따라 한 약속에서 동시에 판정 중인 사진은 최대 1개이며, `Evaluating` 중 추가 사진 제출은 허용하지 않습니다.
+- 결정: 현재 해당 약속에 판정이 진행 중인지 나타내는 서버 상태를 입력받아, 진행 중이면 추가 제출을 거절하고 진행 중이 아니면 제출을 허용하는 정책 함수를 추가합니다.
+- 근거: Notion LOCKED D10 및 원문 Flow 상태 전이의 `AuthAvailable → Evaluating` 규칙.
+- 대안 및 선택 이유: 이번 커밋에는 attempt 저장·동시성 잠금·상태 전이 트랜잭션을 함께 넣지 않고, 제출 전 정책 게이트만 독립적으로 구현합니다. 저장과 원자적 전이는 다음 소단위 작업에서 다룹니다.
+- 영향·주의점: 현재 함수는 순수 정책 판정이며 실제 API/DB 조회와 원자적 잠금에는 아직 연결되지 않았습니다. 실제 구현에서는 약속별 Evaluating 행을 잠그거나 원자적으로 확인해야 합니다.
+- 검증: `backend\\mvnw.cmd test` 실행 결과 테스트 7건, 실패 0건으로 BUILD SUCCESS; `git diff --check` 통과.
+
 ## DEV-20260928-05 — 사진 신규 제출의 T/T+30 서버 경계 검증
 
 - 날짜: 2026-09-28

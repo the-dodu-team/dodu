@@ -88,4 +88,10 @@ class InterventionWindowPolicyTests {
                         .validateNewPhotoSubmission(scheduledAt));
     }
 
+    @Test
+    void blocksAdditionalPhotoSubmissionWhileEvaluationIsInProgress() {
+        assertTrue(policy.isAdditionalPhotoSubmissionAllowed(false));
+        assertFalse(policy.isAdditionalPhotoSubmissionAllowed(true));
+    }
+
 }
