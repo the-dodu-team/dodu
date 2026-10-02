@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20261003-03 — 사진 제출 attempt 접수 기록 모델 추가
+
+- 날짜: 2026-10-03
+- 관련 커밋 제목 / Jira: `feat(SCRUM-64): add photo attempt record` / SCRUM-64
+- 변경 파일: `backend/src/main/java/com/dodu/intervention/PhotoAttempt.java`, `backend/src/test/java/com/dodu/intervention/PhotoAttemptTests.java`, `Decisions.md`
+- 배경: D08의 약속·attempt·event 분리를 실제 백엔드 코드에 단계적으로 반영하기 위해, 영속 저장소가 없는 현재 저장소에서 먼저 서버가 기록해야 할 attempt 접수 모델을 고정합니다.
+- 결정: `PhotoAttempt`를 불변 record로 만들고 `promiseId`, `clientRequestId`, `requestFingerprint`, 도구 유형, 서버 `requestReceivedAt`, 처리 상태를 필수로 둡니다. 새 접수 attempt의 초기 상태는 `RECEIVED`입니다.
+- 근거: 논리 ERD `AUTH_ATTEMPT` 필드와 D08의 서버 접수·retry·새 사진 제출 분리 원칙.
+- 대안 및 선택 이유: JPA 엔티티·DB repository·사진 파일 참조를 이번 커밋에 추가하지 않습니다. 실제 DB 제품과 마이그레이션이 결정되기 전에는 불변 도메인 모델로 계약을 먼저 검증합니다.
+- 영향·주의점: 현재 record는 메모리 객체이며 재시작 후 보존되지 않습니다. 다음 저장소 작업에서 `(promise_id, client_request_id)` 유일 제약과 원자적 저장을 연결해야 합니다.
+- 검증: `backend\\mvnw.cmd test` 실행 결과 테스트 11건, 실패 0건으로 BUILD SUCCESS; `git diff --check` 통과.
+
 ## DEV-20261003-02 — 사진 제출 retry와 새 attempt 식별
 
 - 날짜: 2026-10-03
