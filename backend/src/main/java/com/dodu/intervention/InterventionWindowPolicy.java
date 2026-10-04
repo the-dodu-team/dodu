@@ -73,6 +73,7 @@ public final class InterventionWindowPolicy {
 
     /**
      * Prevents a second photo submission while the promise already has one evaluation in flight.
+     * This snapshot predicate is advisory only; use an atomic reservation before evaluation.
      */
     public boolean isAdditionalPhotoSubmissionAllowed(boolean evaluationInProgress) {
         return !evaluationInProgress;
