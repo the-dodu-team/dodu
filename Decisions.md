@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20261005-01 — 제출 retry의 소유권·약속 범위 검사
+
+- 날짜: 2026-10-05
+- 커밋 제목 / Jira: `feat(SCRUM-64): scope photo retries to owned promises` / 강민 배정 SCRUM-64.
+- 변경 파일: `PhotoAttemptRetryPolicy.java`, 해당 테스트, `docs/api/intervention.md`, `Decisions.md`.
+- 배경: 기존 attempt 식별 함수는 request ID/fingerprint만 비교하므로 호출자가 다른 약속의 조회 결과를 넘기면 잘못된 retry 분류가 가능합니다.
+- 선택·근거: 승인 D08, 서비스 정책 §13 및 서버 접근 제어 지침에 따라 소유권·철회를 먼저 검사하고 동일 promiseId의 attempt만 기존 식별 정책에 전달합니다. 비소유자는 retry/충돌/존재 여부에 관계없이 같은 FORBIDDEN 결정을 받습니다.
+- 대안: client participant ID 신뢰나 모든 약속을 대상으로 request ID 조회는 채택하지 않았습니다. API·DB 미선정 상태에서 가짜 영속 저장이나 미인증 엔드포인트를 만들지 않았습니다.
+- 영향: 순수 정책 소단위이며 실제 API 접근 제어 및 원자적 제출 통합은 미완료입니다. 서버 인증 참가자와 서버 조회 상태를 같은 트랜잭션에서 검증해야 합니다. NEW_ATTEMPT는 제출 허가가 아니며 시간·상태·원자적 저장 검사가 필요합니다. 기존 코드를 삭제·교체하지 않았고 새 정책은 domain 아래에 추가했습니다.
+- 검증: npm run verify 통과 — lint·TypeScript·프런트 빌드·백엔드 20개 테스트(실패 0)·JAR 패키징. 비소유자, 철회, 다른 약속 연결, retry/충돌/새 시도 분류를 4개 신규 테스트로 검증했습니다. 공백 검사 통과. API/DB/기기 QA 미실행.
+- 최신 확인: Notion 페이지 404로 최신 하위 항목 확인 불가. 기존 CodeRabbit 코멘트 ID/갱신일 확인 결과 새 의견 없음; 실제 제출 지점 원자성 지적은 여전히 미완료입니다. 기능 브랜치만 사용하며 dev 대상 PR·병합 없음. 새 제품 정책/OPEN 결정 추가 없음.
+
 ## DEV-20261004-05 — SCRUM-64 기반을 큰 기능 브랜치로 분리
 
 - 날짜: 2026-10-04
