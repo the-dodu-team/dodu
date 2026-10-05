@@ -102,3 +102,15 @@
 - 대안 및 선택 이유: 이미 푸시한 커밋을 수정하는 대신 후속 커밋으로 기록을 정정합니다.
 - 영향·주의점: 문서만 변경하며 앱 동작과 제품 정책은 변경하지 않습니다.
 - 검증: 기존 커밋과 실행 로그를 대조했습니다. 문서만 변경하므로 앱 검증은 재실행하지 않습니다.
+
+## DEV-20261005-03 — 공통 입력·오류·빈 상태와 접근성 확인
+
+- 날짜: 2026-10-05
+- 관련 커밋 제목: `feat: add shared text field and empty state previews`
+- 변경 파일: `Decisions.md`, `frontend/src/ComponentPreview.tsx`, `frontend/src/components/TextField.tsx`, `frontend/src/components/EmptyState.tsx`, `frontend/src/dodu.css`.
+- 배경: SCRUM-8의 입력·오류·빈 상태 예시와 키보드·반응형 확인이 남아 있었습니다.
+- 결정: 문자열 입력과 도움말·오류 문구를 받는 TextField, 제목·설명을 받는 EmptyState를 추가합니다. Preview에서 입력 반영, 오류 표시·숨기기, 정상 버튼 클릭 상태 메시지를 확인합니다. label/htmlFor, aria-describedby, aria-invalid, role=alert 및 role=status를 연결합니다.
+- 근거: SCRUM-8 완료 기준, docs/DEVELOPMENT_CONVENTIONS.md의 명명·React 구조·접근성·검증 기준과 실제 브라우저 검사 결과입니다.
+- 대안 및 선택 이유: 홈에 예시를 배치하는 대신 ComponentPreview에서 확인하고, 새 라이브러리 없이 기본 HTML과 React 상태를 사용합니다. 오류와 로딩은 제품 정책 검증이 아닌 표시 예시로 유지합니다.
+- 영향·주의점: 실제 예약·인증·권한 요청·데이터 저장은 실행하지 않습니다. OPEN 정책을 확정하지 않습니다. 실제 모바일 기기·스크린리더와 mono 리뷰는 별도이며, 브라우저 폭 검증으로 이를 대체했다고 보지 않습니다. 기존 DEV-20261005-01에서 남겨둔 입력·오류·빈 상태 구현을 이번 변경에서 추가했습니다.
+- 검증: 2026-10-05 npm run verify 통과(TypeScript·Vite 빌드, 린트, 백엔드 테스트 1개 및 패키징 성공). Codex 내장 브라우저에서 Enter로 정상 버튼 활성화와 상태 메시지, Tab으로 disabled 버튼 2개 건너뛰기 및 입력·오류 버튼 포커스 테두리, label 클릭 시 입력 포커스, 입력값 반영, 오류 표시·숨기기와 aria 연결을 확인했습니다. 320·375·768·1440px 뷰포트에서 기본 예시의 document scrollWidth가 clientWidth를 넘지 않았고, 320px 오류 표시 상태에서 줄바꿈과 빈 상태 가운데 정렬을 확인했습니다. 실제 모바일 기기와 스크린리더 음성 출력은 미실행입니다.

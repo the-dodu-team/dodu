@@ -18,3 +18,17 @@ button:focus-visible { outline: 3px solid #be741d; outline-offset: 4px; }
 .button:active:not(:disabled) {background: #4b2ee8;}
 .button:disabled {background: #eef0f5; color: #a2a9ba; opacity: 1; cursor: not-allowed;}
 .button:focus-visible {outline: 3px solid #5f43ff; outline-offset: 4px;}
+
+.text-field {margin-bottom: 20px;}
+.text-field label {display: block; margin-bottom: 8px; color: #161a29; font-size: 15px; font-weight: 600;}
+.text-field input {box-sizing: border-box; width: 100%; min-height: 44px; padding: 12px; border: 1px solid #cbd0dc; border-radius: 8px; background: #ffffff; color: #161a29; font: inherit;}
+.text-field input:focus-visible {outline: 3px solid #5f43ff; outline-offset: 3px;}
+.text-field input[aria-invalid="true"] {border-color: #c33335;}
+.text-field-hint,
+.text-field-error {margin: 8px 0 0; font-size: 13px; overflow-wrap: anywhere;}
+.text-field-hint {color: #6b7285;}
+.text-field-error {color: #c33335;}
+
+.empty-state {padding: 32px 16px; text-align: center; overflow-wrap: anywhere;}
+.empty-state-title {margin: 0; color: #363c4d; font-size: 18px; font-weight: 500; line-height: 1.4;}
+.empty-state-description {margin: 8px 0 0; color: #6b7285; font-size: 14px; line-height: 1.4;}
