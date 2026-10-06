@@ -75,7 +75,8 @@ export default function DoduHome({
         onViewAll={onViewAll}
       />
 
-      <footer className="home-footer">
+      {/* 이전: 인증 기능과 안내문을 모두 <footer className="home-footer">에 배치했다. */}
+      <div className="home-bottom">
         {promise && (
           <PromiseAuthPreview
             key={promise.date + promise.startTime}
@@ -84,11 +85,13 @@ export default function DoduHome({
           />
         )}
 
+        <footer className="home-footer">
         <p>
           입력한 약속의 미리보기입니다. 실제 예약이나 알림은
           실행되지 않으며 새로고침하면 사라집니다.
         </p>
-      </footer>
+        </footer>
+      </div>
 
       {/*
       <p className="eyebrow">DODU · v2.5</p>

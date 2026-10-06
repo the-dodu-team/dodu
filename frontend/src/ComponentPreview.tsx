@@ -11,9 +11,10 @@ export default function ComponentPreview() {
   const [buttonMessage, setButtonMessage] = useState('')
 
   return (
-    <main>
-
+    // 이전: 앱 header가 <main> 안에 있어 최상위 헤더 랜드마크가 아니었다.
+    <div className="component-preview">
       <AppHeader />
+      <main>
       <h1>공통 컴포넌트 확인</h1>
       <p>개발용 화면입니다. 실제 예약이나 인증은 실행하지 않습니다.</p>
 
@@ -64,6 +65,7 @@ export default function ComponentPreview() {
           description="내용이 추가되면 이곳에 표시됩니다."
         />
       </section>
-    </main>
+      </main>
+    </div>
   )
 }

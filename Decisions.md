@@ -1,5 +1,15 @@
 # 개발 결정 기록
 
+## DEV-20261007-09 — 기능 영역을 푸터와 분리하고 하단 배치 유지
+
+- 날짜: 2026-10-07. Jira/PR: SCRUM-69 / #8. 커밋: `fix(SCRUM-69): separate authentication content from footer`.
+- 변경 파일: DoduHome.tsx, ComponentPreview.tsx, dodu.css, semanticUi.test.mjs, Decisions.md.
+- 배경·선택: 인증 미리보기는 주요 기능이므로 footer 밖으로 이동하고 안내문만 footer에 유지합니다. 개발용 ComponentPreview의 header도 main 밖으로 분리합니다. 원래 하단 배치·가운데 정렬을 새 래퍼에 유지하도록 flex/CSS를 보완합니다.
+- 근거: 사용자 승인, DEVELOPMENT_CONVENTIONS 기본 HTML·접근성, PRD F-05 / SERVICE_POLICY 9 / FLOW_LOG_MAPPING 10. 제품 정책·원문 변경 없음. Notion 페이지 404로 최신 하위 문서 확인 불가.
+- 대안: footer를 이름만 바꿔 전체 안내 역할을 없애는 대신 기능과 안내를 분리합니다. 설정 아이콘은 실제 기능 계약이 없으므로 가짜 버튼·링크를 만들지 않습니다.
+- 영향: API·인증 상태에는 영향 없음. 기존 JSX 위치와 CSS는 주석으로 기록합니다. D01~D13의 새 결정 없음.
+- 검증: npm run verify 통과(프론트 7개·백엔드 16개 테스트, 린트·TypeScript/Vite·패키징). SSR에서 인증 section이 footer 밖이고 개발용 헤더가 main 밖임을 검증했습니다. 브라우저 인벤토리가 비어 실제 화면·키보드·모바일·스크린리더 QA는 미실행입니다.
+
 ## DEV-20261007-08 — 홈·약속 화면의 의미론적 HTML 보완
 
 - 날짜: 2026-10-07. 관련 Jira: SCRUM-69. 커밋 제목: `fix(SCRUM-69): improve home and promise HTML semantics`.

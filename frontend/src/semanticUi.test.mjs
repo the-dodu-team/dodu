@@ -45,6 +45,13 @@ test('rendered pages expose named sections, a single main, and native form/date 
     })
     assert.match(auth, /<section[^>]*aria-labelledby="promise-auth-preview-title"/)
     assert.match(auth, /<h2 id="promise-auth-preview-title"/)
+    const populatedHome = await render('/src/DoduHome.tsx', {
+      promise, onCreate: () => {}, onEdit: () => {}, onViewAll: () => {}, onVerify: () => {},
+    })
+    assert.match(populatedHome, /promise-auth-preview-title[\s\S]*?<\/section><footer/)
+    assert.doesNotMatch(populatedHome, /<footer[^>]*>[\s\S]*?<section/)
+    const componentPreview = await render('/src/ComponentPreview.tsx')
+    assert.match(componentPreview, /<header class="app-header">[\s\S]*?<\/header><main/)
   } finally {
     await server.close()
   }
