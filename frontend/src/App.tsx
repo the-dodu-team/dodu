@@ -1,4 +1,5 @@
-import { useState } from 'react'
+// 이전 import: import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import AppHeader from './components/AppHeader'
 import DoduHome from './DoduHome'
 import PromiseFormPage from './features/promise/PromiseFormPage'
@@ -6,12 +7,22 @@ import PromiseConfirmPage from './features/promise/PromiseConfirmPage'
 import PromiseHistoryPage from './features/promise/PromiseHistoryPage'
 import { getKstDateKey } from './features/promise/formatPromise'
 import { reconfirmPromise } from './features/promise/reconfirmPromise'
+import { focusScreenHeading } from './features/promise/focusScreenHeading'
 import type { PromiseDraft, PreviewPromise } from './features/promise/types'
 
 type PreviewScreen = 'home' | 'write' | 'confirm' | 'history'
 
 export default function App() {
   const [screen, setScreen] = useState<PreviewScreen>('home')
+  const contentRef = useRef<HTMLElement>(null)
+  const previousScreenRef = useRef(screen)
+
+  useEffect(() => {
+    // 최초 진입과 같은 화면의 입력/인증 상태 갱신에는 포커스를 빼앗지 않는다.
+    if (previousScreenRef.current === screen) return
+    previousScreenRef.current = screen
+    focusScreenHeading(contentRef.current)
+  }, [screen])
   const [draft, setDraft] = useState<PromiseDraft>({
     taskName: '',
     startTime: '',
@@ -63,7 +74,8 @@ export default function App() {
     <div className="home-page">
       <AppHeader />
 
-      <main className="home-content">
+      {/* 이전: <main className="home-content"> (전환 후 포커스 처리 없음) */}
+      <main className="home-content" ref={contentRef}>
       {screen === 'home' && <h1 className="visually-hidden">약속 홈</h1>}
 
       {screen === 'home' && (

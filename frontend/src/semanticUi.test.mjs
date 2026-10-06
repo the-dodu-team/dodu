@@ -3,6 +3,21 @@ import { test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
+import { focusScreenHeading } from './features/promise/focusScreenHeading.ts'
+
+test('screen focus targets only the h1 without adding it to the Tab order', () => {
+  let focused = 0
+  const heading = { tabIndex: 0, focus: () => { focused += 1 } }
+  focusScreenHeading({ querySelector: (selector) => {
+    assert.equal(selector, 'h1')
+    return heading
+  } })
+  assert.equal(heading.tabIndex, -1)
+  assert.equal(focused, 1)
+  focusScreenHeading(null)
+  focusScreenHeading({ querySelector: () => null })
+  assert.equal(focused, 1)
+})
 
 test('rendered pages expose named sections, a single main, and native form/date semantics', async () => {
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
