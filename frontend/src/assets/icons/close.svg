@@ -1,0 +1,5 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!--rect width="20" height="20" transform="translate(20) rotate(90)" fill="#FF0000" fill-opacity="0.1"/-->
+<path d="M3.33337 3.33333L16.6667 16.6666" stroke="black" stroke-linecap="round"/>
+<path d="M16.6666 3.33337L3.33333 16.6667" stroke="black" stroke-linecap="round"/>
+</svg>

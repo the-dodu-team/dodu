@@ -1,6 +1,8 @@
-import { useState } from 'react'
+// import { useState } from 'react'
+import AppHeader from './components/AppHeader'
 
 export default function DoduHome() {
+  /*
   const [connection, setConnection] = useState('확인 전')
   const [checking, setChecking] = useState(false)
 
@@ -20,9 +22,12 @@ export default function DoduHome() {
       setChecking(false)
     }
   }
-
+  */
   return (
     <main>
+      <AppHeader />
+
+      {/*
       <p className="eyebrow">DODU · v2.5</p>
       <h1>계획한 시작을<br />첫 행동으로.</h1>
       <p>스스로 정한 개인작업의 시작을 돕는 서비스입니다.</p>
@@ -35,6 +40,7 @@ export default function DoduHome() {
         </button>
         <p role="status">{connection}</p>
       </section>
+      */}
     </main>
   )
 }
