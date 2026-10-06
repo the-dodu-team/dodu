@@ -1,5 +1,15 @@
 # 개발 결정 기록
 
+## DEV-20261007-10 — 약속 화면 전환 시 제목 포커스
+
+- 날짜: 2026-10-07. Jira/PR: SCRUM-69 / #8. 커밋: `fix(SCRUM-69): focus screen heading after navigation`.
+- 변경 파일: App.tsx, features/promise/focusScreenHeading.ts, semanticUi.test.mjs, Decisions.md.
+- 배경·선택: 버튼으로 화면이 교체되면 이전 포커스 요소가 사라집니다. 실제 screen 변경 후 main 내부 h1에 tabindex=-1과 focus를 적용합니다. 최초 진입·동일 화면의 상태 변경은 이전 screen ref로 제외합니다.
+- 근거: 사용자 승인과 DEVELOPMENT_CONVENTIONS 키보드·포커스 규칙. PRD F-05, 서비스 정책 9의 인증 의미 및 Flow 10의 UI 변경 범위를 유지합니다. 새로운 제품 결정 ID 없음.
+- 대안: main 전체나 첫 입력을 강제 포커스하면 제목 안내를 건너뛰거나 입력을 방해하므로 화면 제목을 선택했습니다. 제목을 Tab 순서에 추가하지 않습니다. 제목/본문이 없으면 안전하게 무시합니다.
+- 영향: 서버 저장·시간·인증 정책에는 영향 없음. 기존 import/main 코드는 주석으로 보존합니다. 추가 의존성 없음.
+- 검증: npm run verify 통과(프론트 8개, 백엔드 16개, 린트·TypeScript/Vite·패키징). mock DOM 테스트에서 h1 선택·tabIndex=-1·focus 호출·제목 없는 경우를 확인했습니다. 실제 React 화면 전환/브라우저·모바일·스크린리더 검증은 브라우저 인벤토리 없음으로 미실행이며 단위검증과 구분합니다. Notion 기준 페이지는 404입니다. 이전 커밋 19c8a0d에 대한 CodeRabbit 리뷰에 실행 가능한 지적이 없음을 확인했으며 이번 후속 커밋은 별도 재검토 대상입니다.
+
 ## DEV-20261007-09 — 기능 영역을 푸터와 분리하고 하단 배치 유지
 
 - 날짜: 2026-10-07. Jira/PR: SCRUM-69 / #8. 커밋: `fix(SCRUM-69): separate authentication content from footer`.
