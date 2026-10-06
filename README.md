@@ -16,6 +16,7 @@ Dodu v2.5 Baseline을 바탕으로 시작 시점 개입과 작업환경 인증 �
 | 연결 확인 | `GET /api/health` 및 준비 화면의 API 연결 확인 |
 | 통합 검증 | 프런트엔드 lint·TypeScript 검사·빌드, Java 테스트·패키징 |
 | 통합 빌드 | React 정적 파일을 Spring Boot JAR에 포함 |
+| 인증 도메인 기반 | 서버 시간 경계·attempt 식별/기록·단일 프로세스 원자적 판정 슬롯 예약 (API/DB 연결 전) |
 
 참가자 식별, DB, 약속 생성·수정·취소, 알림, 사진 인증·AI 판정, 인증 이력,
 자기보고, 데이터 수집·삭제와 PWA 설치·오프라인·푸시는 아직 구현하지 않았습니다.
@@ -135,16 +136,17 @@ Maven 프로필만 직접 실행하면 최신 React 빌드를 보장하지 않�
 제품 기준은 다음 문서에서 확인합니다.
 
 1. [구현 컨텍스트](docs/dodu/IMPLEMENTATION_CONTEXT.md): 원문 요약과 기술설계 제안.
-2. [미결정 사항](docs/dodu/OPEN_DECISIONS.md): D01~D13, 현재 모두 OPEN.
+2. [결정 사항 및 구현 영향](docs/dodu/OPEN_DECISIONS.md): 2026-09-27 D01~D13 확정 내용과 기술설계 영향.
 3. [PRD v2.5](docs/dodu/sources/PRD_v2.5.md): 목적·범위·가설.
 4. [서비스 운영 정책 v2.5](docs/dodu/sources/SERVICE_POLICY_v2.5.md): 시간·횟수·권한·보관 조건.
 5. [Flow·로그 매핑 v2.5](docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md): 흐름·관찰 사실·지표와 이벤트 제안.
 6. [수용 기준](docs/dodu/ACCEPTANCE_CHECKLIST.md): 기능 구현 후 검증할 시나리오.
+7. [논리 ERD](docs/dodu/DATA_MODEL.md) / [ERD 설명서](docs/dodu/DATA_MODEL_GUIDE.md): 관계·제약·생성 및 삭제 흐름과 D01~D13 영향.
+8. [유지보수 준비 순서](docs/MAINTENANCE_PLAN.md): CI·브랜치 보호·DB 및 배포 운영의 후속 작업.
 
-OPEN 항목의 제안은 승인된 제품 정책이 아닙니다. 영향을 받는 기능은 보류하고 독립적인 작업을 진행합니다.
-예약 날짜·시간 경계(D06/D11), 인증 비동기 처리(D04/D05/D08/D10), 설문(D01/D02/D03/D07/D12),
-분석·지원 환경·QA(D09/D13)는 관련 결정을 확인한 뒤 진행합니다.
-기술 스택 선택이나 개발 컨벤션 작성은 OPEN 제품 정책의 승인을 의미하지 않습니다.
+D01~D13은 2026-09-27 최종 결정으로 확정되었습니다. 예약 경계·인증 비동기 처리·설문·분석은
+해당 결정의 제품 조건을 지키고, DB·API·스케줄러·멱등성·AI threshold의 구체 방식은 기술설계로 기록합니다.
+문서의 원문 정책은 변경하지 않으며, 파생 문서와 구현은 최신 LOCKED 기준을 따릅니다.
 
 [사용자 지정 Notion 페이지](https://app.notion.com/p/3d64c293890d80cc940bdc3cef7aa32c)와 하위 항목은
 Dodu 작업 시작 시, 업데이트 통지를 받은 때 다시 확인합니다. 상시 자동 감시는 구성되지 않았습니다.
