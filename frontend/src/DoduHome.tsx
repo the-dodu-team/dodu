@@ -1,7 +1,27 @@
-// import { useState } from 'react'
-import AppHeader from './components/AppHeader'
+import TodayPromiseCard from './components/TodayPromiseCard'
+import WeeklyPromiseCard from './components/WeeklyPromiseCard'
+import PromiseAuthPreview from './features/promise/PromiseAuthPreview'
+import { formatStartTime, getKstDateKey } from './features/promise/formatPromise'
+import type { PreviewPromise } from './features/promise/types'
 
-export default function DoduHome() {
+type DoduHomeProps = {
+  promise: PreviewPromise | null
+  onCreate: () => void
+  onEdit: () => void
+  onViewAll: () => void
+  onVerify: () => void
+}
+
+export default function DoduHome({
+  promise,
+  onCreate,
+  onEdit,
+  onViewAll,
+  onVerify,
+}: DoduHomeProps) {
+  const todayPromise =
+    promise?.date === getKstDateKey() ? promise : null
+
   /*
   const [connection, setConnection] = useState('확인 전')
   const [checking, setChecking] = useState(false)
@@ -23,9 +43,52 @@ export default function DoduHome() {
     }
   }
   */
+
   return (
-    <main>
-      <AppHeader />
+    <>
+      <TodayPromiseCard
+        promise={
+          todayPromise
+            ? {
+                taskName: todayPromise.taskName,
+                startTimeLabel: formatStartTime(todayPromise.startTime),
+                toolLabel:
+                  todayPromise.tool === 'computer' ? '컴퓨터' : '실제 책',
+              }
+            : null
+        }
+        onCreate={onCreate}
+        onEdit={onEdit}
+      />
+
+      <WeeklyPromiseCard
+        records={
+          promise
+            ? [
+                {
+                  date: promise.date,
+                  status: promise.status,
+                },
+              ]
+            : []
+        }
+        onViewAll={onViewAll}
+      />
+
+      <footer className="home-footer">
+        {promise && (
+          <PromiseAuthPreview
+            key={promise.date + promise.startTime}
+            promise={promise}
+            onVerify={onVerify}
+          />
+        )}
+
+        <p>
+          입력한 약속의 미리보기입니다. 실제 예약이나 알림은
+          실행되지 않으며 새로고침하면 사라집니다.
+        </p>
+      </footer>
 
       {/*
       <p className="eyebrow">DODU · v2.5</p>
@@ -41,6 +104,6 @@ export default function DoduHome() {
         <p role="status">{connection}</p>
       </section>
       */}
-    </main>
+    </>
   )
 }

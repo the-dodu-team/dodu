@@ -1,3 +1,4 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css');
 :root { font-family: system-ui, sans-serif; color: #172b28; background: #f4f7f3; line-height: 1.6; }
 * { box-sizing: border-box; }
 body { margin: 0; }
@@ -32,3 +33,82 @@ button:focus-visible { outline: 3px solid #be741d; outline-offset: 4px; }
 .empty-state {padding: 32px 16px; text-align: center; overflow-wrap: anywhere;}
 .empty-state-title {margin: 0; color: #363c4d; font-size: 18px; font-weight: 500; line-height: 1.4;}
 .empty-state-description {margin: 8px 0 0; color: #6b7285; font-size: 14px; line-height: 1.4;}
+
+.today-promise-card {margin-top: 0; padding: 24px; border: 0; border-radius: 24px; background: #ffffff; color: #161a29; line-height: 1.4; letter-spacing: -0.015em;}
+.today-promise-label {margin: 0 0 28px; color: #4e5568; font-size: 15px; font-weight: 500;}
+.today-promise-name {margin: 0 0 16px; overflow-wrap: anywhere; font-size: 20px; font-weight: 600;}
+.today-promise-detail {display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; font-size: 15px;}
+.today-promise-detail img {flex-shrink: 0;}
+.today-promise-detail span {color: #4e5568;}
+.today-promise-detail strong {font-weight: 500;}
+
+.home-page {max-width: 430px; min-height: 100dvh; padding: 24px 16px; background: #f5f6fa; color: #161a29; line-height: 1.4; letter-spacing: -0.015em; font-family: 'Pretendard', system-ui, sans-serif;}
+.home-page .app-header {margin-bottom: 16px; padding: 0 8px;}
+
+.weekly-promise-card {margin-top: 24px; padding: 24px; border: 0; border-radius: 24px; background: #ffffff;}
+.weekly-promise-label {margin: 0 0 28px; color: #4e5568; font-size: 15px; font-weight: 500;}
+.weekly-promise-period {margin: 0 0 8px; color: #6b7285; font-size: 14px;}
+.weekly-promise-count {margin: 0; color: #161a29; font-size: 24px; font-weight: 500;}
+.weekly-promise-count strong {font-weight: 600;}
+.weekly-promise-description {margin: 4px 0 0; color: #363c4d; font-size: 16px;}
+.weekly-promise-progress {height: 48px; margin-top: 24px; overflow: hidden; border-radius: 12px; background: #ebe9fb;}
+.weekly-promise-progress-fill {position: relative; width: 66.6667%; height: 100%; border: 0; border-radius: 12px 4px 4px 12px; background: #ac83ff;}
+.weekly-promise-progress-fill::before {content: ''; position: absolute; inset: 0 6px 0 0; border-radius: 12px 4px 4px 12px; background: linear-gradient(90deg, #5f43ff, #8243ff);}
+.weekly-promise-days {display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; margin: 24px 0 0; padding: 0; list-style: none;}
+.weekly-promise-day {display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0; border-radius: 12px; color: #6b7285; font-size: 14px;}
+.weekly-promise-day--verified {background: #ededff; color: #5668b4;}
+.weekly-promise-day--unverified {background: #ffe3e3; color: #c33335;}
+.visually-hidden {position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;}
+
+.home-page {display: flex; flex-direction: column;}
+.home-card-heading {display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 28px;}
+.home-card-heading h2 {margin: 0;}
+.home-card-action {display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: #6b7285; font: inherit; font-size: 15px; white-space: nowrap;}
+.home-card-action:disabled {opacity: 1; color: #a2a9ba; cursor: not-allowed;}
+.home-card-action span {font-size: 22px; line-height: 1;}
+.home-footer {margin-top: auto; padding-top: 32px; padding-bottom: env(safe-area-inset-bottom, 0px); text-align: center;}
+.home-footer p {margin: 0; color: #6b7285; font-size: 13px; line-height: 1.4;}
+
+/* PD 홈 색상 적용 */
+:root {color: #161a29; background: #f5f6fa;}
+.weekly-promise-count {color: #363c4d;}
+.weekly-promise-count strong {color: #161a29;}
+
+/* 아직 연결되지 않은 버튼: 동작은 비활성, 색은 시안 확인용 */
+.home-card-action:disabled {color: #6b7285;}
+
+.weekly-promise-day--past {color: #6b7285;}
+.weekly-promise-day--future {color: #363c4d;}
+.weekly-promise-day--verified {color: #5668b4; background: #ededff;}
+.weekly-promise-day--unverified {color: #c33335; background: #ffe3e3;}
+.weekly-promise-day--today {color: #161a29; font-weight: 600;}
+
+.today-promise-name {overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
+.today-promise-empty {text-align: center;}
+.today-promise-empty-title {margin: 0; color: #363c4d; font-size: 18px; font-weight: 500;}
+.today-promise-empty-description {margin: 12px 0 24px; color: #6b7285; font-size: 14px;}
+.today-promise-empty .button {width: 100%;}
+
+/* 약속 작성·확인 화면 스타일 */
+.promise-editor {margin-top: 0; border: 0; border-radius: 24px;}
+.promise-screen-title {margin: 0 0 16px; font-size: 24px; line-height: 1.4;}
+.promise-screen-description {margin: 0 0 24px; color: #6b7285; font-size: 14px;}
+.promise-tool-options {min-width: 0; margin: 0 0 24px; padding: 0; border: 0;}
+.promise-tool-options legend {margin-bottom: 12px; font-size: 15px; font-weight: 600;}
+.promise-tool-options label {display: flex; align-items: center; gap: 8px; min-height: 44px;}
+.promise-tool-options input {accent-color: #5f43ff;}
+.promise-actions {display: flex; flex-direction: column; gap: 12px;}
+.promise-summary {margin: 0 0 24px;}
+.promise-summary dt {margin-top: 16px; color: #4e5568; font-size: 15px;}
+.promise-summary dd {margin: 6px 0 0; color: #161a29; overflow-wrap: anywhere;}
+
+.weekly-promise-empty {padding: 20px 0 0; text-align: center;}
+.weekly-promise-empty h3 {margin: 0; color: #363c4d; font-size: 18px; font-weight: 500;}
+.weekly-promise-empty p {margin: 8px 0 0; color: #6b7285; font-size: 14px;}
+.weekly-promise-progress-fill--complete {border-radius: 12px;}
+.weekly-promise-progress-fill--complete::before {inset: 0; border-radius: 12px;}
+.weekly-promise-progress-zero {width: 8px; height: 100%; border-radius: 12px; background: #ff8383;}
+/* 기기 시간 기준 인증 버튼 미리보기 */
+.promise-auth-preview {display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;}
+.promise-auth-preview .button {display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;}
+.promise-auth-preview .button img {filter: brightness(0) invert(1);}
