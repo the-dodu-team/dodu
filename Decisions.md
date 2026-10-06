@@ -1,5 +1,36 @@
 # 개발 결정 기록
 
+## DEV-20261007-10 — 약속 화면 전환 시 제목 포커스
+
+- 날짜: 2026-10-07. Jira/PR: SCRUM-69 / #8. 커밋: `fix(SCRUM-69): focus screen heading after navigation`.
+- 변경 파일: App.tsx, features/promise/focusScreenHeading.ts, semanticUi.test.mjs, Decisions.md.
+- 배경·선택: 버튼으로 화면이 교체되면 이전 포커스 요소가 사라집니다. 실제 screen 변경 후 main 내부 h1에 tabindex=-1과 focus를 적용합니다. 최초 진입·동일 화면의 상태 변경은 이전 screen ref로 제외합니다.
+- 근거: 사용자 승인과 DEVELOPMENT_CONVENTIONS 키보드·포커스 규칙. PRD F-05, 서비스 정책 9의 인증 의미 및 Flow 10의 UI 변경 범위를 유지합니다. 새로운 제품 결정 ID 없음.
+- 대안: main 전체나 첫 입력을 강제 포커스하면 제목 안내를 건너뛰거나 입력을 방해하므로 화면 제목을 선택했습니다. 제목을 Tab 순서에 추가하지 않습니다. 제목/본문이 없으면 안전하게 무시합니다.
+- 영향: 서버 저장·시간·인증 정책에는 영향 없음. 기존 import/main 코드는 주석으로 보존합니다. 추가 의존성 없음.
+- 검증: npm run verify 통과(프론트 8개, 백엔드 16개, 린트·TypeScript/Vite·패키징). mock DOM 테스트에서 h1 선택·tabIndex=-1·focus 호출·제목 없는 경우를 확인했습니다. 실제 React 화면 전환/브라우저·모바일·스크린리더 검증은 브라우저 인벤토리 없음으로 미실행이며 단위검증과 구분합니다. Notion 기준 페이지는 404입니다. 이전 커밋 19c8a0d에 대한 CodeRabbit 리뷰에 실행 가능한 지적이 없음을 확인했으며 이번 후속 커밋은 별도 재검토 대상입니다.
+
+## DEV-20261007-09 — 기능 영역을 푸터와 분리하고 하단 배치 유지
+
+- 날짜: 2026-10-07. Jira/PR: SCRUM-69 / #8. 커밋: `fix(SCRUM-69): separate authentication content from footer`.
+- 변경 파일: DoduHome.tsx, ComponentPreview.tsx, dodu.css, semanticUi.test.mjs, Decisions.md.
+- 배경·선택: 인증 미리보기는 주요 기능이므로 footer 밖으로 이동하고 안내문만 footer에 유지합니다. 개발용 ComponentPreview의 header도 main 밖으로 분리합니다. 원래 하단 배치·가운데 정렬을 새 래퍼에 유지하도록 flex/CSS를 보완합니다.
+- 근거: 사용자 승인, DEVELOPMENT_CONVENTIONS 기본 HTML·접근성, PRD F-05 / SERVICE_POLICY 9 / FLOW_LOG_MAPPING 10. 제품 정책·원문 변경 없음. Notion 페이지 404로 최신 하위 문서 확인 불가.
+- 대안: footer를 이름만 바꿔 전체 안내 역할을 없애는 대신 기능과 안내를 분리합니다. 설정 아이콘은 실제 기능 계약이 없으므로 가짜 버튼·링크를 만들지 않습니다.
+- 영향: API·인증 상태에는 영향 없음. 기존 JSX 위치와 CSS는 주석으로 기록합니다. D01~D13의 새 결정 없음.
+- 검증: npm run verify 통과(프론트 7개·백엔드 16개 테스트, 린트·TypeScript/Vite·패키징). SSR에서 인증 section이 footer 밖이고 개발용 헤더가 main 밖임을 검증했습니다. 브라우저 인벤토리가 비어 실제 화면·키보드·모바일·스크린리더 QA는 미실행입니다.
+
+## DEV-20261007-08 — 홈·약속 화면의 의미론적 HTML 보완
+
+- 날짜: 2026-10-07. 관련 Jira: SCRUM-69. 커밋 제목: `fix(SCRUM-69): improve home and promise HTML semantics`.
+- 변경 파일: App.tsx, TodayPromiseCard.tsx, WeeklyPromiseCard.tsx, PromiseFormPage.tsx, PromiseConfirmPage.tsx, PromiseHistoryPage.tsx, PromiseAuthPreview.tsx, dodu.css, semanticUi.test.mjs, frontend/package.json, Decisions.md.
+- 배경: 사용자가 유연정의 홈 화면과 연계 화면을 용도에 맞는 HTML 요소로 보완하도록 요청했습니다. 기존 카드·폼에는 이미 section/form/fieldset/dl/ul이 있어 전체 div 치환은 적절하지 않습니다.
+- 선택: 앱 header를 단일 main 밖으로 분리하고 홈 h1을 추가합니다. 카드 제목 묶음에는 header, 인증 미리보기에는 이름 있는 section, 폼·확인·기록 영역에는 제목 연결, 주간·기록 날짜에는 time을 사용합니다. 배치 목적 div와 기존 주석은 보존합니다. 전역 main/section 스타일이 새 영역에 번지지 않도록 CSS를 한정합니다.
+- 근거: 사용자 요청, DEVELOPMENT_CONVENTIONS 접근성·검증 규칙, PRD F-05, SERVICE_POLICY 9, FLOW_LOG_MAPPING 10의 UI 변경 범위 구분. 제품 정책·API·로그·인증 상태 동작은 변경하지 않습니다. Notion 기준 페이지는 404로 최신 하위 항목을 확인하지 못했습니다.
+- 대안: 모든 div를 section으로 바꾸면 제목 없는 불필요한 영역이 생기므로 실제 역할을 가진 요소만 변경했습니다. 추가 UI/검증 라이브러리 없이 기존 React/Vite와 Node 테스트를 사용합니다.
+- 영향: 화면 디자인 유지 목적이며 실제 API·사진 인증은 여전히 미리보기입니다. SCRUM-69 전체 완료가 아닌 의미론적 구조 하위 작업입니다. OPEN 결정을 승인하거나 원문을 변경하지 않습니다.
+- 검증: npm run verify 통과(프론트 7개 테스트, 린트, TypeScript·Vite 빌드, 백엔드 16개 테스트 및 패키징). 서버 렌더링 HTML에서 단일 main/h1, header 분리, 섹션 제목 연결, form/fieldset/label, time을 확인했습니다. 실제 PC/모바일 시각·키보드·스크린리더 검증은 미실행입니다. git diff --check 통과.
+
 ## DEV-20261007-05 — 공통 UI 통합 후 홈 화면 유지
 
 - 날짜: 2026-10-07. 관련 Jira/PR: SCRUM-68 / #7, 선행 #6.

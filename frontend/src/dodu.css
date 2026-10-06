@@ -15,6 +15,17 @@ button:focus-visible { outline: 3px solid #be741d; outline-offset: 4px; }
 .app-header-logo {color: #5f43ff; font-size: 20px; font-weight: 700; line-height: 1.4; letter-spacing: -0.015em;}
 .app-header img {display: block; flex-shrink: 0;}
 
+/* main/section으로 바뀐 의미론적 영역에 기존 전역 카드 스타일이 번지지 않도록 한다. */
+/* 이전: .home-content {max-width: none; margin: 0; padding: 0;} */
+.home-content {display: flex; flex-direction: column; flex: 1; max-width: none; margin: 0; padding: 0;}
+.home-page {margin: 0 auto;}
+.home-bottom {margin-top: auto; padding-top: 32px; text-align: center;}
+.home-bottom .home-footer {padding-top: 0;}
+.home-bottom .promise-auth-preview p {margin: 0; color: #6b7285; font-size: 13px; line-height: 1.4;}
+.component-preview {max-width: 760px; margin: 0 auto; padding: 64px 24px;}
+.component-preview main {max-width: none; margin: 0; padding: 0;}
+section.promise-auth-preview {margin: 0 0 16px; padding: 0; border: 0; border-radius: 0; background: transparent;}
+
 .button {font: inherit; font-size: 16px; font-weight: 600; line-height: 1.4; letter-spacing: -0.015em; min-height: 44px; padding: 12px 18px; border: 0; border-radius: 8px; background: #5f43ff; color: #ffffff; cursor: pointer;}
 .button:active:not(:disabled) {background: #4b2ee8;}
 .button:disabled {background: #eef0f5; color: #a2a9ba; opacity: 1; cursor: not-allowed;}
