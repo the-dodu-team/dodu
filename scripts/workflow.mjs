@@ -77,6 +77,7 @@ try {
     await maven(task)
   } else if (task === 'build' || task === 'verify') {
     javaEnvironment()
+    if (task === 'verify') await npm(['run', 'test:promise-preview', '--workspace', 'frontend', '--if-present'])
     if (task === 'verify') await npm(['run', 'lint', '--workspace', 'frontend'])
     await npm(['run', 'build', '--workspace', 'frontend'])
     await maven(task)

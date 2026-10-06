@@ -1,4 +1,5 @@
-import settingsIcon from '../assets/icons/settings-outline.svg'
+// 이전 공통 UI import 보존: import settingsIcon from '../assets/icons/settings-outline.svg'
+import settingsIcon from '../assets/icons/settings-filled.svg'
 
 export default function AppHeader() {
   return (
