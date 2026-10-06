@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Button from './components/Button'
 import TextField from './components/TextField'
 import EmptyState from './components/EmptyState'
+
 import AppHeader from './components/AppHeader'
 
 export default function ComponentPreview() {
@@ -11,6 +12,7 @@ export default function ComponentPreview() {
 
   return (
     <main>
+
       <AppHeader />
       <h1>공통 컴포넌트 확인</h1>
       <p>개발용 화면입니다. 실제 예약이나 인증은 실행하지 않습니다.</p>
