@@ -4,7 +4,8 @@ import { createRoot } from 'react-dom/client'
 // import App from './App.tsx'
 import './dodu.css'
 // import App from './DoduHome.tsx'
-import App from './ComponentPreview.tsx'
+import App from './App.tsx'
+// import App from './ComponentPreview.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
