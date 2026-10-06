@@ -5,6 +5,7 @@ import PromiseFormPage from './features/promise/PromiseFormPage'
 import PromiseConfirmPage from './features/promise/PromiseConfirmPage'
 import PromiseHistoryPage from './features/promise/PromiseHistoryPage'
 import { getKstDateKey } from './features/promise/formatPromise'
+import { reconfirmPromise } from './features/promise/reconfirmPromise'
 import type { PromiseDraft, PreviewPromise } from './features/promise/types'
 
 type PreviewScreen = 'home' | 'write' | 'confirm' | 'history'
@@ -38,12 +39,15 @@ export default function App() {
   function showHomePreview() {
     if (!draft.taskName.trim() || !draft.startTime) return
 
-    setPromise({
-      ...draft,
-      taskName: draft.taskName.trim(),
-      date: getKstDateKey(),
-      status: 'pending',
-    })
+    // 이전 미리보기 코드 보존: 같은 내용을 재확인해도 pending으로 초기화했다.
+    // setPromise({
+    //   ...draft,
+    //   taskName: draft.taskName.trim(),
+    //   date: getKstDateKey(),
+    //   status: 'pending',
+    // })
+    const date = getKstDateKey()
+    setPromise((previous) => reconfirmPromise(previous, draft, date))
     setScreen('home')
   }
 
