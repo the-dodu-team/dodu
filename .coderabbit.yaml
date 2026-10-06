@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: ko-KR
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - ^dev$
+      - ^main$
+  path_instructions:
+    - path: '**/*'
+      instructions: >-
+        Follow AGENTS.md and docs/DEVELOPMENT_CONVENTIONS.md.
+        Treat D01-D13 in docs/dodu/OPEN_DECISIONS.md as unresolved unless
+        an explicit approval record exists. Focus on correctness, security,
+        concurrency, and actionable issues. Human review remains required.
+    - path: 'backend/**'
+      instructions: >-
+        Check participant isolation, server-side time validation, duplicate
+        requests, stale asynchronous results, withdrawal, and data deletion.
+        Photo authentication is not evidence of actual work starting.
+    - path: 'frontend/**'
+      instructions: >-
+        Check keyboard accessibility, loading and error states, request
+        cancellation, and stale responses. Do not present unsaved data as saved.
