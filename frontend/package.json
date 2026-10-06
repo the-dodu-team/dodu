@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test:promise-preview": "node --experimental-strip-types --test src/features/promise/reconfirmPromise.test.mjs",
+    "test:promise-preview": "node --experimental-strip-types --test src/features/promise/reconfirmPromise.test.mjs src/semanticUi.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -59,8 +59,12 @@ export default function App() {
   }
 
   return (
-    <main className="home-page">
+    // 이전 루트: <main className="home-page"> 안에 앱 헤더와 본문을 함께 배치했다.
+    <div className="home-page">
       <AppHeader />
+
+      <main className="home-content">
+      {screen === 'home' && <h1 className="visually-hidden">약속 홈</h1>}
 
       {screen === 'home' && (
         <DoduHome
@@ -96,7 +100,8 @@ export default function App() {
           onBack={() => setScreen('home')}
         />
       )}
-    </main>
+      </main>
+    </div>
   )
 }
 

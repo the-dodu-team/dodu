@@ -37,7 +37,9 @@ export default function PromiseAuthPreview({
   }, [])
 
   return (
-    <div className="promise-auth-preview">
+    // 이전: 제목 없는 <div className="promise-auth-preview"> 컨테이너.
+    <section className="promise-auth-preview" aria-labelledby="promise-auth-preview-title">
+      <h2 id="promise-auth-preview-title" className="visually-hidden">인증 미리보기</h2>
       <p role="status">
         {isVerified
           ? '인증 완료 상태의 미리보기입니다. 실제 인증은 실행되지 않았어요.'
@@ -52,6 +54,6 @@ export default function PromiseAuthPreview({
           {isVerified ? '인증 완료 · 미리보기' : '약속 인증하기'}
         </Button>
       )}
-    </div>
+    </section>
   )
 }

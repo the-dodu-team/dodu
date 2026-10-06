@@ -24,7 +24,8 @@ export default function TodayPromiseCard({
       className="today-promise-card"
       aria-labelledby="today-promise-title"
     >
-      <div className="home-card-heading">
+      {/* 이전 제목 배치 컨테이너: <div className="home-card-heading"> */}
+      <header className="home-card-heading">
         <h2 id="today-promise-title" className="today-promise-label">
           오늘 약속
         </h2>
@@ -39,7 +40,7 @@ export default function TodayPromiseCard({
             수정하기 <span aria-hidden="true">›</span>
           </button>
         )}
-      </div>
+      </header>
 
       {promise ? (
         <>

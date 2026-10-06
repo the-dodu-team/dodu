@@ -9,8 +9,9 @@ type PromiseHistoryPageProps = {
 
 export default function PromiseHistoryPage({ promise, onBack }: PromiseHistoryPageProps) {
   return (
-    <section className="promise-editor">
-      <h1 className="promise-screen-title">약속 기록 미리보기</h1>
+    // 이전 section은 className만 사용하고 제목과 연결되지 않았다.
+    <section className="promise-editor" aria-labelledby="promise-history-title">
+      <h1 id="promise-history-title" className="promise-screen-title">약속 기록 미리보기</h1>
       <p className="promise-screen-description">
         이번에 입력한 약속만 표시합니다.
         서버에 저장된 이력이나 실제 인증 결과는 아닙니다.
@@ -19,7 +20,8 @@ export default function PromiseHistoryPage({ promise, onBack }: PromiseHistoryPa
       {promise ? (
         <dl className="promise-summary">
           <dt>날짜</dt>
-          <dd>{promise.date} · KST</dd>
+          {/* 이전 날짜 표시: <dd>{promise.date} · KST</dd> */}
+          <dd><time dateTime={promise.date}>{promise.date}</time> · KST</dd>
 
           <dt>작업명</dt>
           <dd>{promise.taskName}</dd>

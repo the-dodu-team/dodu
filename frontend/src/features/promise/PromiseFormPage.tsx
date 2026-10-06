@@ -12,8 +12,9 @@ type PromiseFormPageProps = {
 
 export default function PromiseFormPage({ draft, setDraft, isEditing, onConfirm, onBack }: PromiseFormPageProps) {
   return (
-    <section className="promise-editor">
-      <h1 className="promise-screen-title">
+    // 이전 section에는 제목을 참조하는 접근 가능한 이름이 없었다.
+    <section className="promise-editor" aria-labelledby="promise-form-title">
+      <h1 id="promise-form-title" className="promise-screen-title">
         {isEditing ? '약속 수정하기' : '약속 만들기'}
       </h1>
       <p className="promise-screen-description">
@@ -22,6 +23,7 @@ export default function PromiseFormPage({ draft, setDraft, isEditing, onConfirm,
       </p>
 
       <form
+        aria-labelledby="promise-form-title"
         onSubmit={(event) => {
           event.preventDefault()
 
