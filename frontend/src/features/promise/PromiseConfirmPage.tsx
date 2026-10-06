@@ -10,8 +10,9 @@ type PromiseConfirmPageProps = {
 
 export default function PromiseConfirmPage({ draft, onEdit, onPreview }: PromiseConfirmPageProps) {
   return (
-    <section className="promise-editor">
-      <h1 className="promise-screen-title">약속 내용 확인</h1>
+    // 이전 section은 className만 사용하고 제목과 연결되지 않았다.
+    <section className="promise-editor" aria-labelledby="promise-confirm-title">
+      <h1 id="promise-confirm-title" className="promise-screen-title">약속 내용 확인</h1>
 
       <dl className="promise-summary">
         <dt>작업명</dt>

@@ -1,5 +1,16 @@
 # 개발 결정 기록
 
+## DEV-20261007-08 — 홈·약속 화면의 의미론적 HTML 보완
+
+- 날짜: 2026-10-07. 관련 Jira: SCRUM-69. 커밋 제목: `fix(SCRUM-69): improve home and promise HTML semantics`.
+- 변경 파일: App.tsx, TodayPromiseCard.tsx, WeeklyPromiseCard.tsx, PromiseFormPage.tsx, PromiseConfirmPage.tsx, PromiseHistoryPage.tsx, PromiseAuthPreview.tsx, dodu.css, semanticUi.test.mjs, frontend/package.json, Decisions.md.
+- 배경: 사용자가 유연정의 홈 화면과 연계 화면을 용도에 맞는 HTML 요소로 보완하도록 요청했습니다. 기존 카드·폼에는 이미 section/form/fieldset/dl/ul이 있어 전체 div 치환은 적절하지 않습니다.
+- 선택: 앱 header를 단일 main 밖으로 분리하고 홈 h1을 추가합니다. 카드 제목 묶음에는 header, 인증 미리보기에는 이름 있는 section, 폼·확인·기록 영역에는 제목 연결, 주간·기록 날짜에는 time을 사용합니다. 배치 목적 div와 기존 주석은 보존합니다. 전역 main/section 스타일이 새 영역에 번지지 않도록 CSS를 한정합니다.
+- 근거: 사용자 요청, DEVELOPMENT_CONVENTIONS 접근성·검증 규칙, PRD F-05, SERVICE_POLICY 9, FLOW_LOG_MAPPING 10의 UI 변경 범위 구분. 제품 정책·API·로그·인증 상태 동작은 변경하지 않습니다. Notion 기준 페이지는 404로 최신 하위 항목을 확인하지 못했습니다.
+- 대안: 모든 div를 section으로 바꾸면 제목 없는 불필요한 영역이 생기므로 실제 역할을 가진 요소만 변경했습니다. 추가 UI/검증 라이브러리 없이 기존 React/Vite와 Node 테스트를 사용합니다.
+- 영향: 화면 디자인 유지 목적이며 실제 API·사진 인증은 여전히 미리보기입니다. SCRUM-69 전체 완료가 아닌 의미론적 구조 하위 작업입니다. OPEN 결정을 승인하거나 원문을 변경하지 않습니다.
+- 검증: npm run verify 통과(프론트 7개 테스트, 린트, TypeScript·Vite 빌드, 백엔드 16개 테스트 및 패키징). 서버 렌더링 HTML에서 단일 main/h1, header 분리, 섹션 제목 연결, form/fieldset/label, time을 확인했습니다. 실제 PC/모바일 시각·키보드·스크린리더 검증은 미실행입니다. git diff --check 통과.
+
 ## DEV-20261007-05 — 공통 UI 통합 후 홈 화면 유지
 
 - 날짜: 2026-10-07. 관련 Jira/PR: SCRUM-68 / #7, 선행 #6.

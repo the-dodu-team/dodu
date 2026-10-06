@@ -83,7 +83,8 @@ export default function WeeklyPromiseCard({
       className="weekly-promise-card"
       aria-labelledby="weekly-promise-title"
     >
-      <div className="home-card-heading">
+      {/* 이전 제목 배치 컨테이너: <div className="home-card-heading"> */}
+      <header className="home-card-heading">
         <h2 id="weekly-promise-title" className="weekly-promise-label">
           이번 주 약속
         </h2>
@@ -95,7 +96,7 @@ export default function WeeklyPromiseCard({
         >
           전체 보기 <span aria-hidden="true">›</span>
         </button>
-      </div>
+      </header>
 
       <p className="weekly-promise-period">
         {formatDate(days[0].date)} ~ {formatDate(days[6].date)}
@@ -151,7 +152,8 @@ export default function WeeklyPromiseCard({
             className={`weekly-promise-day weekly-promise-day--${day.timing} weekly-promise-day--${day.status}`}
             aria-current={day.timing === 'today' ? 'date' : undefined}
           >
-            <span>{day.date.getUTCDate()}</span>
+            {/* 이전 날짜 표시: <span>{day.date.getUTCDate()}</span> */}
+            <time dateTime={day.dateKey}>{day.date.getUTCDate()}</time>
             <span>{day.label}</span>
             <span className="visually-hidden">
               {day.status === 'verified'
