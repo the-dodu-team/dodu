@@ -1,0 +1,10 @@
+{
+  "status": "error",
+  "error": {
+    "type": "VALIDATION",
+    "code": "PROMISE_SCHEDULE_TOO_SOON",
+    "field": "scheduledAt",
+    "message": "시작 시간을 지금보다 조금 더 뒤로 설정해주세요."
+  },
+  "serverTime": "2026-10-06T14:02:11+09:00"
+}
