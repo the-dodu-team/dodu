@@ -1,5 +1,30 @@
 # 개발 결정 기록
 
+
+## DEV-20261007-07 — FE 검토용 API 응답 fixture 추가
+
+- 날짜: 2026-10-07
+- 관련 커밋 제목 / Jira: `docs: add API response fixtures` / SCRUM-7 (이전 DODU-16), 분할 초안 SPLIT-16-2.
+- 변경 파일: `docs/api/fixtures/success.json`, `docs/api/fixtures/validation-error.json`, `docs/api/fixtures/technical-error.json`, `docs/api/fixtures/invalid-responses.json`, `docs/api/fixtures/README.md`, `Decisions.md`.
+- 배경: FE가 서버 없이 정상·입력오류·기술오류 상태를 재현하고, 계약에 맞지 않는 응답을 성공으로 표시하지 않는지 확인하려면 계약에 맞는 예시 파일이 필요합니다.
+- 결정: 계약 문서 5장의 예시를 응답 본문 그대로 JSON 파일로 분리하고, HTTP 상태는 README 표에서 관리합니다. 계약에 맞지 않는 응답은 정상 fixture와 분리한 `invalid-responses.json`에 이름을 붙인 사례로 둡니다. 모든 값은 가상 데이터입니다.
+- 근거: `docs/api/COMMON_API_CONTRACT.md` 3~5장, `docs/jira/WORK_BREAKDOWN.md`의 SPLIT-16-2·SPLIT-18-2, `docs/DEVELOPMENT_CONVENTIONS.md`(문서 예시는 가상 데이터, 승인되지 않은 OPEN 기대 결과를 정답으로 고정하지 않음).
+- 대안 및 선택 이유: 파일 본문에 `httpStatus`를 함께 담는 래퍼 형식은 실제 응답 본문과 달라져 FE가 계약 응답과 구분하기 어려워 채택하지 않았습니다.
+- 영향·주의점: 계약 초안이 강민님 리뷰로 바뀌면 fixture도 같은 PR에서 고칩니다. D04/D05/D06/D08/D10/D11에 걸린 사례는 넣지 않았습니다. 이 fixture를 FE mock에 연결하는 작업과 사용 범위 확정은 SPLIT-18-2 범위입니다.
+- 검증: 문서·예시 전용 변경이라 앱 테스트는 실행하지 않습니다.
+
+## DEV-20261007-06 — 공통 API 응답·오류 계약 초안 방향
+
+- 날짜: 2026-10-07
+- 관련 커밋 제목 / Jira: `docs: draft common API response and error contract` / SCRUM-7 (이전 DODU-16, S1-BE01), 분할 초안 SPLIT-16-1.
+- 변경 파일: `docs/api/COMMON_API_CONTRACT.md`, `Decisions.md`.
+- 배경: FE가 정상·입력오류·기술오류를 같은 규칙으로 처리하려면 응답·오류·시각 표현의 공통 계약이 필요합니다. 현재 구현된 API는 `GET /api/health`뿐입니다.
+- 결정: 성공·오류 응답을 `status` / `data` / `error` / `serverTime` 형태로 제안하고, 오류를 `error.type`(VALIDATION·UNAUTHENTICATED·FORBIDDEN·NOT_FOUND·CONFLICT·TECHNICAL)과 `error.code`로 구분합니다. 모든 시각은 오프셋이 포함된 ISO 8601로 전달합니다. 기술오류는 사용자 미인증으로 집계하지 않습니다.
+- 근거: 서비스 운영 정책 v2.5 §0·§8, Flow·로그 매핑 v2.5 §3~4, `docs/DEVELOPMENT_CONVENTIONS.md`의 API·시간·상태 계약(입력 오류 400 등 HTTP 의미 사용, 오프셋 포함 ISO 8601).
+- 대안 및 선택 이유: 입력오류에 422를 쓰는 방식은 컨벤션이 400을 기준으로 해서 채택하지 않았습니다.
+- 영향·주의점: 확정된 제품 API 명세가 아니라 신규 API의 작성 기준 제안입니다. 예약 끝점 비교·유효 서버 접수(D11), 마감 직전 기술오류·판정 대기 결과(D04/D10), 시도 연결키·중복 제거(D08), 철회·권한 부재 등 오류 전이(D05), 날짜 수정·재예약(D06)은 OPEN이라 확정하지 않았고 예시에서도 제외했습니다. D-ID 대응은 `OPEN_DECISIONS.md`와 대조했습니다.
+- 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다. GET /api/health를 로컬에서 호출해 응답 형태({"service":"dodu-backend","status":"ok"})를 확인하고 §2에 반영했습니다. 계약 형식과 달라서 강민님 확인 사항으로 남겼습니다.
+
 ## DEV-20261007-05 — 공통 UI 통합 후 홈 화면 유지
 
 - 날짜: 2026-10-07. 관련 Jira/PR: SCRUM-68 / #7, 선행 #6.

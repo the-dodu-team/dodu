@@ -1,0 +1,13 @@
+{
+  "status": "success",
+  "data": {
+    "promiseId": "00000000-0000-4000-8000-000000000001",
+    "lifecycleStatus": "Scheduled",
+    "taskTitle": "예시 작업",
+    "toolType": "COMPUTER",
+    "scheduledAt": "2026-10-07T20:00:00+09:00",
+    "scheduledDateKst": "2026-10-07",
+    "authWindowEndsAt": "2026-10-07T20:30:00+09:00"
+  },
+  "serverTime": "2026-10-06T14:02:11+09:00"
+}
