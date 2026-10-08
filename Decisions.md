@@ -1,5 +1,16 @@
 # 개발 결정 기록
 
+## DEV-20261007-08 — 시간 계약 초안 추가
+
+- 날짜: 2026-10-07
+- 관련 커밋 제목 / Jira: `docs: add time contract draft` / SCRUM-7 (이전 DODU-16), 분할 초안 SPLIT-16-3.
+- 변경 파일: `docs/api/TIME_CONTRACT.md`, `docs/api/COMMON_API_CONTRACT.md`(4장 5번 링크), `Decisions.md`.
+- 배경: 약속 예약 범위, 알림, 인증 종료, 일자 제한이 모두 시간 계산에 의존합니다. 구현(SCRUM-15) 전에 기준 시간대, 시각 표현, 현재 시각을 얻는 방식, KST 일자 계산 책임을 먼저 문서로 맞춰야 FE·BE가 같은 가정으로 작업합니다.
+- 결정: 기준은 `Asia/Seoul`, 시점은 오프셋 포함 ISO 8601과 시간대 정보가 있는 저장 방식을 쓰는 방향으로 제안합니다. 서버는 주입된 `Clock`에서 현재 시각을 얻고, KST 일자는 서버가 계산해 `...DateKst`로 내려줍니다. 구현 코드와 구성 방식은 이 문서에 두지 않고 SCRUM-15로 넘깁니다.
+- 근거: `docs/dodu/sources/SERVICE_POLICY_v2.5.md` §0·§1·§2·§5, `docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md` §3~4, `docs/DEVELOPMENT_CONVENTIONS.md` "API·시간·상태 계약".
+- 대안 및 선택 이유: 응답을 UTC(`Z`)로 통일하는 방안이 있습니다. 변환 책임이 FE에 생기므로 이 초안은 `+09:00`을 제안하고, 최종 선택은 mono 확인 사항으로 남겼습니다.
+- 영향·주의점: D11(경계 포함 여부), D04/D10(마감 직전 기술오류), D06(날짜 제한 범위)은 OPEN이라 정하지 않았고 예시·테스트의 정답으로도 고정하지 않았습니다. 응답 시각 표기가 UTC로 바뀌면 계약 문서와 fixture의 시각 표기를 같은 PR에서 함께 고칩니다.
+- 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다.
 
 ## DEV-20261007-07 — FE 검토용 API 응답 fixture 추가
 
@@ -18,12 +29,12 @@
 - 날짜: 2026-10-07
 - 관련 커밋 제목 / Jira: `docs: draft common API response and error contract` / SCRUM-7 (이전 DODU-16, S1-BE01), 분할 초안 SPLIT-16-1.
 - 변경 파일: `docs/api/COMMON_API_CONTRACT.md`, `Decisions.md`.
-- 배경: FE가 정상·입력오류·기술오류를 같은 규칙으로 처리하려면 응답·오류·시각 표현의 공통 계약이 필요합니다. 현재 구현된 API는 `GET /api/health`뿐입니다.
-- 결정: 성공·오류 응답을 `status` / `data` / `error` / `serverTime` 형태로 제안하고, 오류를 `error.type`(VALIDATION·UNAUTHENTICATED·FORBIDDEN·NOT_FOUND·CONFLICT·TECHNICAL)과 `error.code`로 구분합니다. 모든 시각은 오프셋이 포함된 ISO 8601로 전달합니다. 기술오류는 사용자 미인증으로 집계하지 않습니다.
-- 근거: 서비스 운영 정책 v2.5 §0·§8, Flow·로그 매핑 v2.5 §3~4, `docs/DEVELOPMENT_CONVENTIONS.md`의 API·시간·상태 계약(입력 오류 400 등 HTTP 의미 사용, 오프셋 포함 ISO 8601).
+- 배경: FE가 정상·입력오류·기술오류를 같은 규칙으로 처리하려면 응답·오류·시각 표현의 공통 계약이 필요합니다. 현재 구현된 HTTP API는 `GET /api/health`뿐이고, 예약·제출 시간 경계 판정은 `InterventionWindowPolicy`(SCRUM-64)로 도메인 코드에만 있으며 API에 연결되지 않았습니다.
+- 결정: 성공·오류 응답을 `status` / `data` / `error` / `serverTime` 형태로 제안하고, 오류를 `error.type`(VALIDATION·UNAUTHENTICATED·FORBIDDEN·NOT_FOUND·CONFLICT·TECHNICAL)과 `error.code`로 구분합니다. 모든 시각은 오프셋이 포함된 ISO 8601로 전달합니다. 기술오류는 사용자 미인증으로 집계하지 않습니다. 확정된 결정(D03·D04·D06·D10·D11)의 경계 규칙은 오류 코드(`PROMISE_SCHEDULE_TOO_SOON`, `AUTH_WINDOW_EXPIRED` 등)로 반영하고, 코드 이름은 제안으로 둡니다.
+- 근거: 서비스 운영 정책 v2.5 §0·§8, Flow·로그 매핑 v2.5 §3~4, `docs/dodu/OPEN_DECISIONS.md`(D01~D13, 2026-09-27 APPROVED), `docs/DEVELOPMENT_CONVENTIONS.md`의 API·시간·상태 계약(입력 오류 400 등 HTTP 의미 사용, 오프셋 포함 ISO 8601).
 - 대안 및 선택 이유: 입력오류에 422를 쓰는 방식은 컨벤션이 400을 기준으로 해서 채택하지 않았습니다.
-- 영향·주의점: 확정된 제품 API 명세가 아니라 신규 API의 작성 기준 제안입니다. 예약 끝점 비교·유효 서버 접수(D11), 마감 직전 기술오류·판정 대기 결과(D04/D10), 시도 연결키·중복 제거(D08), 철회·권한 부재 등 오류 전이(D05), 날짜 수정·재예약(D06)은 OPEN이라 확정하지 않았고 예시에서도 제외했습니다. D-ID 대응은 `OPEN_DECISIONS.md`와 대조했습니다.
-- 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다. GET /api/health를 로컬에서 호출해 응답 형태({"service":"dodu-backend","status":"ok"})를 확인하고 §2에 반영했습니다. 계약 형식과 달라서 강민님 확인 사항으로 남겼습니다.
+- 영향·주의점: 확정된 제품 API 명세가 아니라 신규 API의 작성 기준 제안입니다. 상태 전이표·판정 결과 전달 방식·멱등키 방식은 이 계약의 범위 밖이며 별도 계약이 필요합니다. 서비스 정책 §1의 최소 예약 `+30분`과 확정 결정 D11·구현의 `+5분`이 달라 D11을 기준으로 썼고 강민님 확인 사항으로 남겼습니다. 기존 `GET /api/health` 응답이 계약 형식과 달라 이것도 확인 사항입니다.
+- 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다. `GET /api/health`를 로컬에서 호출해 응답 형태(`{"service":"dodu-backend","status":"ok"}`)를 확인하고 §2에 반영했습니다. 최신 `dev`의 `OPEN_DECISIONS.md`, `InterventionWindowPolicy`와 대조해 확정 결정을 반영했습니다.
 
 ## DEV-20261007-05 — 공통 UI 통합 후 홈 화면 유지
 
