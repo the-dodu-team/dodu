@@ -19,9 +19,9 @@
 - 변경 파일: `docs/api/fixtures/success.json`, `docs/api/fixtures/validation-error.json`, `docs/api/fixtures/technical-error.json`, `docs/api/fixtures/invalid-responses.json`, `docs/api/fixtures/README.md`, `Decisions.md`.
 - 배경: FE가 서버 없이 정상·입력오류·기술오류 상태를 재현하고, 계약에 맞지 않는 응답을 성공으로 표시하지 않는지 확인하려면 계약에 맞는 예시 파일이 필요합니다.
 - 결정: 계약 문서 5장의 예시를 응답 본문 그대로 JSON 파일로 분리하고, HTTP 상태는 README 표에서 관리합니다. 계약에 맞지 않는 응답은 정상 fixture와 분리한 `invalid-responses.json`에 이름을 붙인 사례로 둡니다. 모든 값은 가상 데이터입니다.
-- 근거: `docs/api/COMMON_API_CONTRACT.md` 3~5장, `docs/jira/WORK_BREAKDOWN.md`의 SPLIT-16-2·SPLIT-18-2, `docs/DEVELOPMENT_CONVENTIONS.md`(문서 예시는 가상 데이터, 승인되지 않은 OPEN 기대 결과를 정답으로 고정하지 않음).
+- 근거: `docs/api/COMMON_API_CONTRACT.md` 3~5장, `docs/jira/WORK_BREAKDOWN.md`의 SPLIT-16-2·SPLIT-18-2, `docs/DEVELOPMENT_CONVENTIONS.md`(문서 예시는 가상 데이터).
 - 대안 및 선택 이유: 파일 본문에 `httpStatus`를 함께 담는 래퍼 형식은 실제 응답 본문과 달라져 FE가 계약 응답과 구분하기 어려워 채택하지 않았습니다.
-- 영향·주의점: 계약 초안이 강민님 리뷰로 바뀌면 fixture도 같은 PR에서 고칩니다. D04/D05/D06/D08/D10/D11에 걸린 사례는 넣지 않았습니다. 이 fixture를 FE mock에 연결하는 작업과 사용 범위 확정은 SPLIT-18-2 범위입니다.
+- 영향·주의점: 계약 초안이 강민님 리뷰로 바뀌면 fixture도 같은 PR에서 고칩니다. 예약·제출 경계값 사례는 BE 도메인 테스트(`InterventionWindowPolicyTests`)가 맡고, 상태 전이·멱등 계약이 필요한 사례(마감 직전 기술오류 복구, 지연된 판정, 중복 요청 등)는 계약이 정해진 뒤 추가합니다. 이 fixture를 FE mock에 연결하는 작업과 사용 범위 확정은 SPLIT-18-2 범위입니다.
 - 검증: 문서·예시 전용 변경이라 앱 테스트는 실행하지 않습니다.
 
 ## DEV-20261007-06 — 공통 API 응답·오류 계약 초안 방향
