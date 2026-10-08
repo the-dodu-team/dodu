@@ -4,12 +4,12 @@
 
 - 날짜: 2026-10-07
 - 관련 커밋 제목 / Jira: `docs: add time contract draft` / SCRUM-7 (이전 DODU-16), 분할 초안 SPLIT-16-3.
-- 변경 파일: `docs/api/TIME_CONTRACT.md`, `docs/api/COMMON_API_CONTRACT.md`(4장 5번 링크), `Decisions.md`.
-- 배경: 약속 예약 범위, 알림, 인증 종료, 일자 제한이 모두 시간 계산에 의존합니다. 구현(SCRUM-15) 전에 기준 시간대, 시각 표현, 현재 시각을 얻는 방식, KST 일자 계산 책임을 먼저 문서로 맞춰야 FE·BE가 같은 가정으로 작업합니다.
-- 결정: 기준은 `Asia/Seoul`, 시점은 오프셋 포함 ISO 8601과 시간대 정보가 있는 저장 방식을 쓰는 방향으로 제안합니다. 서버는 주입된 `Clock`에서 현재 시각을 얻고, KST 일자는 서버가 계산해 `...DateKst`로 내려줍니다. 구현 코드와 구성 방식은 이 문서에 두지 않고 SCRUM-15로 넘깁니다.
-- 근거: `docs/dodu/sources/SERVICE_POLICY_v2.5.md` §0·§1·§2·§5, `docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md` §3~4, `docs/DEVELOPMENT_CONVENTIONS.md` "API·시간·상태 계약".
-- 대안 및 선택 이유: 응답을 UTC(`Z`)로 통일하는 방안이 있습니다. 변환 책임이 FE에 생기므로 이 초안은 `+09:00`을 제안하고, 최종 선택은 mono 확인 사항으로 남겼습니다.
-- 영향·주의점: D11(경계 포함 여부), D04/D10(마감 직전 기술오류), D06(날짜 제한 범위)은 OPEN이라 정하지 않았고 예시·테스트의 정답으로도 고정하지 않았습니다. 응답 시각 표기가 UTC로 바뀌면 계약 문서와 fixture의 시각 표기를 같은 PR에서 함께 고칩니다.
+- 변경 파일: `docs/api/TIME_CONTRACT.md`, `docs/api/COMMON_API_CONTRACT.md`(4장 5번 링크 문구), `Decisions.md`.
+- 배경: 예약 범위, 알림, 인증 종료, 일자 제한이 모두 시간 계산에 의존합니다. 확정된 경계(D03·D04·D10·D11)와 이미 `dev`에 있는 `InterventionWindowPolicy`(SCRUM-64)를 문서로 맞춰야 FE·BE가 같은 가정으로 이후 API 구현(SCRUM-23 등)을 진행합니다.
+- 결정: 기준은 `Asia/Seoul`, 시점은 오프셋 포함 ISO 8601로 전달하고 저장은 `DATA_MODEL.md`의 UTC 순간 + KST 일자 별도 보존 방식을 따릅니다. 서버는 주입된 `Clock`에서 현재 시각을 얻고, KST 일자는 서버가 계산해 `...DateKst`로 내려줍니다. 확정 경계(예약 `now+5분 ≤ T ≤ now+72시간`, 제출 `T ≤ 접수 < T+30`, `T+30 ≤ 공식 종료`)는 새로 정하지 않고 시간 계산 예시로 풀어 적었습니다. 구현 코드는 이 문서에 두지 않습니다.
+- 근거: `docs/dodu/OPEN_DECISIONS.md` D03·D04·D10·D11(2026-09-27 APPROVED), `docs/dodu/DATA_MODEL.md`, `docs/dodu/sources/SERVICE_POLICY_v2.5.md` §0·§1·§2·§5, `docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md` §3~4, `docs/DEVELOPMENT_CONVENTIONS.md` "API·시간·상태 계약".
+- 대안 및 선택 이유: 응답을 UTC(`Z`)로 통일하는 방안이 있습니다. 변환 책임이 FE에 생기므로 이 초안은 `+09:00`을 제안하고, 최종 선택은 강민님 확인 사항으로 남겼습니다.
+- 영향·주의점: 서비스 정책 §1·§2의 `+30분`과 D11의 `+5분`이 달라 D11 기준으로 썼고 확인을 요청했습니다. 정확히 T인 순간의 수정·취소는 문서에 명시가 없어 정하지 않았습니다. 응답 시각 표기가 UTC로 바뀌면 계약 문서와 fixture의 시각 표기를 같은 PR에서 함께 고칩니다.
 - 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다.
 
 ## DEV-20261007-07 — FE 검토용 API 응답 fixture 추가
