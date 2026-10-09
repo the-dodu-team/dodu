@@ -1,5 +1,53 @@
 # 개발 결정 기록
 
+## DEV-20261009-01 — PR #9 리뷰 반영: 계약 오류 수정과 확인 결과 정리
+
+- 날짜: 2026-10-09
+- 관련 커밋 제목 / Jira: `docs: address PR #9 review feedback on API contract` / SCRUM-7.
+- 변경 파일: `docs/api/COMMON_API_CONTRACT.md`, `docs/api/TIME_CONTRACT.md`, `docs/api/fixtures/README.md`, `docs/DEVELOPMENT_CONVENTIONS.md`(한 문장), `docs/api/fixture/` → `docs/api/fixtures/` 폴더 이름 변경, `Decisions.md`.
+- 배경: 리뷰에서 계약 3.2 오류 예시에 TECHNICAL 전용인 `retryable`이 들어 있다는 점과, 문서에 적은 `docs/api/fixtures/` 경로가 실제 폴더 `docs/api/fixture/`와 달라 검증 명령이 파일을 찾지 못한다는 점이 지적됐습니다. 강민님은 7장 확인 사항(Q1~Q7)에 답하면서 확정 근거(D06·D11)가 있는 답과 기술 제안을 구분해 달라고 하셨습니다.
+- 결정: 3.2 예시에서 `retryable`을 빼고 `retryable: true`가 자동 재시도 허가가 아니라는 설명을 더했습니다. 폴더 이름을 `fixtures`로 바꿔 문서의 경로와 맞췄습니다. Q1(`+5분`)과 Q2(정확히 T의 수정·취소 불가)는 확정 결정에 근거한 답으로 반영하고, 응답 시각 `+09:00`·health 예외·`SESSION_REPLACED`/`CREDENTIAL_REVOKED` 오류 코드·기존 티켓 연결은 기술 제안으로 표시해 확정으로 취급하지 않았습니다. 7장은 확인 결과 표로 바꿨습니다. Q3(컨벤션 문서의 "D11 승인 전" 문장)은 D11이 승인됐고 계약 문서와 어긋나지 않도록 같은 PR에서 한 문장만 "승인된 D11(2026-09-27)을 따른다"로 고쳤습니다. 컨벤션이 정책을 다시 정의하지 않습니다. 병합 후에도 맞도록 문서 상태 문구에서 "리뷰 전"·"반영 중" 같은 진행 상태 표현과 리뷰어 표기를 빼고, "초안이며 기술 제안은 확정 정책이 아니다"로 정리했습니다.
+- 근거: PR #9 리뷰(CodeRabbit 인라인 2건, 강민님 코멘트), `docs/dodu/OPEN_DECISIONS.md` D06·D11(2026-09-27 APPROVED), `docs/dodu/DATA_MODEL.md` 참가자 세션·자격 규칙.
+- 대안 및 선택 이유: 폴더 이름 대신 문서의 경로를 `fixture`로 고치는 방법도 있었지만, 문서 여러 곳과 Decisions가 이미 `fixtures`로 적혀 있고 복수형이 일반적이라 폴더를 바꿨습니다. 정책 원문(`SERVICE_POLICY_v2.5.md`)의 `+30분`은 원문을 고치지 않고 이전 기준이라는 차이만 기록했습니다.
+- 영향·주의점: 문서만 바뀌고 코드·`HealthController`는 바뀌지 않았습니다. 오류 코드 이름은 모두 제안이며 미확정입니다. 429·Retry-After(SCRUM-70)와 상태 전이·결과 전달·멱등 계약은 후속 티켓(SCRUM-60·62·63·64·56)에서 정합니다.
+- 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다.
+
+## DEV-20261007-08 — 시간 계약 초안 추가
+
+- 날짜: 2026-10-07
+- 관련 커밋 제목 / Jira: `docs: add time contract draft` / SCRUM-7 (이전 DODU-16), 분할 초안 SPLIT-16-3.
+- 변경 파일: `docs/api/TIME_CONTRACT.md`, `docs/api/COMMON_API_CONTRACT.md`(4장 5번 링크 문구), `Decisions.md`.
+- 배경: 예약 범위, 알림, 인증 종료, 일자 제한이 모두 시간 계산에 의존합니다. 확정된 경계(D03·D04·D10·D11)와 이미 `dev`에 있는 `InterventionWindowPolicy`(SCRUM-64)를 문서로 맞춰야 FE·BE가 같은 가정으로 이후 API 구현(SCRUM-23 등)을 진행합니다.
+- 결정: 기준은 `Asia/Seoul`, 시점은 오프셋 포함 ISO 8601로 전달하고 저장은 `DATA_MODEL.md`의 UTC 순간 + KST 일자 별도 보존 방식을 따릅니다. 서버는 주입된 `Clock`에서 현재 시각을 얻고, KST 일자는 서버가 계산해 `...DateKst`로 내려줍니다. 확정 경계(예약 `now+5분 ≤ T ≤ now+72시간`, 제출 `T ≤ 접수 < T+30`, `T+30 ≤ 공식 종료`)는 새로 정하지 않고 시간 계산 예시로 풀어 적었습니다. 구현 코드는 이 문서에 두지 않습니다.
+- 근거: `docs/dodu/OPEN_DECISIONS.md` D03·D04·D10·D11(2026-09-27 APPROVED), `docs/dodu/DATA_MODEL.md`, `docs/dodu/sources/SERVICE_POLICY_v2.5.md` §0·§1·§2·§5, `docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md` §3~4, `docs/DEVELOPMENT_CONVENTIONS.md` "API·시간·상태 계약".
+- 대안 및 선택 이유: 응답을 UTC(`Z`)로 통일하는 방안이 있습니다. 변환 책임이 FE에 생기므로 이 초안은 `+09:00`을 제안하고, 최종 선택은 강민님 확인 사항으로 남겼습니다.
+- 영향·주의점: 서비스 정책 §1·§2의 `+30분`과 D11의 `+5분`이 달라 D11 기준으로 썼고 확인을 요청했습니다. 정확히 T인 순간의 수정·취소는 문서에 명시가 없어 정하지 않았습니다. 응답 시각 표기가 UTC로 바뀌면 계약 문서와 fixture의 시각 표기를 같은 PR에서 함께 고칩니다.
+- 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다.
+
+## DEV-20261007-07 — FE 검토용 API 응답 fixture 추가
+
+- 날짜: 2026-10-07
+- 관련 커밋 제목 / Jira: `docs: add API response fixtures` / SCRUM-7 (이전 DODU-16), 분할 초안 SPLIT-16-2.
+- 변경 파일: `docs/api/fixtures/success.json`, `docs/api/fixtures/validation-error.json`, `docs/api/fixtures/technical-error.json`, `docs/api/fixtures/invalid-responses.json`, `docs/api/fixtures/README.md`, `Decisions.md`.
+- 배경: FE가 서버 없이 정상·입력오류·기술오류 상태를 재현하고, 계약에 맞지 않는 응답을 성공으로 표시하지 않는지 확인하려면 계약에 맞는 예시 파일이 필요합니다.
+- 결정: 계약 문서 5장의 예시를 응답 본문 그대로 JSON 파일로 분리하고, HTTP 상태는 README 표에서 관리합니다. 계약에 맞지 않는 응답은 정상 fixture와 분리한 `invalid-responses.json`에 이름을 붙인 사례로 둡니다. 모든 값은 가상 데이터입니다.
+- 근거: `docs/api/COMMON_API_CONTRACT.md` 3~5장, `docs/jira/WORK_BREAKDOWN.md`의 SPLIT-16-2·SPLIT-18-2, `docs/DEVELOPMENT_CONVENTIONS.md`(문서 예시는 가상 데이터).
+- 대안 및 선택 이유: 파일 본문에 `httpStatus`를 함께 담는 래퍼 형식은 실제 응답 본문과 달라져 FE가 계약 응답과 구분하기 어려워 채택하지 않았습니다.
+- 영향·주의점: 계약 초안이 강민님 리뷰로 바뀌면 fixture도 같은 PR에서 고칩니다. 예약·제출 경계값 사례는 BE 도메인 테스트(`InterventionWindowPolicyTests`)가 맡고, 상태 전이·멱등 계약이 필요한 사례(마감 직전 기술오류 복구, 지연된 판정, 중복 요청 등)는 계약이 정해진 뒤 추가합니다. 이 fixture를 FE mock에 연결하는 작업과 사용 범위 확정은 SPLIT-18-2 범위입니다.
+- 검증: 문서·예시 전용 변경이라 앱 테스트는 실행하지 않습니다.
+
+## DEV-20261007-06 — 공통 API 응답·오류 계약 초안 방향
+
+- 날짜: 2026-10-07
+- 관련 커밋 제목 / Jira: `docs: draft common API response and error contract` / SCRUM-7 (이전 DODU-16, S1-BE01), 분할 초안 SPLIT-16-1.
+- 변경 파일: `docs/api/COMMON_API_CONTRACT.md`, `Decisions.md`.
+- 배경: FE가 정상·입력오류·기술오류를 같은 규칙으로 처리하려면 응답·오류·시각 표현의 공통 계약이 필요합니다. 현재 구현된 HTTP API는 `GET /api/health`뿐이고, 예약·제출 시간 경계 판정은 `InterventionWindowPolicy`(SCRUM-64)로 도메인 코드에만 있으며 API에 연결되지 않았습니다.
+- 결정: 성공·오류 응답을 `status` / `data` / `error` / `serverTime` 형태로 제안하고, 오류를 `error.type`(VALIDATION·UNAUTHENTICATED·FORBIDDEN·NOT_FOUND·CONFLICT·TECHNICAL)과 `error.code`로 구분합니다. 모든 시각은 오프셋이 포함된 ISO 8601로 전달합니다. 기술오류는 사용자 미인증으로 집계하지 않습니다. 확정된 결정(D03·D04·D06·D10·D11)의 경계 규칙은 오류 코드(`PROMISE_SCHEDULE_TOO_SOON`, `AUTH_WINDOW_EXPIRED` 등)로 반영하고, 코드 이름은 제안으로 둡니다.
+- 근거: 서비스 운영 정책 v2.5 §0·§8, Flow·로그 매핑 v2.5 §3~4, `docs/dodu/OPEN_DECISIONS.md`(D01~D13, 2026-09-27 APPROVED), `docs/DEVELOPMENT_CONVENTIONS.md`의 API·시간·상태 계약(입력 오류 400 등 HTTP 의미 사용, 오프셋 포함 ISO 8601).
+- 대안 및 선택 이유: 입력오류에 422를 쓰는 방식은 컨벤션이 400을 기준으로 해서 채택하지 않았습니다.
+- 영향·주의점: 확정된 제품 API 명세가 아니라 신규 API의 작성 기준 제안입니다. 상태 전이표·판정 결과 전달 방식·멱등키 방식은 이 계약의 범위 밖이며 별도 계약이 필요합니다. 서비스 정책 §1의 최소 예약 `+30분`과 확정 결정 D11·구현의 `+5분`이 달라 D11을 기준으로 썼고 강민님 확인 사항으로 남겼습니다. 기존 `GET /api/health` 응답이 계약 형식과 달라 이것도 확인 사항입니다.
+- 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다. `GET /api/health`를 로컬에서 호출해 응답 형태(`{"service":"dodu-backend","status":"ok"}`)를 확인하고 §2에 반영했습니다. 최신 `dev`의 `OPEN_DECISIONS.md`, `InterventionWindowPolicy`와 대조해 확정 결정을 반영했습니다.
+
 ## DEV-20261007-05 — 공통 UI 통합 후 홈 화면 유지
 
 - 날짜: 2026-10-07. 관련 Jira/PR: SCRUM-68 / #7, 선행 #6.

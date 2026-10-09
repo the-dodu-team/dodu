@@ -1,0 +1,102 @@
+{
+  "description": "계약에 맞지 않는 응답 사례입니다. FE가 이 응답들을 성공으로 표시하지 않는지 확인하는 용도이며, 서버가 실제로 이런 응답을 준다는 뜻이 아닙니다.",
+  "cases": [
+    {
+      "name": "missing-status",
+      "httpStatus": 200,
+      "violates": "성공 응답에 status 필드가 없음 (계약 3.1)",
+      "body": {
+        "data": {
+          "promiseId": "00000000-0000-4000-8000-000000000001",
+          "lifecycleStatus": "Scheduled"
+        },
+        "serverTime": "2026-10-06T14:02:11+09:00"
+      }
+    },
+    {
+      "name": "success-without-data",
+      "httpStatus": 200,
+      "violates": "status가 success인데 data가 없음 (계약 3.1)",
+      "body": {
+        "status": "success",
+        "serverTime": "2026-10-06T14:02:11+09:00"
+      }
+    },
+    {
+      "name": "error-without-error-object",
+      "httpStatus": 400,
+      "violates": "status가 error인데 error 객체가 없음 (계약 3.2)",
+      "body": {
+        "status": "error",
+        "serverTime": "2026-10-06T14:02:11+09:00"
+      }
+    },
+    {
+      "name": "unknown-error-type",
+      "httpStatus": 400,
+      "violates": "error.type이 계약에 없는 값 (계약 3.3)",
+      "body": {
+        "status": "error",
+        "error": {
+          "type": "SOMETHING_ELSE",
+          "code": "PROMISE_SCHEDULE_TOO_SOON",
+          "message": "시작 시간을 지금보다 조금 더 뒤로 설정해주세요."
+        },
+        "serverTime": "2026-10-06T14:02:11+09:00"
+      }
+    },
+    {
+      "name": "error-body-with-http-200",
+      "httpStatus": 200,
+      "violates": "오류 본문인데 HTTP 상태가 2xx (계약 3.3)",
+      "body": {
+        "status": "error",
+        "error": {
+          "type": "VALIDATION",
+          "code": "PROMISE_SCHEDULE_TOO_SOON",
+          "field": "scheduledAt",
+          "message": "시작 시간을 지금보다 조금 더 뒤로 설정해주세요."
+        },
+        "serverTime": "2026-10-06T14:02:11+09:00"
+      }
+    },
+    {
+      "name": "success-body-with-http-500",
+      "httpStatus": 500,
+      "violates": "성공 본문인데 HTTP 상태가 5xx (계약 3.3)",
+      "body": {
+        "status": "success",
+        "data": {
+          "promiseId": "00000000-0000-4000-8000-000000000001",
+          "lifecycleStatus": "Scheduled"
+        },
+        "serverTime": "2026-10-06T14:02:11+09:00"
+      }
+    },
+    {
+      "name": "datetime-without-offset",
+      "httpStatus": 201,
+      "violates": "오프셋 없는 시각 사용 (계약 4장 1번)",
+      "body": {
+        "status": "success",
+        "data": {
+          "promiseId": "00000000-0000-4000-8000-000000000001",
+          "lifecycleStatus": "Scheduled",
+          "taskTitle": "예시 작업",
+          "toolType": "COMPUTER",
+          "scheduledAt": "2026-10-07T20:00:00",
+          "scheduledDateKst": "2026-10-07",
+          "authWindowEndsAt": "2026-10-07T20:30:00"
+        },
+        "serverTime": "2026-10-06T14:02:11+09:00"
+      }
+    },
+    {
+      "name": "non-json-gateway-response",
+      "httpStatus": 502,
+      "violates": "JSON이 아닌 본문 (프록시·게이트웨이가 돌려주는 응답을 가정)",
+      "bodyIsRawText": true,
+      "body": "<html><body><h1>502 Bad Gateway</h1></body></html>"
+    }
+  ]
+}
