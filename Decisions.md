@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20261009-01 — PR #9 리뷰 반영: 계약 오류 수정과 확인 결과 정리
+
+- 날짜: 2026-10-09
+- 관련 커밋 제목 / Jira: `docs: address PR #9 review feedback on API contract` / SCRUM-7.
+- 변경 파일: `docs/api/COMMON_API_CONTRACT.md`, `docs/api/TIME_CONTRACT.md`, `docs/api/fixtures/README.md`, `docs/DEVELOPMENT_CONVENTIONS.md`(한 문장), `docs/api/fixture/` → `docs/api/fixtures/` 폴더 이름 변경, `Decisions.md`.
+- 배경: 리뷰에서 계약 3.2 오류 예시에 TECHNICAL 전용인 `retryable`이 들어 있다는 점과, 문서에 적은 `docs/api/fixtures/` 경로가 실제 폴더 `docs/api/fixture/`와 달라 검증 명령이 파일을 찾지 못한다는 점이 지적됐습니다. 강민님은 7장 확인 사항(Q1~Q7)에 답하면서 확정 근거(D06·D11)가 있는 답과 기술 제안을 구분해 달라고 하셨습니다.
+- 결정: 3.2 예시에서 `retryable`을 빼고 `retryable: true`가 자동 재시도 허가가 아니라는 설명을 더했습니다. 폴더 이름을 `fixtures`로 바꿔 문서의 경로와 맞췄습니다. Q1(`+5분`)과 Q2(정확히 T의 수정·취소 불가)는 확정 결정에 근거한 답으로 반영하고, 응답 시각 `+09:00`·health 예외·`SESSION_REPLACED`/`CREDENTIAL_REVOKED` 오류 코드·기존 티켓 연결은 기술 제안으로 표시해 확정으로 취급하지 않았습니다. 7장은 확인 결과 표로 바꿨습니다. Q3(컨벤션 문서의 "D11 승인 전" 문장)은 D11이 승인됐고 계약 문서와 어긋나지 않도록 같은 PR에서 한 문장만 "승인된 D11(2026-09-27)을 따른다"로 고쳤습니다. 컨벤션이 정책을 다시 정의하지 않습니다. 병합 후에도 맞도록 문서 상태 문구에서 "리뷰 전"·"반영 중" 같은 진행 상태 표현과 리뷰어 표기를 빼고, "초안이며 기술 제안은 확정 정책이 아니다"로 정리했습니다.
+- 근거: PR #9 리뷰(CodeRabbit 인라인 2건, 강민님 코멘트), `docs/dodu/OPEN_DECISIONS.md` D06·D11(2026-09-27 APPROVED), `docs/dodu/DATA_MODEL.md` 참가자 세션·자격 규칙.
+- 대안 및 선택 이유: 폴더 이름 대신 문서의 경로를 `fixture`로 고치는 방법도 있었지만, 문서 여러 곳과 Decisions가 이미 `fixtures`로 적혀 있고 복수형이 일반적이라 폴더를 바꿨습니다. 정책 원문(`SERVICE_POLICY_v2.5.md`)의 `+30분`은 원문을 고치지 않고 이전 기준이라는 차이만 기록했습니다.
+- 영향·주의점: 문서만 바뀌고 코드·`HealthController`는 바뀌지 않았습니다. 오류 코드 이름은 모두 제안이며 미확정입니다. 429·Retry-After(SCRUM-70)와 상태 전이·결과 전달·멱등 계약은 후속 티켓(SCRUM-60·62·63·64·56)에서 정합니다.
+- 검증: 문서 전용 변경이라 앱 테스트는 실행하지 않습니다.
+
 ## DEV-20261007-08 — 시간 계약 초안 추가
 
 - 날짜: 2026-10-07
