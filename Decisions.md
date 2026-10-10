@@ -1,5 +1,17 @@
 # 개발 결정 기록
 
+## DEV-20261010-01 — DB 선택(PostgreSQL)과 Flyway 핵심 체인 V1
+
+- 날짜: 2026-10-10
+- 관련 커밋 제목 / Jira: `feat: [SCRUM-10] add PostgreSQL/Flyway baseline and core schema V1` / SCRUM-10.
+- 변경 파일: DB_SELECTION.md, DATA_MODEL.md, V1__core_schema_draft.sql,
+  CoreSchemaMigrationTests.java, docker-compose.yml, .env.example,
+  pom.xml, application.yml(application.properties 대체), Decisions.md
+- 근거: `docs/dodu/DATA_MODEL.md`(논리 모델·제약 후보), `docs/dodu/OPEN_DECISIONS.md` D03·D06·D08·D10·D11, `docs/dodu/DATA_MODEL_GUIDE.md`.
+- 대안 및 선택 이유: PostgreSQL을 택한 이유는 부분 유니크 인덱스로 활성 약속 1개·Evaluating 사진 1개 제약을 DB에서 보장할 수 있기 때문입니다. MySQL은 같은 제약에 슬롯 테이블이나 잠금이 필요하고, H2는 PostgreSQL 전용 기능을 검증하지 못해 제외했습니다. V1은 약속·시도·이벤트·설문 연결의 핵심 9개 테이블과 SCRUM-22 구현이 바로 쓸 인증 4개 테이블(접근 자격·기기·세션·알림 구독)을 만들고, 권한 기록·알림 발송·사진·삭제 테이블은 계약이 정해진 뒤 추가합니다. 인증 테이블은 DATA_MODEL의 컬럼과 제약 후보 11번을 그대로 옮겼고, 재발급·세션 종료 처리 방식은 SCRUM-12·22에서 확정합니다. V1이 머지되기 전이라 V1에 포함했고, 머지 후 구조가 바뀌면 새 마이그레이션으로 고칩니다. ORM은 선택하지 않았습니다. 설정 파일은 앞으로 항목이 늘어날 것을 대비해 가독성이 좋은 `application.yml`로 바꿨고, 기존 `application.properties`는 같은 내용을 옮긴 뒤 삭제했습니다(둘 다 두면 같은 키가 properties 값으로 덮이기 때문).
+- 영향·주의점: 상태 값(enum)은 확정되지 않아 CHECK로 고정하지 않았고, 참가자당 활성 약속 1개 제약은 상태 값이 정해질 때까지 주석으로만 남겼습니다. 앱이 DB 접속 정보를 요구하게 되어 DoduApplicationTests가 Testcontainers의 PostgreSQL 컨테이너에 연결하도록 수정했습니다(TestcontainersConfiguration 추가, @Import).
+- 검증: [x] 빈 PostgreSQL 16 컨테이너에서 V1 적용, 테이블 13개 생성 확인(CoreSchemaMigrationTests), [x] 재실행 시 추가 적용 0건, 제약 위반 케이스가 의도한 제약명으로 거부됨(같은 클래스, 테스트 12개 통과, Windows·Docker Desktop·Testcontainers 2.0.5), [x] 기존 테스트 포함 전체 28개 통과(.\mvnw.cmd test, BUILD SUCCESS)
+
 ## DEV-20261007-05 — 공통 UI 통합 후 홈 화면 유지
 
 - 날짜: 2026-10-07. 관련 Jira/PR: SCRUM-68 / #7, 선행 #6.

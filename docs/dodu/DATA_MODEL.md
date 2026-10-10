@@ -8,7 +8,7 @@
 
 기준 문서는 `PRD_v2.5.md`, `SERVICE_POLICY_v2.5.md`, `FLOW_LOG_MAPPING_v2.5.md`,
 `IMPLEMENTATION_CONTEXT.md`, `OPEN_DECISIONS.md`, `ACCEPTANCE_CHECKLIST.md`이다.
-현재 저장소에는 DB 드라이버·ORM·마이그레이션 도구가 없으므로 DB 제품과 물리 타입은 DODU-19에서 결정한다.
+DB 제품(PostgreSQL)·마이그레이션 도구(Flyway)·물리 타입은 [DB_SELECTION.md](DB_SELECTION.md)에서 결정했고, 실제 스키마는 backend/src/main/resources/db/migration/의 마이그레이션이 기준이다.
 
 ## 설계 경계
 
