@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: Dodu
+  datasource:
+    url: jdbc:postgresql://localhost:${DODU_DB_PORT:5432}/${DODU_DB_NAME}
+    username: ${DODU_DB_USERNAME}
+    password: ${DODU_DB_PASSWORD}
+  flyway:
+    locations: classpath:db/migration
