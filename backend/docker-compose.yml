@@ -1,0 +1,15 @@
+# 로컬 개발용 PostgreSQL. 접속 정보는 이 파일에 쓰지 않고 backend/.env (Git 제외)에서 읽습니다.
+# 사용: cp .env.example .env 후 값을 채우고 `docker compose up -d`
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DODU_DB_NAME:?DODU_DB_NAME를 .env에 설정하세요}
+      POSTGRES_USER: ${DODU_DB_USERNAME:?DODU_DB_USERNAME을 .env에 설정하세요}
+      POSTGRES_PASSWORD: ${DODU_DB_PASSWORD:?DODU_DB_PASSWORD를 .env에 설정하세요}
+    ports:
+      - "127.0.0.1:${DODU_DB_PORT:-5432}:5432"
+    volumes:
+      - dodu-db-data:/var/lib/postgresql/data
+volumes:
+  dodu-db-data:
