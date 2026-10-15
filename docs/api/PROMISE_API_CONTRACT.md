@@ -3,6 +3,8 @@
 - 담당: 강민 / 작성일: 2026-10-15
 - 상태: **FE·BE 검토 전 기술 제안**. 아래 경로·필드·HTTP 상태·코드는 mock 작성 기준이며 실행 API가 아니다. 제품 정책을 새로 승인하지 않는다.
 - 범위: 일반 약속 생성, 자기 약속 조회, 예정 시작일시 수정, 시작 전 취소. 재생성·기술복구 생성 계약은 별도 증분으로 남긴다.
+
+후속 증분: [재생성·기술복구·멱등 처리 초안](PROMISE_RECOVERY_CONTRACT.md). 아래 ‘미정’ 표기는 최초 CRUD 증분의 상태이며 후속 문서에서 제안한 부분도 팀 인수 전까지 확정으로 보지 않는다.
 - 근거: PRD v2.5 F-01·F-06, 최신 Notion 운영정책 §1~2·§12~13, 승인 D03·D05·D06·D11, Flow·Log §1.2~1.3·§3~4.
 - 공통: [응답·오류](COMMON_API_CONTRACT.md), [시간](TIME_CONTRACT.md), [접근](../security/PARTICIPANT_ACCESS_CONTRACT.md), [화면별 인수 지도](SCREEN_API_HANDOFF.md).
 
