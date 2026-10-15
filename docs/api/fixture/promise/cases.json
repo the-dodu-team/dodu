@@ -1,0 +1,83 @@
+{
+  "contractStatus": "draft",
+  "cases": [
+    {
+      "name": "create",
+      "request": { "method": "POST", "path": "/api/promises", "body": { "taskTitle": "예시 작업", "toolType": "COMPUTER", "scheduledAt": "2026-10-15T20:00:00+09:00" } },
+      "response": {
+        "httpStatus": 201,
+        "body": {
+          "status": "success",
+          "data": { "promise": { "promiseId": "00000000-0000-4000-8000-000000000001", "taskTitle": "예시 작업", "toolType": "COMPUTER", "scheduledAt": "2026-10-15T20:00:00+09:00", "scheduledDateKst": "2026-10-15", "authWindowEndsAt": "2026-10-15T20:30:00+09:00", "lifecycleStatus": "Scheduled", "finalOutcome": null, "version": 0, "scheduleVersion": 1, "actions": { "canReschedule": true, "canCancel": true } } },
+          "serverTime": "2026-10-15T19:00:00+09:00"
+        }
+      }
+    },
+    {
+      "name": "active-empty",
+      "request": { "method": "GET", "path": "/api/promises/active" },
+      "response": { "httpStatus": 200, "body": { "status": "success", "data": { "promise": null }, "serverTime": "2026-10-15T19:00:00+09:00" } }
+    },
+    {
+      "name": "reschedule",
+      "request": { "method": "PATCH", "path": "/api/promises/00000000-0000-4000-8000-000000000001/schedule", "body": { "scheduledAt": "2026-10-16T00:30:00+09:00", "expectedVersion": 0 } },
+      "response": {
+        "httpStatus": 200,
+        "body": {
+          "status": "success",
+          "data": { "promise": { "promiseId": "00000000-0000-4000-8000-000000000001", "taskTitle": "예시 작업", "toolType": "COMPUTER", "scheduledAt": "2026-10-16T00:30:00+09:00", "scheduledDateKst": "2026-10-16", "authWindowEndsAt": "2026-10-16T01:00:00+09:00", "lifecycleStatus": "Scheduled", "finalOutcome": null, "version": 1, "scheduleVersion": 2, "actions": { "canReschedule": false, "canCancel": true } } },
+          "serverTime": "2026-10-15T19:02:00+09:00"
+        }
+      }
+    },
+    {
+      "name": "detail-after-reschedule",
+      "request": { "method": "GET", "path": "/api/promises/00000000-0000-4000-8000-000000000001" },
+      "response": {
+        "httpStatus": 200,
+        "body": {
+          "status": "success",
+          "data": { "promise": { "promiseId": "00000000-0000-4000-8000-000000000001", "taskTitle": "예시 작업", "toolType": "COMPUTER", "scheduledAt": "2026-10-16T00:30:00+09:00", "scheduledDateKst": "2026-10-16", "authWindowEndsAt": "2026-10-16T01:00:00+09:00", "lifecycleStatus": "Scheduled", "finalOutcome": null, "version": 1, "scheduleVersion": 2, "actions": { "canReschedule": false, "canCancel": true } } },
+          "serverTime": "2026-10-15T19:03:00+09:00"
+        }
+      }
+    },
+    {
+      "name": "cancel",
+      "request": { "method": "POST", "path": "/api/promises/00000000-0000-4000-8000-000000000001/cancel", "body": { "expectedVersion": 1 } },
+      "response": {
+        "httpStatus": 200,
+        "body": {
+          "status": "success",
+          "data": { "promise": { "promiseId": "00000000-0000-4000-8000-000000000001", "taskTitle": "예시 작업", "toolType": "COMPUTER", "scheduledAt": "2026-10-16T00:30:00+09:00", "scheduledDateKst": "2026-10-16", "authWindowEndsAt": "2026-10-16T01:00:00+09:00", "lifecycleStatus": "Closed", "finalOutcome": "Cancelled", "version": 2, "scheduleVersion": 2, "actions": { "canReschedule": false, "canCancel": false } } },
+          "serverTime": "2026-10-15T19:04:00+09:00"
+        }
+      }
+    },
+    {
+      "name": "too-soon",
+      "request": { "method": "POST", "path": "/api/promises", "body": { "taskTitle": "예시 작업", "toolType": "BOOK", "scheduledAt": "2026-10-15T19:02:00+09:00" } },
+      "response": { "httpStatus": 400, "body": { "status": "error", "error": { "type": "VALIDATION", "code": "PROMISE_SCHEDULE_TOO_SOON", "field": "scheduledAt", "message": "시작 시간을 조금 더 뒤로 설정해주세요." }, "serverTime": "2026-10-15T19:00:00+09:00" } }
+    },
+    {
+      "name": "session-replaced",
+      "request": { "method": "GET", "path": "/api/promises/active" },
+      "response": { "httpStatus": 401, "body": { "status": "error", "error": { "type": "UNAUTHENTICATED", "code": "SESSION_REPLACED", "message": "다른 기기에서 접속해 현재 세션이 종료되었어요." }, "serverTime": "2026-10-15T19:00:00+09:00" } }
+    },
+    {
+      "name": "not-found-or-not-owned",
+      "request": { "method": "GET", "path": "/api/promises/00000000-0000-4000-8000-000000000002" },
+      "response": { "httpStatus": 404, "body": { "status": "error", "error": { "type": "NOT_FOUND", "code": "RESOURCE_NOT_FOUND", "message": "요청한 약속을 찾을 수 없어요." }, "serverTime": "2026-10-15T19:00:00+09:00" } }
+    },
+    {
+      "name": "version-conflict",
+      "request": { "method": "POST", "path": "/api/promises/00000000-0000-4000-8000-000000000001/cancel", "body": { "expectedVersion": 0 } },
+      "response": { "httpStatus": 409, "body": { "status": "error", "error": { "type": "CONFLICT", "code": "PROMISE_VERSION_CONFLICT", "message": "약속 정보가 변경되었어요. 다시 확인해주세요." }, "serverTime": "2026-10-15T19:03:00+09:00" } }
+    },
+    {
+      "name": "technical-error",
+      "request": { "method": "GET", "path": "/api/promises/active" },
+      "response": { "httpStatus": 503, "body": { "status": "error", "error": { "type": "TECHNICAL", "code": "SERVICE_UNAVAILABLE", "message": "일시적인 오류가 발생했어요.", "retryable": true }, "serverTime": "2026-10-15T19:00:00+09:00" } }
+    }
+  ]
+}
