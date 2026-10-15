@@ -1,6 +1,6 @@
 # DODU 업무 배분 및 Jira 등록 결과
 
-대상: [DODU 백로그](https://dodu-app.atlassian.net/jira/software/projects/DODU/boards/2/backlog).
+대상: [DODU 백로그](https://dodu-mobile.atlassian.net/jira/software/projects/DODU/boards/2/backlog).
 작성 기준일: 2026-09-16. **Jira DODU-15~DODU-37 등록·검증 완료.**
 기존 에픽 4개·스토리 10개 아래에 작업 23개를 추가하고 담당자를 지정했습니다.
 차단 관계와 기존 스토리 관련 링크 75개를 재조회로 검증했습니다.
