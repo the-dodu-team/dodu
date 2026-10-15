@@ -29,14 +29,14 @@
 | NEXT06 | [BE] 철회·보관 만료·삭제 요청 처리 구현 | 문은서 | 후속 백로그 | 재추정 |
 | NEXT07 | [BE] 인증 이력·자기보고·이벤트 집계 API 세분화 | 문은서 | 후속 백로그 | 재추정 |
 
-## S1-FS01 · [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) [FS] 팀 실행환경 인수 및 원격 저장소·CI 기반 구성
+## S1-FS01 · [DODU-15](https://dodu-mobile.atlassian.net/browse/DODU-15) [FS] 팀 실행환경 인수 및 원격 저장소·CI 기반 구성
 
 - 구분: Sprint 1 후보
 - 담당 제안: mono / 리뷰: 문은서
 - 예상 작업량: 1~1.5 인일
 - 선행 로컬 티켓: 없음
 - 관련 OPEN: 없음
-- Jira 등록: [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-15](https://dodu-mobile.atlassian.net/browse/DODU-15) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: 없음
 - 관련 기존 스토리: 공통 기반
@@ -57,14 +57,14 @@
 - README.md
 - docs/DEVELOPMENT_CONVENTIONS.md: 저장소와 의존성·검증
 
-## S1-BE01 · [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) [BE] 공통 API·시간·오류 계약 초안 작성
+## S1-BE01 · [DODU-16](https://dodu-mobile.atlassian.net/browse/DODU-16) [BE] 공통 API·시간·오류 계약 초안 작성
 
 - 구분: Sprint 1 후보
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 1~1.5 인일
 - 선행 로컬 티켓: 없음
 - 관련 OPEN: D05, D08, D11
-- Jira 등록: [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-16](https://dodu-mobile.atlassian.net/browse/DODU-16) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: 없음
 - 관련 기존 스토리: 공통 기반
@@ -86,14 +86,14 @@
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §0·§8
 - docs/dodu/sources/FLOW_LOG_MAPPING_v2.5.md: §3~4
 
-## S1-FE01 · [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) [FE] 공통 화면 구조와 입력·안내 컴포넌트 구성
+## S1-FE01 · [DODU-17](https://dodu-mobile.atlassian.net/browse/DODU-17) [FE] 공통 화면 구조와 입력·안내 컴포넌트 구성
 
 - 구분: Sprint 1 후보
 - 담당 제안: Elle Yoo / 리뷰: mono
 - 예상 작업량: 1.5~2 인일
 - 선행 로컬 티켓: 없음
 - 관련 OPEN: 없음
-- Jira 등록: [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-17](https://dodu-mobile.atlassian.net/browse/DODU-17) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: 없음
 - 관련 기존 스토리: 공통 기반
@@ -114,14 +114,14 @@
 - docs/dodu/sources/PRD_v2.5.md: §19
 - docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조
 
-## S1-FS02 · [DODU-18](https://dodu-app.atlassian.net/browse/DODU-18) [FS] 프런트엔드 API 호출 기반과 mock fixture 구성
+## S1-FS02 · [DODU-18](https://dodu-mobile.atlassian.net/browse/DODU-18) [FS] 프런트엔드 API 호출 기반과 mock fixture 구성
 
 - 구분: Sprint 1 후보
 - 담당 제안: mono / 리뷰: 문은서
 - 예상 작업량: 1~1.5 인일
 - 선행 로컬 티켓: S1-BE01
 - 관련 OPEN: 없음
-- Jira 등록: [DODU-18](https://dodu-app.atlassian.net/browse/DODU-18) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-18](https://dodu-mobile.atlassian.net/browse/DODU-18) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-16
 - 관련 기존 스토리: 공통 기반
@@ -141,14 +141,14 @@
 
 - docs/DEVELOPMENT_CONVENTIONS.md: React와 TypeScript 구조·API 계약
 
-## S1-BE02 · [DODU-19](https://dodu-app.atlassian.net/browse/DODU-19) [BE] 데이터 저장 기술 선택 및 최소 마이그레이션 기반
+## S1-BE02 · [DODU-19](https://dodu-mobile.atlassian.net/browse/DODU-19) [BE] 데이터 저장 기술 선택 및 최소 마이그레이션 기반
 
 - 구분: Sprint 1 후보
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 1.5~2 인일
 - 선행 로컬 티켓: S1-BE01
 - 관련 OPEN: D06, D08, D10
-- Jira 등록: [DODU-19](https://dodu-app.atlassian.net/browse/DODU-19) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-19](https://dodu-mobile.atlassian.net/browse/DODU-19) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-6
 - 선행 Jira 키: DODU-16
 - 관련 기존 스토리: 공통 기반
@@ -170,14 +170,14 @@
 - docs/dodu/IMPLEMENTATION_CONTEXT.md: 기술설계 제안
 - docs/dodu/sources/PRD_v2.5.md: §17·§19
 
-## S1-FE02 · [DODU-20](https://dodu-app.atlassian.net/browse/DODU-20) [FE] 서비스 소개·권한 목적·데이터 안내 화면 작성
+## S1-FE02 · [DODU-20](https://dodu-mobile.atlassian.net/browse/DODU-20) [FE] 서비스 소개·권한 목적·데이터 안내 화면 작성
 
 - 구분: Sprint 1 후보
 - 담당 제안: Elle Yoo / 리뷰: mono
 - 예상 작업량: 1.5~2 인일
 - 선행 로컬 티켓: S1-FE01
 - 관련 OPEN: D03, D13
-- Jira 등록: [DODU-20](https://dodu-app.atlassian.net/browse/DODU-20) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-20](https://dodu-mobile.atlassian.net/browse/DODU-20) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-17
 - 관련 기존 스토리: DODU-2
@@ -198,14 +198,14 @@
 - docs/dodu/sources/PRD_v2.5.md: F-08
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §7·§10~15
 
-## S1-BE03 · [DODU-21](https://dodu-app.atlassian.net/browse/DODU-21) [BE] 참가자 접근·철회·삭제의 보안 계약 설계
+## S1-BE03 · [DODU-21](https://dodu-mobile.atlassian.net/browse/DODU-21) [BE] 참가자 접근·철회·삭제의 보안 계약 설계
 
 - 구분: Sprint 1 후보
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 1.5~2 인일
 - 선행 로컬 티켓: S1-BE01, S1-BE02
 - 관련 OPEN: D03, D05, D12
-- Jira 등록: [DODU-21](https://dodu-app.atlassian.net/browse/DODU-21) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-21](https://dodu-mobile.atlassian.net/browse/DODU-21) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-16, DODU-19
 - 관련 기존 스토리: DODU-2
@@ -225,14 +225,14 @@
 
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §11~13
 
-## S1-FE03 · [DODU-22](https://dodu-app.atlassian.net/browse/DODU-22) [FE] 약속 작성·내용 확인 프로토타입 구현
+## S1-FE03 · [DODU-22](https://dodu-mobile.atlassian.net/browse/DODU-22) [FE] 약속 작성·내용 확인 프로토타입 구현
 
 - 구분: Sprint 1 후보
 - 담당 제안: Elle Yoo / 리뷰: mono
 - 예상 작업량: 2~2.5 인일
 - 선행 로컬 티켓: S1-FE01, S1-FS02
 - 관련 OPEN: D06, D11
-- Jira 등록: [DODU-22](https://dodu-app.atlassian.net/browse/DODU-22) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-22](https://dodu-mobile.atlassian.net/browse/DODU-22) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-17, DODU-18
 - 관련 기존 스토리: DODU-3
@@ -254,14 +254,14 @@
 - docs/dodu/sources/PRD_v2.5.md: F-01
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §1·§4
 
-## S1-FS03 · [DODU-23](https://dodu-app.atlassian.net/browse/DODU-23) [FS] 알림·카메라·AI 연동 가능성 기술 검토
+## S1-FS03 · [DODU-23](https://dodu-mobile.atlassian.net/browse/DODU-23) [FS] 알림·카메라·AI 연동 가능성 기술 검토
 
 - 구분: Sprint 1 후보
 - 담당 제안: mono / 리뷰: 문은서
 - 예상 작업량: 1.5~2 인일
 - 선행 로컬 티켓: 없음
 - 관련 OPEN: D04, D10, D13
-- Jira 등록: [DODU-23](https://dodu-app.atlassian.net/browse/DODU-23) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-23](https://dodu-mobile.atlassian.net/browse/DODU-23) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-4
 - 선행 Jira 키: 없음
 - 관련 기존 스토리: DODU-8, DODU-9
@@ -282,14 +282,14 @@
 
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §6·§7·§14
 
-## S1-BE04 · [DODU-24](https://dodu-app.atlassian.net/browse/DODU-24) [BE] 시간·상태·로그 경계 검증 시나리오와 테스트 기반
+## S1-BE04 · [DODU-24](https://dodu-mobile.atlassian.net/browse/DODU-24) [BE] 시간·상태·로그 경계 검증 시나리오와 테스트 기반
 
 - 구분: Sprint 1 후보
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 1~1.5 인일
 - 선행 로컬 티켓: S1-BE01
 - 관련 OPEN: D04, D05, D06, D08, D10, D11
-- Jira 등록: [DODU-24](https://dodu-app.atlassian.net/browse/DODU-24) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-24](https://dodu-mobile.atlassian.net/browse/DODU-24) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-4
 - 선행 Jira 키: DODU-16
 - 관련 기존 스토리: DODU-11, DODU-14
@@ -310,14 +310,14 @@
 - docs/dodu/ACCEPTANCE_CHECKLIST.md
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §5·§8·§13
 
-## S1-FE04 · [DODU-25](https://dodu-app.atlassian.net/browse/DODU-25) [FE] 프로토타입 사용성·접근성 확인 및 UT 자료 준비
+## S1-FE04 · [DODU-25](https://dodu-mobile.atlassian.net/browse/DODU-25) [FE] 프로토타입 사용성·접근성 확인 및 UT 자료 준비
 
 - 구분: Sprint 1 후보
 - 담당 제안: Elle Yoo / 리뷰: mono
 - 예상 작업량: 1~1.5 인일
 - 선행 로컬 티켓: S1-FE02, S1-FE03
 - 관련 OPEN: 없음
-- Jira 등록: [DODU-25](https://dodu-app.atlassian.net/browse/DODU-25) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-25](https://dodu-mobile.atlassian.net/browse/DODU-25) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-20, DODU-22
 - 관련 기존 스토리: 공통 기반
@@ -337,14 +337,14 @@
 
 - docs/dodu/sources/PRD_v2.5.md: §12.1·§20
 
-## S1-FS04 · [DODU-26](https://dodu-app.atlassian.net/browse/DODU-26) [FS] Sprint 1 통합 검증·리뷰·인수 기록
+## S1-FS04 · [DODU-26](https://dodu-mobile.atlassian.net/browse/DODU-26) [FS] Sprint 1 통합 검증·리뷰·인수 기록
 
 - 구분: Sprint 1 후보
 - 담당 제안: mono / 리뷰: 문은서
 - 예상 작업량: 1~1.5 인일
 - 선행 로컬 티켓: S1-FS01, S1-FS02, S1-FS03, S1-BE02, S1-BE03, S1-BE04, S1-FE04
 - 관련 OPEN: 없음
-- Jira 등록: [DODU-26](https://dodu-app.atlassian.net/browse/DODU-26) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-26](https://dodu-mobile.atlassian.net/browse/DODU-26) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-15, DODU-18, DODU-23, DODU-19, DODU-21, DODU-24, DODU-25
 - 관련 기존 스토리: 공통 기반
@@ -365,14 +365,14 @@
 - README.md
 - docs/dodu/IMPLEMENTATION_CONTEXT.md: 제품과 Sprint 범위
 
-## DEC01 · [DODU-27](https://dodu-app.atlassian.net/browse/DODU-27) [결정] 예약 날짜·종료·정확한 시간 경계 검토
+## DEC01 · [DODU-27](https://dodu-mobile.atlassian.net/browse/DODU-27) [결정] 예약 날짜·종료·정확한 시간 경계 검토
 
 - 구분: 결정 검토
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 0.5~1 인일
 - 선행 로컬 티켓: 없음
 - 관련 OPEN: D03, D06, D11
-- Jira 등록: [DODU-27](https://dodu-app.atlassian.net/browse/DODU-27) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-27](https://dodu-mobile.atlassian.net/browse/DODU-27) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: 없음
 - 관련 기존 스토리: DODU-3, DODU-7
@@ -391,14 +391,14 @@
 
 - docs/dodu/OPEN_DECISIONS.md: D03·D06·D11
 
-## DEC02 · [DODU-28](https://dodu-app.atlassian.net/browse/DODU-28) [결정] 인증 오류·비동기 결과·철회·로그 계약 검토
+## DEC02 · [DODU-28](https://dodu-mobile.atlassian.net/browse/DODU-28) [결정] 인증 오류·비동기 결과·철회·로그 계약 검토
 
 - 구분: 결정 검토
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 0.5~1 인일
 - 선행 로컬 티켓: 없음
 - 관련 OPEN: D04, D05, D08, D10
-- Jira 등록: [DODU-28](https://dodu-app.atlassian.net/browse/DODU-28) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-28](https://dodu-mobile.atlassian.net/browse/DODU-28) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-4
 - 선행 Jira 키: 없음
 - 관련 기존 스토리: DODU-9, DODU-10, DODU-11, DODU-14
@@ -416,14 +416,14 @@
 
 - docs/dodu/OPEN_DECISIONS.md: D04·D05·D08·D10
 
-## DEC03 · [DODU-29](https://dodu-app.atlassian.net/browse/DODU-29) [결정] 자기보고 문항·자정·노출·대상 검토
+## DEC03 · [DODU-29](https://dodu-mobile.atlassian.net/browse/DODU-29) [결정] 자기보고 문항·자정·노출·대상 검토
 
 - 구분: 결정 검토
 - 담당 제안: mono / 리뷰: 문은서
 - 예상 작업량: 0.5~1 인일
 - 선행 로컬 티켓: 없음
 - 관련 OPEN: D01, D02, D07, D12
-- Jira 등록: [DODU-29](https://dodu-app.atlassian.net/browse/DODU-29) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-29](https://dodu-mobile.atlassian.net/browse/DODU-29) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-5
 - 선행 Jira 키: 없음
 - 관련 기존 스토리: DODU-13
@@ -443,14 +443,14 @@
 
 - docs/dodu/OPEN_DECISIONS.md: D01·D02·D07·D12
 
-## DEC04 · [DODU-30](https://dodu-app.atlassian.net/browse/DODU-30) [결정] 반복 지표·지원 환경·AI QA·Go 기준 검토
+## DEC04 · [DODU-30](https://dodu-mobile.atlassian.net/browse/DODU-30) [결정] 반복 지표·지원 환경·AI QA·Go 기준 검토
 
 - 구분: 결정 검토
 - 담당 제안: mono / 리뷰: 문은서
 - 예상 작업량: 0.5~1 인일
 - 선행 로컬 티켓: S1-FS03
 - 관련 OPEN: D09, D13
-- Jira 등록: [DODU-30](https://dodu-app.atlassian.net/browse/DODU-30) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-30](https://dodu-mobile.atlassian.net/browse/DODU-30) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-6
 - 선행 Jira 키: DODU-23
 - 관련 기존 스토리: DODU-14
@@ -469,14 +469,14 @@
 
 - docs/dodu/OPEN_DECISIONS.md: D09·D13
 
-## NEXT01 · [DODU-31](https://dodu-app.atlassian.net/browse/DODU-31) [BE] 참가자 식별·재발급·접근 제어 구현
+## NEXT01 · [DODU-31](https://dodu-mobile.atlassian.net/browse/DODU-31) [BE] 참가자 식별·재발급·접근 제어 구현
 
 - 구분: 후속 백로그
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 정책·기술 계약 확정 후 세분화·추정
 - 선행 로컬 티켓: S1-BE02, S1-BE03, DEC01, DEC02
 - 관련 OPEN: D03, D05
-- Jira 등록: [DODU-31](https://dodu-app.atlassian.net/browse/DODU-31) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-31](https://dodu-mobile.atlassian.net/browse/DODU-31) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-19, DODU-21, DODU-27, DODU-28
 - 관련 기존 스토리: DODU-2
@@ -495,14 +495,14 @@
 
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §12~13
 
-## NEXT02 · [DODU-32](https://dodu-app.atlassian.net/browse/DODU-32) [BE] 약속 생성·수정·취소·상태 복원 API 구현
+## NEXT02 · [DODU-32](https://dodu-mobile.atlassian.net/browse/DODU-32) [BE] 약속 생성·수정·취소·상태 복원 API 구현
 
 - 구분: 후속 백로그
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 정책·기술 계약 확정 후 세분화·추정
 - 선행 로컬 티켓: NEXT01, DEC01, DEC02
 - 관련 OPEN: D03, D05, D06, D11
-- Jira 등록: [DODU-32](https://dodu-app.atlassian.net/browse/DODU-32) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-32](https://dodu-mobile.atlassian.net/browse/DODU-32) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-31, DODU-27, DODU-28
 - 관련 기존 스토리: DODU-3, DODU-7
@@ -521,14 +521,14 @@
 
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §1~2·§8
 
-## NEXT03 · [DODU-33](https://dodu-app.atlassian.net/browse/DODU-33) [FE] 참가자·약속 API 연결 및 서버 오류 표시
+## NEXT03 · [DODU-33](https://dodu-mobile.atlassian.net/browse/DODU-33) [FE] 참가자·약속 API 연결 및 서버 오류 표시
 
 - 구분: 후속 백로그
 - 담당 제안: Elle Yoo / 리뷰: mono
 - 예상 작업량: 정책·기술 계약 확정 후 세분화·추정
 - 선행 로컬 티켓: S1-FE03, NEXT01, NEXT02
 - 관련 OPEN: D03, D05, D06, D11
-- Jira 등록: [DODU-33](https://dodu-app.atlassian.net/browse/DODU-33) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-33](https://dodu-mobile.atlassian.net/browse/DODU-33) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-1
 - 선행 Jira 키: DODU-22, DODU-31, DODU-32
 - 관련 기존 스토리: DODU-2, DODU-3, DODU-7
@@ -547,14 +547,14 @@
 
 - docs/dodu/sources/PRD_v2.5.md: F-01·F-06·F-08
 
-## NEXT04 · [DODU-34](https://dodu-app.atlassian.net/browse/DODU-34) [FS] 알림 스케줄·사진 업로드·판정 연동 세분화 및 구현
+## NEXT04 · [DODU-34](https://dodu-mobile.atlassian.net/browse/DODU-34) [FS] 알림 스케줄·사진 업로드·판정 연동 세분화 및 구현
 
 - 구분: 후속 백로그
 - 담당 제안: mono / 리뷰: 문은서
 - 예상 작업량: 정책·기술 계약 확정 후 세분화·추정
 - 선행 로컬 티켓: NEXT02, DEC02, DEC04
 - 관련 OPEN: D04, D05, D08, D10, D11, D13
-- Jira 등록: [DODU-34](https://dodu-app.atlassian.net/browse/DODU-34) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-34](https://dodu-mobile.atlassian.net/browse/DODU-34) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-4
 - 선행 Jira 키: DODU-32, DODU-28, DODU-30
 - 관련 기존 스토리: DODU-8, DODU-9, DODU-10, DODU-11
@@ -574,14 +574,14 @@
 
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §3~8
 
-## NEXT05 · [DODU-35](https://dodu-app.atlassian.net/browse/DODU-35) [FE] 인증 이력·자기보고 화면과 API 연동 세분화
+## NEXT05 · [DODU-35](https://dodu-mobile.atlassian.net/browse/DODU-35) [FE] 인증 이력·자기보고 화면과 API 연동 세분화
 
 - 구분: 후속 백로그
 - 담당 제안: Elle Yoo / 리뷰: mono
 - 예상 작업량: 정책·기술 계약 확정 후 세분화·추정
 - 선행 로컬 티켓: NEXT03, DEC03, DEC04, NEXT07
 - 관련 OPEN: D01, D02, D03, D07, D09, D12
-- Jira 등록: [DODU-35](https://dodu-app.atlassian.net/browse/DODU-35) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-35](https://dodu-mobile.atlassian.net/browse/DODU-35) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-5
 - 선행 Jira 키: DODU-33, DODU-29, DODU-30, DODU-37
 - 관련 기존 스토리: DODU-12, DODU-13
@@ -600,14 +600,14 @@
 
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §9~10
 
-## NEXT06 · [DODU-36](https://dodu-app.atlassian.net/browse/DODU-36) [BE] 철회·보관 만료·삭제 요청 처리 구현
+## NEXT06 · [DODU-36](https://dodu-mobile.atlassian.net/browse/DODU-36) [BE] 철회·보관 만료·삭제 요청 처리 구현
 
 - 구분: 후속 백로그
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 정책·기술 계약 확정 후 세분화·추정
 - 선행 로컬 티켓: NEXT01, DEC02, DEC03
 - 관련 OPEN: D03, D05, D08, D12
-- Jira 등록: [DODU-36](https://dodu-app.atlassian.net/browse/DODU-36) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-36](https://dodu-mobile.atlassian.net/browse/DODU-36) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-6
 - 선행 Jira 키: DODU-31, DODU-28, DODU-29
 - 관련 기존 스토리: DODU-2, DODU-14
@@ -626,14 +626,14 @@
 
 - docs/dodu/sources/SERVICE_POLICY_v2.5.md: §11~13
 
-## NEXT07 · [DODU-37](https://dodu-app.atlassian.net/browse/DODU-37) [BE] 인증 이력·자기보고·이벤트 집계 API 세분화
+## NEXT07 · [DODU-37](https://dodu-mobile.atlassian.net/browse/DODU-37) [BE] 인증 이력·자기보고·이벤트 집계 API 세분화
 
 - 구분: 후속 백로그
 - 담당 제안: 문은서 / 리뷰: mono
 - 예상 작업량: 정책·기술 계약 확정 후 세분화·추정
 - 선행 로컬 티켓: NEXT02, DEC01, DEC02, DEC03, DEC04
 - 관련 OPEN: D01, D02, D03, D05, D07, D08, D09, D12
-- Jira 등록: [DODU-37](https://dodu-app.atlassian.net/browse/DODU-37) / 담당·에픽·링크 검증 완료
+- Jira 등록: [DODU-37](https://dodu-mobile.atlassian.net/browse/DODU-37) / 담당·에픽·링크 검증 완료
 - 에픽: DODU-6
 - 선행 Jira 키: DODU-32, DODU-27, DODU-28, DODU-29, DODU-30
 - 관련 기존 스토리: DODU-12, DODU-13, DODU-14
