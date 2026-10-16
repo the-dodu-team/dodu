@@ -437,3 +437,11 @@
 - 근거: `V2__photo_submission_storage.sql`, SCRUM-83 완료 기준의 photo_asset/attempt 저장 요구.
 - 영향·주의점: 테스트는 Docker/Testcontainers가 없으면 실행할 수 없으며, 실행 전까지 SCRUM-83 완료 조건으로 표시하지 않는다.
 - 검증: 테스트 컴파일은 관련 단위 테스트 실행 시 성공했다. Docker 통합 실행은 환경 부재로 아직 실패 상태다.
+
+## DEV-20261016-03 — SCRUM-84 판정 결과의 소유권·현재 attempt 원자성
+
+- 날짜: 2026-10-16
+- 관련 Jira/작업: SCRUM-84
+- 결정: 결과 저장은 활성 세션의 참가자, 약속 소유자, 철회되지 않은 참가자, `Evaluating` 현재 상태를 하나의 SQL UPDATE 조건으로 확인한다. 상태가 이미 종료되었거나 철회된 경우 결과를 덮어쓰지 않는다.
+- 근거: SCRUM-84 완료 기준, D05·D08·D10, 기존 `auth_attempt` 상태 모델.
+- 주의: 실제 동시성·지연 결과·철회 경쟁은 Docker/Testcontainers 통합 검증 전까지 완료로 표시하지 않는다.
