@@ -426,3 +426,14 @@
 - 대안 및 선택 이유: 프로세스 메모리 예약만 사용하는 방법은 다중 서버에서 중복 Evaluating을 허용할 수 있어 제외했다. 사진 원문을 DB에 저장하는 방법은 민감 데이터 노출면을 늘리므로 저장 키와 검증 메타데이터만 저장한다.
 - 영향·주의점: 객체 저장소 업로드·삭제, AI 결과 저장, 지연 결과·철회 보호는 이 커밋에서 완료하지 않고 SCRUM-84~86으로 남긴다. Docker/Testcontainers가 unavailable이면 DB 통합 검증을 완료로 표시하지 않는다.
 - 검증: `PhotoSubmissionFingerprintTests` 2건 성공. 전체 DB 마이그레이션·동시성 통합 테스트는 Docker 환경에서 별도 실행한다.
+
+## DEV-20261016-02 — SCRUM-83 V2 사진 메타데이터 연결 검증 준비
+
+- 날짜: 2026-10-16
+- 관련 Jira/작업: SCRUM-83
+- 변경 파일: `backend/src/test/java/com/dodu/db/CoreSchemaMigrationTests.java`
+- 배경: V2 마이그레이션은 사진 메타데이터와 인증 시도를 연결하지만, 기존 통합 테스트는 V1 테이블 수와 기존 `auth_attempt` 제약만 확인했다.
+- 결정: Testcontainers가 실행 가능한 환경에서 `photo_asset` 생성, `auth_attempt.photo_asset_id` 연결, 하나의 사진 자산을 두 attempt가 공유하지 못하는 부분 유니크 인덱스를 검증한다.
+- 근거: `V2__photo_submission_storage.sql`, SCRUM-83 완료 기준의 photo_asset/attempt 저장 요구.
+- 영향·주의점: 테스트는 Docker/Testcontainers가 없으면 실행할 수 없으며, 실행 전까지 SCRUM-83 완료 조건으로 표시하지 않는다.
+- 검증: 테스트 컴파일은 관련 단위 테스트 실행 시 성공했다. Docker 통합 실행은 환경 부재로 아직 실패 상태다.
