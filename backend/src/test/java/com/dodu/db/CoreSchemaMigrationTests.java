@@ -98,6 +98,21 @@ class CoreSchemaMigrationTests {
     }
 
     @Test
+    void photoMetadataCanBeLinkedToExactlyOneAttempt() throws SQLException {
+        String promise = seedPromise("E2");
+        String asset = scalar("insert into photo_asset(storage_key, content_type, byte_size, sha256_hash, received_at) "
+                + "values ('storage-e2', 'image/jpeg', 4, '0000000000000000000000000000000000000000000000000000000000000000', now()) "
+                + "returning id::text");
+        String attempt = "insert into auth_attempt(promise_id, client_request_id, request_fingerprint, tool_type, "
+                + "processing_status, request_received_at, photo_asset_id) values ('" + promise
+                + "', '00000000-0000-4000-8000-0000000000e2', 'fingerprint-e2', 'laptop', 'Evaluating', now(), '"
+                + asset + "')";
+        exec(attempt);
+        assertEquals(asset, scalar("select photo_asset_id::text from auth_attempt where promise_id = '" + promise + "'"));
+        assertViolates("ux_auth_attempt_photo_asset", () -> exec(attempt.replace("0000000000e2", "0000000000e3")));
+    }
+
+    @Test
     void onlyOneSurveyIsAllowedPerPromise() throws SQLException {
         String promise = seedPromise("F");
         String insert = "insert into validation_survey(promise_id, questionnaire_version, lifecycle_status, "
@@ -224,7 +239,11 @@ class CoreSchemaMigrationTests {
     }
 
     private static String scalar(String sql) throws SQLException {
-        return scalarOrNull(sql);
+        try (Connection connection = connect();
+             Statement statement = connection.createStatement();
+             var resultSet = statement.executeQuery(sql)) {
+            return resultSet.next() ? resultSet.getString(1) : null;
+        }
     }
 
     private static long count(String sql) throws SQLException {
