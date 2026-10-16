@@ -415,3 +415,14 @@
 - 대안: 원본마다 복구 한도를 초기화하거나 모든 네트워크 retry를 새 약속으로 만드는 방식은 날짜 한도를 우회하므로 배제했다. 기술복구 약속의 재수정 가능 여부는 제품 결정이 명확하지 않아 성공 actions를 임의 고정하지 않는다.
 - 영향: 앱/DB 동작 변경 없음. 키 형식·저장·보관은 기술 제안이고 제품 승인과 구분한다. 실제 구현은 팀 계약 인수 및 DB/인증 연결 후 진행한다. 기존 원문·mock과 사용자 .vscode는 보존한다.
 - 검증: JSON6개 envelope/오류 유형, 새 ID·원본/최종 KST 날짜 연결, T+30, 개별 한도, Evaluating과 TechFailed 분리, 공식 종료 경계를 검사한다. 상대 링크·git diff --check 확인. HTTP/DB 테스트 미실행. PR8 CodeRabbit 리뷰 본문의 포커스 전환 테스트 제안은 별도 프론트 브랜치의 정확성 보완으로, 이번 계약의 보안/성능 필수 수정과는 구분해 미변경이다.
+## DEV-20261016-01 — SCRUM-83 사진 제출의 원자적 저장 경계
+
+- 날짜: 2026-10-16
+- 관련 Jira/작업: SCRUM-83, 사진 제출 API·DB 저장·원자적 판정 예약 통합
+- 변경 파일: `backend/src/main/java/com/dodu/intervention/PhotoSubmissionController.java`, `PhotoSubmissionFingerprint.java`, `backend/src/main/resources/db/migration/V2__photo_submission_storage.sql`, `docs/api/PHOTO_SUBMISSION_CONTRACT.md`
+- 배경: 기존 정책 클래스는 사진 제출 시간 경계와 attempt identity를 검증했지만, 활성 세션 소유권·DB 저장·요청 멱등·다중 서버 동시 Evaluating 제약을 HTTP 경계에 연결하지 않았다.
+- 결정: multipart 요청의 서버 수신시각과 활성 세션의 참가자 소유권을 먼저 검증하고, 외부 저장소를 가리키는 사진 메타데이터와 `auth_attempt`를 한 트랜잭션에 저장한다. 같은 약속·요청 키는 같은 fingerprint일 때 기존 attempt를 반환하고, 다른 본문은 충돌로 처리한다. `auth_attempt`의 기존 부분 유니크 인덱스를 동시 Evaluating 예약의 DB 최종 기준으로 사용한다.
+- 근거: `docs/dodu/sources/SERVICE_POLICY_v2.5.md` §3~8, `docs/dodu/OPEN_DECISIONS.md` D04·D08·D10·D11, 기존 `InterventionWindowPolicy`·`PhotoAttemptIdentityPolicy`와 SCRUM-83 완료 기준.
+- 대안 및 선택 이유: 프로세스 메모리 예약만 사용하는 방법은 다중 서버에서 중복 Evaluating을 허용할 수 있어 제외했다. 사진 원문을 DB에 저장하는 방법은 민감 데이터 노출면을 늘리므로 저장 키와 검증 메타데이터만 저장한다.
+- 영향·주의점: 객체 저장소 업로드·삭제, AI 결과 저장, 지연 결과·철회 보호는 이 커밋에서 완료하지 않고 SCRUM-84~86으로 남긴다. Docker/Testcontainers가 unavailable이면 DB 통합 검증을 완료로 표시하지 않는다.
+- 검증: `PhotoSubmissionFingerprintTests` 2건 성공. 전체 DB 마이그레이션·동시성 통합 테스트는 Docker 환경에서 별도 실행한다.
