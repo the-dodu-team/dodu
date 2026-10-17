@@ -462,6 +462,17 @@
 - 근거: D03·D04·D10·D11 및 SCRUM-86 완료 기준.
 - 주의: 실제 약속·알림·기술복구 서비스의 오래된 작업 무효화는 통합 연결 단계에서 검증한다.
 
+## DEV-20261018-02 — 전체 통합 테스트의 Spring 프록시·제약조건 검증 수정
+
+- 날짜: 2026-10-18
+- 관련 범위: Docker/Testcontainers 전체 백엔드 테스트, SCRUM-83 사진 메타데이터 연결 검증
+- 배경: Docker 재기동 후 전체 테스트에서 실제 DB 마이그레이션은 성공했지만, 사진 자산 중복 테스트가 다른 유니크 제약조건을 먼저 검증했고, Spring의 기본 CGLIB 프록시가 final Controller를 생성하지 못했다.
+- 결정: 사진 자산 중복 테스트의 두 번째 attempt에 고유 요청 fingerprint와 비Evaluating 상태를 사용해 photo_asset 연결 제약을 단독 검증한다. 트랜잭션 프록시가 필요한 Controller는 final을 제거해 Spring이 프록시화할 수 있게 한다.
+- 근거: 전체 Maven 테스트 실패 로그, Flyway V1/V2 실제 적용 로그, Spring AOP의 CGLIB 프록시 오류, V2 부분 유니크 인덱스 검증 의도.
+- 대안: 테스트에서 실패한 제약조건을 허용하거나 Spring AOP를 전역 비활성화하는 방법은 실제 무결성·트랜잭션 검증을 약화하므로 선택하지 않았다.
+- 영향: 런타임 API 계약과 DB 스키마는 변경하지 않는다. Controller는 기존 트랜잭션 경계를 유지하면서 Spring 프록시 가능한 형태가 된다.
+- 검증: Docker 기반 전체 백엔드 테스트 46건을 실행해 모두 통과했다. Flyway V1/V2가 Testcontainers PostgreSQL에 실제 적용됐고 Spring 애플리케이션 컨텍스트도 기동됐다.
+
 ## DEV-20261018-01 — AGENTS 작업 기준 최신화
 
 - 날짜: 2026-10-18

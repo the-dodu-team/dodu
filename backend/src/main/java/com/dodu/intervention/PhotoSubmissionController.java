@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,12 +24,13 @@ import com.dodu.access.AccessCredentialHasher;
 
 @RestController
 @RequestMapping("/api/promises/{promiseId}/photo-attempts")
-public final class PhotoSubmissionController {
+public class PhotoSubmissionController {
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final InterventionWindowPolicy windowPolicy;
     private final AccessCredentialHasher hasher;
 
+    @Autowired
     public PhotoSubmissionController(JdbcTemplate jdbc) {
         this(jdbc, Clock.systemUTC());
     }

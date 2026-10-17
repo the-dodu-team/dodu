@@ -109,7 +109,11 @@ class CoreSchemaMigrationTests {
                 + asset + "')";
         exec(attempt);
         assertEquals(asset, scalar("select photo_asset_id::text from auth_attempt where promise_id = '" + promise + "'"));
-        assertViolates("ux_auth_attempt_photo_asset", () -> exec(attempt.replace("0000000000e2", "0000000000e3")));
+        String duplicateAssetAttempt = attempt
+                .replace("0000000000e2", "0000000000e3")
+                .replace("'fingerprint-e2'", "'fingerprint-e3'")
+                .replace("'Evaluating', now()", "'Rejected', now()");
+        assertViolates("ux_auth_attempt_photo_asset", () -> exec(duplicateAssetAttempt));
     }
 
     @Test

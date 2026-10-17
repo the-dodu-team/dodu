@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,11 +20,12 @@ import com.dodu.access.AccessCredentialHasher;
 
 @RestController
 @RequestMapping("/api/promises/{promiseId}/photo-attempts/{attemptId}/result")
-public final class PhotoEvaluationResultController {
+public class PhotoEvaluationResultController {
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final AccessCredentialHasher hasher;
 
+    @Autowired
     public PhotoEvaluationResultController(JdbcTemplate jdbc) {
         this(jdbc, Clock.systemUTC());
     }
