@@ -66,6 +66,18 @@ public class PhotoEvaluationResultController {
         if (updated != 1) {
             throw error(HttpStatus.CONFLICT, "ATTEMPT_NOT_CURRENT_OR_WITHDRAWN");
         }
+        if (request.result() == Result.COMPLETED) {
+            jdbc.update("update promise set lifecycle_status = 'AuthCompleted', auth_completed_at = ?, "
+                            + "final_outcome = null, updated_at = ? where id = ? and participant_id = ? "
+                            + "and lifecycle_status <> 'Cancelled' and final_outcome is distinct from 'Withdrawn'",
+                    Timestamp.from(now), Timestamp.from(now), promiseId, participantId);
+        } else if (request.result() == Result.TECH_ERROR) {
+            jdbc.update("update promise set lifecycle_status = 'Closed', final_outcome = 'TechFailed', "
+                            + "closed_at = ?, updated_at = ? where id = ? and participant_id = ? "
+                            + "and lifecycle_status not in ('AuthCompleted', 'Cancelled') "
+                            + "and final_outcome is distinct from 'Withdrawn'",
+                    Timestamp.from(now), Timestamp.from(now), promiseId, participantId);
+        }
         return new ResultResponse(attemptId, promiseId, nextStatus, request.result().name(), now);
     }
 
