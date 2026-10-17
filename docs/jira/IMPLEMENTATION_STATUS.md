@@ -34,6 +34,12 @@
 - 검증: `PhotoEvaluationResultControllerIntegrationTests` 2건 통과.
 - 남은 범위: 외부 사진 저장소·AI worker, 사진 제출 멀티파트 통합 테스트, T+30 지연 결과 전체 시나리오.
 
+### SCRUM-35 / 사진 제출 멀티파트 통합 검증
+
+- 상태: 메타데이터 저장·중복 요청 범위 검증됨.
+- 검증: 실제 MockMvc multipart와 PostgreSQL에서 사진 메타데이터·attempt 연결, 동일 요청 재사용, 지문 변경 409를 확인했다(2건).
+- 남은 범위: 외부/private object storage 업로드, AI worker 연동, T+30 지연 결과 전체 시나리오.
+
 ### Docker 기반 DB 통합 검증
 
 - 상태: 완료 범위 검증됨.
