@@ -2,7 +2,45 @@
 
 이 파일은 구현 완료 범위와 Jira 추적 상태를 함께 기록한다. 구현이 완료된 항목은 관련 티켓의 완료 조건과 검증 결과를 남긴다. 원격 Jira 상태를 변경할 수 없는 경우에는 완료로 표시하지 않고 사유를 기록한다.
 
+## 2026-10-18
+
+### SCRUM-23 / 약속 생성 멱등성 계약
+
+- 상태: DB 계약 및 요청 지문 정책 구현.
+- 추가: `backend/src/main/resources/db/migration/V3__promise_creation_idempotency.sql`, `PromiseIdempotencyKeyPolicy`.
+- 검증: Testcontainers PostgreSQL에서 V1~V3 마이그레이션 적용, 관련 테스트 15건 통과.
+- 남은 범위: `PromiseController`에 키 저장·동일 요청 재사용·지문 충돌·동시 요청 처리를 연결하고 통합 시나리오를 검증한다.
+
+### SCRUM-23 / 약속 생성 컨트롤러 멱등성 연결
+
+- 상태: 구현 진행 중.
+- 추가: `POST /api/promises`가 `Idempotency-Key`를 받고 참가자별 키·요청 지문을 트랜잭션으로 예약한다.
+- 동작: 동일 키·동일 지문은 기존 약속을 반환하고, 동일 키·상이한 지문은 `409 IDEMPOTENCY_KEY_REUSED`로 거절한다.
+- 검증: `PromiseControllerIntegrationTests` 2건에서 실제 PostgreSQL 세션으로 동일 키 재요청 재사용, 본문 변경 충돌, 병렬 요청의 단일 promise 생성을 확인했다.
+- 남은 범위: 약속 수정·취소 동시성 검증.
+
+### SCRUM-35/37 / 사진 인증 JDBC 경계 보정
+
+- 상태: 연동 경계 보정.
+- 수정: 사진 제출·판정 결과 API의 PostgreSQL `timestamptz` 읽기·쓰기 변환을 명시했다.
+- 검증: 전체 백엔드 테스트 50건 통과. 사진 API의 운영 저장소·AI worker 연결은 여전히 남아 있다.
+
+### Docker 기반 DB 통합 검증
+
+- 상태: 완료 범위 검증됨.
+- 확인: Docker Desktop 엔진에서 Testcontainers PostgreSQL 16을 기동하고 Flyway V1/V2를 실제 적용했다.
+- 수정: 사진 자산 중복 제약조건 테스트가 의도한 인덱스를 단독 검증하도록 fixture를 분리했고, 트랜잭션 프록시 대상 Controller의 Spring 컨텍스트 기동을 보정했다.
+- 검증: `backend\\mvnw.cmd test` — 46건 실행, 실패 0, 오류 0.
+- 남은 범위: 제품 기능의 전체 수용조건과 외부 알림·사진 저장소·AI worker 연동은 별도 작업이다.
+- 대응 Jira: SCRUM-83 검증 범위에 반영. 티켓 완료 여부는 사진 제출 저장 기능의 전체 수용조건 충족 후 판단한다.
+
 ## 2026-10-16
+
+### 외부 기준·Jira 연결 확인 결과
+
+- Notion 기준 페이지: 확인 실패. 연결된 Notion 통합이 `object_not_found (404)`를 반환하여 `3d64c293-890d-80cc-940b-dc3cef7aa32c` 및 하위 항목의 최신 내용을 읽지 못했다.
+- Jira 연결: `codex_apps` Atlassian 연결에서 `https://dodu-mobile.atlassian.net`을 확인했다. `SCRUM-22` 조회와 보드 1의 활성 `SCRUM Sprint 3`를 확인했으며, 이후 Jira 작업은 이 연결과 cloud ID를 사용한다.
+- 참고: 별도 일반 Atlassian 연결은 `https://dodu-app.atlassian.net`을 반환하므로 사용하지 않는다.
 
 ### NEXT01 / 참가자 식별·재발급·접근 제어
 
@@ -32,7 +70,7 @@
 
 - Status: foundation confirmed.
 - Confirmed: PostgreSQL/Flyway dependencies, V1 schema, access/promise/auth/survey tables and constraints.
-- Remaining: Docker integration test and live database verification.
+- Remaining: product-level integration scenarios, concurrency/idempotency verification, and external service integration.
 
 ### Notifications and photo authentication
 
@@ -45,7 +83,9 @@
 - Status: eligibility and 48-hour response boundary implemented.
 - Added: backend/src/main/java/com/dodu/survey/ValidationSurveyPolicy.java
 - Verified: only AuthCompleted/AuthIncomplete are eligible; availableAt is inclusive and expiresAt is exclusive.
-- Remaining: survey persistence/read API and history screen integration.
+- Added: backend/src/main/java/com/dodu/survey/ValidationSurveyController.java
+- Verified: participant-scoped survey read/submit endpoints, server-side 48-hour boundary, duplicate submission conflict, and separate actual_started fields from promise authentication outcome.
+- Remaining: history screen integration and production notification wiring.
 
 ### Figma fidelity
 
@@ -55,5 +95,5 @@
 ### Ticket synchronization
 
 - Local tracking: NEXT04/NEXT05/NEXT07 and related DODU records.
-- Remote Jira: the current connected session has not been verified against the target `dodu-mobile` site; ticket creation, Sprint 3 assignment, and completion updates remain pending until that site context is active.
+- Remote Jira: the current connected session is verified against `dodu-mobile` with Sprint 3. Each implementation commit is synchronized to its matching ticket; completion is still limited to tickets whose acceptance criteria are fully satisfied and assigned to `mono`.
 - Remote tickets are not marked complete.
