@@ -24,18 +24,18 @@ Ruleset은 요금제 제한으로 API 생성에 실패했으므로 보호가 적
 
 | 로컬 초안 ID | 기존 상위 티켓 | 담당 | 작업 | 팀이 볼 결과물 | 예상 인일 |
 |---|---|---|---|---|---:|
-| SPLIT-15-1 | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | Elle Yoo | FE 개발환경 재현과 시작 안내 보완 | 환경 재현 기록과 필요한 README 수정 | 0.5 |
-| SPLIT-15-2 | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | 문은서 | BE 개발환경 재현과 통합 JAR 확인 | 백엔드·통합 JAR 재현 기록 | 0.5 |
-| SPLIT-15-3 | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | mono | 무료 사용 조건을 확인한 Dodu CI 구성 | CI 변경 PR·성공/실패 실행 링크·무료 사용 확인 기록 | 1 |
-| SPLIT-15-4 | [DODU-15](https://dodu-app.atlassian.net/browse/DODU-15) | mono | 작업별 팀 확인 절차와 결과 공유 양식 정리 | 팀 확인 절차 문서와 리뷰 기록 | 0.5 |
-| SPLIT-16-1 | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | 공통 API 응답·오류 계약 초안 | API 계약 문서 PR | 0.5 |
-| SPLIT-16-2 | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | FE 검토용 응답 fixture 작성 | fixture 파일과 FE 확인 기록 | 0.5 |
-| SPLIT-16-3 | [DODU-16](https://dodu-app.atlassian.net/browse/DODU-16) | 문은서 | 시간 표현·Clock 기술 계약 정리 | 시간 계약과 변환 예시 | 0.5 |
-| SPLIT-17-1 | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 공통 화면 틀과 반응형 배치 | 화면 변경 PR·두 화면 폭의 확인 자료 | 0.5 |
-| SPLIT-17-2 | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 버튼·입력 컴포넌트와 키보드 접근 | 컴포넌트 PR·키보드 확인 절차 | 0.75 |
-| SPLIT-17-3 | [DODU-17](https://dodu-app.atlassian.net/browse/DODU-17) | Elle Yoo | 로딩·빈 결과·오류 안내 예제 | 상태별 화면 PR·재현 절차 | 0.75 |
-| SPLIT-18-1 | [DODU-18](https://dodu-app.atlassian.net/browse/DODU-18) | mono | 공통 API 호출과 오류·취소 처리 | API 호출 기반 PR·검증 결과 | 0.75 |
-| SPLIT-18-2 | [DODU-18](https://dodu-app.atlassian.net/browse/DODU-18) | mono | 개발 fixture 연결 예제와 FE 인수 | fixture 사용 예제 PR·FE 인수 기록 | 0.75 |
+| SPLIT-15-1 | [DODU-15](https://dodu-mobile.atlassian.net/browse/DODU-15) | Elle Yoo | FE 개발환경 재현과 시작 안내 보완 | 환경 재현 기록과 필요한 README 수정 | 0.5 |
+| SPLIT-15-2 | [DODU-15](https://dodu-mobile.atlassian.net/browse/DODU-15) | 문은서 | BE 개발환경 재현과 통합 JAR 확인 | 백엔드·통합 JAR 재현 기록 | 0.5 |
+| SPLIT-15-3 | [DODU-15](https://dodu-mobile.atlassian.net/browse/DODU-15) | mono | 무료 사용 조건을 확인한 Dodu CI 구성 | CI 변경 PR·성공/실패 실행 링크·무료 사용 확인 기록 | 1 |
+| SPLIT-15-4 | [DODU-15](https://dodu-mobile.atlassian.net/browse/DODU-15) | mono | 작업별 팀 확인 절차와 결과 공유 양식 정리 | 팀 확인 절차 문서와 리뷰 기록 | 0.5 |
+| SPLIT-16-1 | [DODU-16](https://dodu-mobile.atlassian.net/browse/DODU-16) | 문은서 | 공통 API 응답·오류 계약 초안 | API 계약 문서 PR | 0.5 |
+| SPLIT-16-2 | [DODU-16](https://dodu-mobile.atlassian.net/browse/DODU-16) | 문은서 | FE 검토용 응답 fixture 작성 | fixture 파일과 FE 확인 기록 | 0.5 |
+| SPLIT-16-3 | [DODU-16](https://dodu-mobile.atlassian.net/browse/DODU-16) | 문은서 | 시간 표현·Clock 기술 계약 정리 | 시간 계약과 변환 예시 | 0.5 |
+| SPLIT-17-1 | [DODU-17](https://dodu-mobile.atlassian.net/browse/DODU-17) | Elle Yoo | 공통 화면 틀과 반응형 배치 | 화면 변경 PR·두 화면 폭의 확인 자료 | 0.5 |
+| SPLIT-17-2 | [DODU-17](https://dodu-mobile.atlassian.net/browse/DODU-17) | Elle Yoo | 버튼·입력 컴포넌트와 키보드 접근 | 컴포넌트 PR·키보드 확인 절차 | 0.75 |
+| SPLIT-17-3 | [DODU-17](https://dodu-mobile.atlassian.net/browse/DODU-17) | Elle Yoo | 로딩·빈 결과·오류 안내 예제 | 상태별 화면 PR·재현 절차 | 0.75 |
+| SPLIT-18-1 | [DODU-18](https://dodu-mobile.atlassian.net/browse/DODU-18) | mono | 공통 API 호출과 오류·취소 처리 | API 호출 기반 PR·검증 결과 | 0.75 |
+| SPLIT-18-2 | [DODU-18](https://dodu-mobile.atlassian.net/browse/DODU-18) | mono | 개발 fixture 연결 예제와 FE 인수 | fixture 사용 예제 PR·FE 인수 기록 | 0.75 |
 
 상세 범위·완료 기준·선행 작업·D-ID·기존 담당자 accountId는 [work-breakdown.json](work-breakdown.json)에 있습니다.
 새 Jira 번호를 임의로 만들지 않았습니다. 기존 상위 담당자를 일괄 변경하지 않으며, 하위 작업별 담당을 지정하는 안입니다.
