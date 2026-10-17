@@ -1,6 +1,6 @@
 # 사진 제출 API 계약 — SCRUM-83
 
-- 상태: 구현 증분 1. 사진 바이트의 외부 저장소 업로드 계약과 AI 판정 결과 쓰기는 후속 티켓에서 다룬다.
+- 상태: 메타데이터 저장·중복 제출·판정 결과 상태 전이 구현 증분 검증 완료. 사진 바이트의 외부 저장소 업로드와 AI worker 계약은 후속 티켓에서 다룬다.
 - 담당: 강민
 - 기준: `InterventionWindowPolicy`, `PhotoAttemptIdentityPolicy`, `PhotoEvaluationReservations`, D04·D08·D10·D11.
 
@@ -41,5 +41,5 @@
 ## 검증 범위
 
 - 단위 테스트: 동일 입력 fingerprint 안정성, MIME/tool type 변경 시 fingerprint 변경.
-- DB 통합 테스트: V2 마이그레이션, 사진 메타데이터 연결, 다중 서버 동시 insert는 Docker/Testcontainers 사용 가능 시 수행한다.
+- DB 통합 테스트: V2/V3 포함 Flyway 마이그레이션, 사진 메타데이터 연결, 실제 multipart 중복 제출을 Docker/Testcontainers로 검증했다.
 - AI adapter, 객체 저장소 업로드·삭제, 판정 결과 반영, 지연 결과·철회 보호는 SCRUM-84·85·86에서 검증한다.

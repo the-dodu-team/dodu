@@ -4,7 +4,7 @@
 - 상태: **인수 범위 초안**. 엔드포인트·DTO·전송 방식의 확정 명세나 구현 완료 증거가 아니다.
 - 디자인: [최종 Draft 핸드오프](https://www.figma.com/design/T35RV2O1XmpFqDLlEH8UVl/?node-id=1-1662)
 - 기준: [공통 응답 계약](COMMON_API_CONTRACT.md), [시간 계약](TIME_CONTRACT.md), [접근 계약](../security/PARTICIPANT_ACCESS_CONTRACT.md), [승인 결정](../dodu/OPEN_DECISIONS.md).
-- 최신 운영정책: [Notion 정책 페이지](https://app.notion.com/p/3e780115466280188446daadeb64a950)의 `Service_Operation_Policy_v2.5_Baseline_LOCKED_20261013_UPDATED.md` 첨부. 지정 기준 페이지 `3d64c293890d80cc940bdc3cef7aa32c`는 접근 실패하여 그 하위 전체의 최신성은 확인하지 못했다.
+- 최신 운영정책: [Notion 정책 페이지](https://app.notion.com/p/3e780115466280188446daadeb64a950)의 `Service_Operation_Policy_v2.5_Baseline_LOCKED_20261013_UPDATED.md` 첨부. 과거 인수인계에 있던 유효하지 않은 페이지 ID는 기준으로 사용하지 않는다.
 
 ## 1. 화면·계약·개발 책임
 
@@ -52,10 +52,12 @@ S07은 이 초안에서 별도 API 책임을 배정하지 않았다. 화면 번�
 
 2026-10-16 후속 증분: [사진 제출 API 계약 및 저장 메타데이터](PHOTO_SUBMISSION_CONTRACT.md)를 추가했다. SCRUM-83의 첫 구현 단위로 활성 세션·소유권·T/T+30 경계·요청 키 멱등·동시 Evaluating DB 제약을 연결한다.
 
+2026-10-18 구현 대조: 약속 생성·수정·취소는 SCRUM-23에서 실제 HTTP·PostgreSQL 동시성까지 검증했고, 사진 제출·판정 결과는 SCRUM-35/37에서 메타데이터 저장·중복 요청·AuthCompleted/TechFailed 전이를 검증했다. 실제 응답은 각 Controller의 record DTO이며, 이 문서의 공통 envelope는 FE/BE 합의 전 제안으로 유지한다.
+
 - [x] 화면 묶음별 서버 담당·UI 티켓·실제 연결 티켓 분리
 - [x] 계약 공통 인수 체크리스트와 정책/기술 합의 경계 정리
 - [ ] S07 화면 책임 확인
-- [ ] 모듈별 요청·응답·오류·멱등 계약 및 fixtures 작성
+- [~] 모듈별 요청·응답·오류·멱등 계약 및 fixtures 작성 — 약속·사진 증분 작성, 인증 이력·알림·집계 범위 미완료
 - [ ] 모듈별 FE/BE 인수와 승인 근거 연결
 
 앱 코드·DB 마이그레이션·실제 권한 요청은 이 증분에서 변경하지 않는다.

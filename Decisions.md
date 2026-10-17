@@ -546,6 +546,15 @@
 - 영향: 현재 구현은 저장소 메타데이터 경계까지 담당하고 실제 object storage 업로드 worker는 후속 연동 범위로 남긴다.
 - 검증: Docker/Testcontainers PostgreSQL 기반 멀티파트 제출 통합 테스트 2건과 전체 백엔드 테스트 56건이 모두 통과했다.
 
+## DEV-20261018-11 — 화면 API 인수 문서의 구현 상태 대조
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-76 화면별 API·상태·오류·fixture 인수 문서
+- 결정: 실제 HTTP/DB 검증이 끝난 약속·사진 범위만 구현 완료로 표시하고, 공통 envelope·FE 리뷰·알림·집계·자기보고 전체 계약은 제안/미완료로 남긴다. 폐기된 외부 기준 ID는 문서에서 제거한다.
+- 근거: 현재 Controller·Flyway V1~V3·MockMvc/Testcontainers 결과와 SCRUM-76 완료 기준.
+- 영향: 문서가 현재 코드와 검증 증거를 반영하지만 SCRUM-76 자체는 FE/BE 인수와 남은 모듈 계약 전까지 완료 처리하지 않는다.
+- 검증: 전체 backend test 56건, frontend build, git diff --check를 실행했다.
+
 ## DEV-20261018-01 — AGENTS 작업 기준 최신화
 
 - 날짜: 2026-10-18
