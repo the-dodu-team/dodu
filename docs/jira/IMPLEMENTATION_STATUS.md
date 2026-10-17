@@ -40,6 +40,12 @@
 - 검증: 실제 MockMvc multipart와 PostgreSQL에서 사진 메타데이터·attempt 연결, 동일 요청 재사용, 지문 변경 409를 확인했다(2건).
 - 남은 범위: 외부/private object storage 업로드, AI worker 연동, T+30 지연 결과 전체 시나리오.
 
+### 전체 검증 회귀 결과
+
+- `backend\\mvnw.cmd test`: 56건 실행, 실패 0, 오류 0. Docker/Testcontainers PostgreSQL과 Flyway V1~V3 포함.
+- `frontend\\npm run build`: 성공.
+- `git diff --check`: 성공.
+
 ### Docker 기반 DB 통합 검증
 
 - 상태: 완료 범위 검증됨.
