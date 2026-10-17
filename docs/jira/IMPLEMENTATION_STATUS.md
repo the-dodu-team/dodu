@@ -134,3 +134,9 @@
 - Local tracking: NEXT04/NEXT05/NEXT07 and related DODU records.
 - Remote Jira: the current connected session is verified against `dodu-mobile` with Sprint 3. Each implementation commit is synchronized to its matching ticket; completion is still limited to tickets whose acceptance criteria are fully satisfied and assigned to `mono`.
 - Remote tickets are not marked complete.
+### SCRUM-84 / accepted receipt guard for delayed result
+
+- Status: partial implementation verified; full external AI/result lifecycle remains open.
+- Added: result persistence now requires the server-stored `valid_received_at` to satisfy `scheduled_at <= valid_received_at < scheduled_at + 30 minutes`, while still checking participant ownership, withdrawal, and `Evaluating` state in the same update.
+- Verified: an accepted attempt can be completed after the intervention window, while an attempt without a valid accepted receipt remains `Evaluating` and returns 409.
+- Remaining: external AI worker callback authentication, previous-attempt/withdrawal race matrix, and production result delivery are not complete.

@@ -575,3 +575,11 @@
 - 영향: Flyway V4 `access_failure_rate_limit`와 `POST /api/access/enter`의 실제 DB 연결이 추가됐다. 원시 접근 코드와 자격정보는 저장하지 않는다.
 - 남은 작업: 신뢰 프록시의 실제 IP 전달, 공유 저장소 보존·정리 상한, 봇 검증 제공자와 공격/오차단 QA는 운영 결정 및 별도 검증으로 남긴다.
 - 검증: Docker/Testcontainers PostgreSQL 기반 rate limiter·Flyway·HTTP 429 통합 테스트 통과. 전체 백엔드 회귀 테스트는 다음 커밋 전 재실행한다.
+## DEV-20261018-13 — 사진 결과 저장의 정상 접수 증거 조건
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-84 판정 결과 API의 지연 결과 저장
+- 결정: 결과 callback은 요청 도착시각이 아니라 DB의 `valid_received_at`만 근거로 허용한다. 해당 시각이 `scheduled_at <= valid_received_at < scheduled_at + 30분`을 만족하고 attempt가 `Evaluating`이며 참가자가 철회되지 않은 경우에만 결과를 원자적으로 반영한다. 따라서 마감 후에도 정상 접수된 동일 attempt의 결과는 허용하고, 유효 접수 증거가 없는 결과는 409로 거절한다.
+- 근거: D04·D08·D10·D11 및 SCRUM-84 완료 기준. 알림·callback 도착 자체는 사진 접수 증거가 아니다.
+- 영향: 새 사진 제출 창은 기존처럼 닫힌 상태를 유지하며, 결과 저장 경계만 서버 기록 기반으로 강화한다.
+- 검증: Docker/Testcontainers PostgreSQL MockMvc에서 마감 후 정상 접수 결과와 `valid_received_at` 없는 결과를 각각 확인했다.

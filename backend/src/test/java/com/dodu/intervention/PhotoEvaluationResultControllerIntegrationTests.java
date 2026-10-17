@@ -55,7 +55,7 @@ class PhotoEvaluationResultControllerIntegrationTests {
         jdbc.update("insert into participant_device(id, participant_id, device_key_hash, lifecycle_status, first_seen_at, last_seen_at) values (?, ?, ?, 'Active', ?, ?)", deviceId, participantId, "result-device-" + suffix, Timestamp.from(now), Timestamp.from(now));
         jdbc.update("insert into participant_session(id, participant_id, participant_device_id, session_token_hash, lifecycle_status, issued_at, last_seen_at, expires_at) values (?, ?, ?, ?, 'Active', ?, ?, ?)", sessionId, participantId, deviceId, tokenHash, Timestamp.from(now), Timestamp.from(now), Timestamp.from(now.plusSeconds(3_600)));
         jdbc.update("insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst, tool_type, creation_type, lifecycle_status) values (?, ?, ?, 'result task', ?, ?, 'laptop', 'NORMAL', 'Evaluating')", promiseId, participantId, policyId, Timestamp.from(now.minusSeconds(300)), now.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate());
-        jdbc.update("insert into auth_attempt(id, promise_id, client_request_id, request_fingerprint, tool_type, processing_status, request_received_at) values (?, ?, ?, 'result-fingerprint', 'laptop', 'Evaluating', ?)", attemptId, promiseId, UUID.randomUUID(), Timestamp.from(now.minusSeconds(120)));
+        jdbc.update("insert into auth_attempt(id, promise_id, client_request_id, request_fingerprint, tool_type, processing_status, request_received_at, valid_received_at) values (?, ?, ?, 'result-fingerprint', 'laptop', 'Evaluating', ?, ?)", attemptId, promiseId, UUID.randomUUID(), Timestamp.from(now.minusSeconds(120)), Timestamp.from(now.minusSeconds(120)));
         authorization = "Bearer " + token;
     }
 
@@ -77,6 +77,17 @@ class PhotoEvaluationResultControllerIntegrationTests {
                         .content("{\"result\":\"TECH_ERROR\",\"technicalErrorType\":\"WORKER_TIMEOUT\"}"))
                 .andExpect(status().isOk());
         assertEquals("TechFailed", jdbc.queryForObject("select final_outcome from promise where id = ?", String.class, promiseId));
+    }
+
+    @Test
+    void resultWithoutValidAcceptedReceiptCannotBeApplied() throws Exception {
+        jdbc.update("update auth_attempt set valid_received_at = null where id = ?", attemptId);
+        mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"COMPLETED\"}"))
+                .andExpect(status().isConflict());
+        assertEquals("Evaluating", jdbc.queryForObject("select processing_status from auth_attempt where id = ?", String.class, attemptId));
     }
 
     @TestConfiguration(proxyBeanMethods = false)

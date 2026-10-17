@@ -43,3 +43,6 @@
 - 단위 테스트: 동일 입력 fingerprint 안정성, MIME/tool type 변경 시 fingerprint 변경.
 - DB 통합 테스트: V2/V3 포함 Flyway 마이그레이션, 사진 메타데이터 연결, 실제 multipart 중복 제출을 Docker/Testcontainers로 검증했다.
 - AI adapter, 객체 저장소 업로드·삭제, 판정 결과 반영, 지연 결과·철회 보호는 SCRUM-84·85·86에서 검증한다.
+## Delayed result guard
+
+An evaluation result may be stored after the T+30 submission window only when the attempt has a server-stored valid receipt in `scheduled_at <= valid_received_at < scheduled_at + 30 minutes`. Missing or out-of-window receipts, non-current `Evaluating` attempts, and withdrawn participants are rejected with a conflict. This does not authorize a new photo submission after T+30.
