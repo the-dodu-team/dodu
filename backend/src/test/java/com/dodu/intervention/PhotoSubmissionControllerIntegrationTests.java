@@ -1,0 +1,100 @@
+package com.dodu.intervention;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.UUID;
+
+import com.dodu.access.AccessCredentialHasher;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+
+@SpringBootTest
+@Import(PhotoSubmissionControllerIntegrationTests.ContainerConfiguration.class)
+class PhotoSubmissionControllerIntegrationTests {
+    @Autowired private WebApplicationContext context;
+    @Autowired private JdbcTemplate jdbc;
+
+    private MockMvc mockMvc;
+    private String authorization;
+    private UUID promiseId;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        String suffix = UUID.randomUUID().toString();
+        String token = "photo-token-" + suffix;
+        String tokenHash = new AccessCredentialHasher("local-development-only").hash(token);
+        UUID studyId = UUID.randomUUID();
+        UUID participantId = UUID.randomUUID();
+        UUID deviceId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        UUID policyId = UUID.randomUUID();
+        promiseId = UUID.randomUUID();
+        Instant now = Instant.now();
+        jdbc.update("insert into study_period(id, code) values (?, ?)", studyId, "photo-study-" + suffix);
+        jdbc.update("insert into policy_version(id, version, effective_from) values (?, ?, ?)", policyId, "photo-policy-" + suffix, Timestamp.from(now.minusSeconds(60)));
+        jdbc.update("insert into participant(id, study_period_id, public_code, lifecycle_status, enrolled_at) values (?, ?, ?, 'Active', ?)", participantId, studyId, "photo-" + suffix, Timestamp.from(now));
+        jdbc.update("insert into participant_device(id, participant_id, device_key_hash, lifecycle_status, first_seen_at, last_seen_at) values (?, ?, ?, 'Active', ?, ?)", deviceId, participantId, "photo-device-" + suffix, Timestamp.from(now), Timestamp.from(now));
+        jdbc.update("insert into participant_session(id, participant_id, participant_device_id, session_token_hash, lifecycle_status, issued_at, last_seen_at, expires_at) values (?, ?, ?, ?, 'Active', ?, ?, ?)", sessionId, participantId, deviceId, tokenHash, Timestamp.from(now), Timestamp.from(now), Timestamp.from(now.plusSeconds(3_600)));
+        jdbc.update("insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst, tool_type, creation_type, lifecycle_status) values (?, ?, ?, 'photo task', ?, ?, 'laptop', 'NORMAL', 'Scheduled')", promiseId, participantId, policyId, Timestamp.from(now.minusSeconds(300)), now.atZone(ZoneId.of("Asia/Seoul")).toLocalDate());
+        authorization = "Bearer " + token;
+    }
+
+    @Test
+    void submissionStoresMetadataAndRepeatingSameRequestReturnsSameAttempt() throws Exception {
+        UUID requestId = UUID.randomUUID();
+        MockMultipartFile photo = new MockMultipartFile("photo", "sample.jpg", "image/jpeg", new byte[] {1, 2, 3});
+        var first = mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(photo).param("clientRequestId", requestId.toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.attemptId").exists()).andReturn();
+        String attemptId = first.getResponse().getContentAsString().replaceFirst(".*\\\"attemptId\\\":\\\"([^\\\"]+)\\\".*", "$1");
+        mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "sample.jpg", "image/jpeg", new byte[] {1, 2, 3}))
+                        .param("clientRequestId", requestId.toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.attemptId").value(attemptId));
+        assertEquals(1, jdbc.queryForObject("select count(*) from auth_attempt where promise_id = ?", Integer.class, promiseId));
+        assertEquals(1, jdbc.queryForObject("select count(*) from photo_asset", Integer.class));
+    }
+
+    @Test
+    void repeatingRequestIdWithDifferentPhotoConflicts() throws Exception {
+        UUID requestId = UUID.randomUUID();
+        mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "sample.jpg", "image/jpeg", new byte[] {1, 2, 3}))
+                        .param("clientRequestId", requestId.toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+        mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "other.jpg", "image/jpeg", new byte[] {9, 8, 7}))
+                        .param("clientRequestId", requestId.toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isConflict());
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class ContainerConfiguration {
+        @Bean @ServiceConnection
+        PostgreSQLContainer postgresContainer() { return new PostgreSQLContainer("postgres:16-alpine"); }
+    }
+}
