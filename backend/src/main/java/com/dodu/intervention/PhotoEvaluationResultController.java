@@ -2,6 +2,7 @@ package com.dodu.intervention;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -61,7 +62,7 @@ public class PhotoEvaluationResultController {
                                 where p.id = a.promise_id and p.participant_id = ?
                                   and part.lifecycle_status <> 'Withdrawn')
                 """, nextStatus, request.result().name(), request.rejectionReason(),
-                request.technicalErrorType(), request.modelVersion(), now, attemptId, promiseId, participantId);
+                request.technicalErrorType(), request.modelVersion(), Timestamp.from(now), attemptId, promiseId, participantId);
         if (updated != 1) {
             throw error(HttpStatus.CONFLICT, "ATTEMPT_NOT_CURRENT_OR_WITHDRAWN");
         }
