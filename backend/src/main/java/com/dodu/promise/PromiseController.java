@@ -31,8 +31,21 @@ public class PromiseController {
     @PostMapping
     @Transactional
     public PromiseResponse create(@RequestHeader("Authorization") String authorization,
+                                  @RequestHeader("Idempotency-Key") String idempotencyKey,
                                   @RequestBody PromiseRequest request) {
         UUID participantId = participantFromBearer(authorization);
+        String key = PromiseIdempotencyKeyPolicy.validate(idempotencyKey);
+        String fingerprint = PromiseIdempotencyKeyPolicy.fingerprint(request);
+        CreationRequest existing = findCreationRequest(participantId, key);
+        if (existing != null) {
+            if (!existing.requestFingerprint().equals(fingerprint)) {
+                throw error(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED");
+            }
+            if (existing.promiseId() == null) {
+                throw error(HttpStatus.CONFLICT, "PROMISE_CREATION_IN_PROGRESS");
+            }
+            return findPromise(existing.promiseId(), participantId);
+        }
         Instant now = Instant.now();
         StudyRow study = jdbc.query("select s.id, s.intervention_ends_at from study_period s "
                         + "join participant p on p.study_period_id = s.id where p.id = ?",
@@ -45,13 +58,39 @@ public class PromiseController {
         var date = valid.scheduledAt().atZone(KST).toLocalDate();
         if (jdbc.queryForObject("select count(*) from promise_date_usage where participant_id = ? and scheduled_date_kst = ?", Long.class, participantId, date) > 0)
             throw error(HttpStatus.CONFLICT, "PROMISE_DATE_ALREADY_USED");
+        jdbc.update("insert into promise_creation_request(participant_id, idempotency_key, request_fingerprint) "
+                        + "values (?, ?, ?) on conflict (participant_id, idempotency_key) do nothing",
+                participantId, key, fingerprint);
+        existing = findCreationRequest(participantId, key);
+        if (existing == null) throw error(HttpStatus.CONFLICT, "PROMISE_CREATION_CONFLICT");
+        if (!existing.requestFingerprint().equals(fingerprint)) throw error(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED");
+        if (existing.promiseId() != null) return findPromise(existing.promiseId(), participantId);
         UUID policyId = jdbc.queryForObject("select id from policy_version where effective_from <= ? order by effective_from desc limit 1", UUID.class, now);
         if (policyId == null) throw error(HttpStatus.SERVICE_UNAVAILABLE, "POLICY_UNAVAILABLE");
         UUID promiseId = UUID.randomUUID();
         jdbc.update("insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst, tool_type, creation_type, lifecycle_status, auth_window_ends_at) values (?, ?, ?, ?, ?, ?, ?, 'NORMAL', 'Scheduled', ?)",
                 promiseId, participantId, policyId, valid.taskTitle(), valid.scheduledAt(), date, valid.toolType().name(), valid.scheduledAt().plusSeconds(1800));
         jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?)", participantId, date, now);
+        jdbc.update("update promise_creation_request set promise_id = ? where participant_id = ? and idempotency_key = ?",
+                promiseId, participantId, key);
         return new PromiseResponse(promiseId, valid.taskTitle(), valid.toolType(), valid.scheduledAt(), 0);
+    }
+
+    private CreationRequest findCreationRequest(UUID participantId, String key) {
+        return jdbc.query("select promise_id, request_fingerprint from promise_creation_request "
+                        + "where participant_id = ? and idempotency_key = ?",
+                rs -> rs.next() ? new CreationRequest(
+                        rs.getObject("promise_id", UUID.class), rs.getString("request_fingerprint")) : null,
+                participantId, key);
+    }
+
+    private PromiseResponse findPromise(UUID promiseId, UUID participantId) {
+        return jdbc.query("select id, task_title, tool_type, scheduled_at, row_version from promise "
+                        + "where id = ? and participant_id = ?",
+                rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")),
+                        rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")),
+                        rs.getObject("scheduled_at", Instant.class), rs.getLong("row_version")) : null,
+                promiseId, participantId);
     }
 
     @GetMapping("/active")
@@ -122,4 +161,5 @@ public class PromiseController {
     public record PromiseResponse(UUID promiseId, String taskTitle, PromiseRequestValidator.ToolType toolType, Instant scheduledAt, long version) { }
     private record StudyRow(UUID id, Instant interventionEndsAt) { }
     private record PromiseRow(String taskTitle, PromiseRequestValidator.ToolType toolType, Instant scheduledAt, long rowVersion, int scheduleVersion, String lifecycleStatus) { }
+    private record CreationRequest(UUID promiseId, String requestFingerprint) { }
 }
