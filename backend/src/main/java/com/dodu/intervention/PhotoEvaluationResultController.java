@@ -60,6 +60,8 @@ public class PhotoEvaluationResultController {
                  where a.id = ? and a.promise_id = ? and a.processing_status = 'Evaluating'
                    and exists (select 1 from promise p join participant part on part.id = p.participant_id
                                 where p.id = a.promise_id and p.participant_id = ?
+                                  and a.valid_received_at >= p.scheduled_at
+                                  and a.valid_received_at < p.scheduled_at + interval '30 minutes'
                                   and part.lifecycle_status <> 'Withdrawn')
                 """, nextStatus, request.result().name(), request.rejectionReason(),
                 request.technicalErrorType(), request.modelVersion(), Timestamp.from(now), attemptId, promiseId, participantId);
