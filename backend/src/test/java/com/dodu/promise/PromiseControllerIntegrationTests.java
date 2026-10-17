@@ -155,6 +155,25 @@ class PromiseControllerIntegrationTests {
         }
     }
 
+    @Test
+    void concurrentCancelsCloseOnlyOnce() throws Exception {
+        String body = "{\"taskTitle\":\"cancel task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
+                + scheduledAt + "\"}";
+        String promiseId = extractPromiseId(createWithKey(body, "create-cancel-1"));
+        String cancel = "{\"expectedVersion\":0}";
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> first = executor.submit(() -> cancel(promiseId, cancel));
+            Future<Integer> second = executor.submit(() -> cancel(promiseId, cancel));
+            int firstStatus = first.get();
+            int secondStatus = second.get();
+            assertTrue((firstStatus == 200 && secondStatus == 409) || (firstStatus == 409 && secondStatus == 200));
+            assertEquals(1, jdbc.queryForObject("select count(*) from promise where lifecycle_status = 'Closed' and final_outcome = 'Cancelled'", Integer.class));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     private String createWithKey(String body, String key) throws Exception {
         return mockMvc.perform(post("/api/promises")
                         .header("Authorization", authorization)
@@ -171,6 +190,14 @@ class PromiseControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andReturn();
+    }
+
+    private int cancel(String promiseId, String body) throws Exception {
+        return mockMvc.perform(post("/api/promises/" + promiseId + "/cancel")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andReturn().getResponse().getStatus();
     }
 
     private static String extractPromiseId(String response) {
