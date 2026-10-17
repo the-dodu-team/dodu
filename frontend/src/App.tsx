@@ -8,6 +8,10 @@ import { getKstDateKey } from './features/promise/formatPromise'
 import { reconfirmPromise } from './features/promise/reconfirmPromise'
 import type { PromiseDraft, PreviewPromise } from './features/promise/types'
 import ParticipantEntryPage from './features/access/ParticipantEntryPage'
+import OnboardingIntroPage from './features/onboarding/OnboardingIntroPage'
+import OnboardingInstallPage from './features/onboarding/OnboardingInstallPage'
+import OnboardingNotificationPage from './features/onboarding/OnboardingNotificationPage'
+import OnboardingCameraPage from './features/onboarding/OnboardingCameraPage'
 
 export default function App() {
   const preview = import.meta.env.DEV
@@ -16,6 +20,54 @@ export default function App() {
 
   if (preview === 'entry') {
     return <ParticipantEntryPreview />
+  }
+
+  if (preview === 'onboarding') {
+    return (
+      <OnboardingIntroPage
+        totalSteps={4}
+        onClose={() => {
+          window.location.search = '?preview=entry'
+        }}
+        onNext={() => {
+          window.location.search = '?preview=onboarding-install'
+        }}
+      />
+    )
+  }
+
+  if (preview === 'onboarding-install') {
+    return (
+      <OnboardingInstallPage
+        onClose={() => {
+          window.location.search = '?preview=entry'
+        }}
+      />
+    )
+  }
+
+  if (preview === 'onboarding-notification') {
+    return (
+      <OnboardingNotificationPage
+        onClose={() => {
+          window.location.search = '?preview=entry'
+        }}
+      />
+    )
+  }
+
+  if (
+    preview === 'onboarding-camera' ||
+    preview === 'onboarding-camera-complete'
+  ) {
+    return (
+      <OnboardingCameraPage
+        isComplete={preview === 'onboarding-camera-complete'}
+        onClose={() => {
+          window.location.search = '?preview=entry'
+        }}
+      />
+    )
   }
 
   return <HomePrototype />
