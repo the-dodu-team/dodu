@@ -18,7 +18,8 @@
 - 동작: 동일 키·동일 지문은 기존 약속을 반환하고, 동일 키·상이한 지문은 `409 IDEMPOTENCY_KEY_REUSED`로 거절한다.
 - 검증: `PromiseControllerIntegrationTests` 2건에서 실제 PostgreSQL 세션으로 동일 키 재요청 재사용, 본문 변경 충돌, 병렬 요청의 단일 promise 생성을 확인했다.
 - 검증: `PromiseControllerIntegrationTests` 3건에서 병렬 약속 수정의 200·409 낙관적 잠금 결과와 변경된 KST 날짜 원장 1건을 확인했다.
-- 남은 범위: 약속 취소 동시성 및 응답 envelope 정리.
+- 검증: `PromiseControllerIntegrationTests` 4건에서 병렬 취소의 200·409 결과와 단일 `Closed/Cancelled` 상태를 확인했다.
+- 남은 범위: 응답 envelope 정리.
 
 ### SCRUM-35/37 / 사진 인증 JDBC 경계 보정
 
