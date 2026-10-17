@@ -1,13 +1,16 @@
 package com.dodu.promise;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.sql.Timestamp;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -57,7 +60,7 @@ class PromiseControllerIntegrationTests {
         scheduledAt = OffsetDateTime.now(ZoneOffset.UTC).plusHours(2).withNano(0).toString();
 
         jdbc.update("insert into study_period(id, code, intervention_ends_at) values (?, ?, ?)",
-                studyId, "integration-" + suffix, timestamp(now.plusSeconds(86_400)));
+                studyId, "integration-" + suffix, timestamp(now.plusSeconds(172_800)));
         jdbc.update("insert into policy_version(version, effective_from) values (?, ?)",
                 "integration-" + suffix, timestamp(now.minusSeconds(60)));
         UUID policyId = jdbc.queryForObject("select id from policy_version where version = ?", UUID.class,
@@ -125,6 +128,33 @@ class PromiseControllerIntegrationTests {
         }
     }
 
+    @Test
+    void concurrentReschedulesUseOptimisticVersionAndRecordNewDate() throws Exception {
+        String body = "{\"taskTitle\":\"reschedule task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
+                + scheduledAt + "\"}";
+        String promiseId = extractPromiseId(createWithKey(body, "create-reschedule-1"));
+        String nextScheduledAt = OffsetDateTime.now(ZoneOffset.UTC).plusHours(26).withNano(0).toString();
+        String reschedule = "{\"scheduledAt\":\"" + nextScheduledAt + "\",\"expectedVersion\":0}";
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<org.springframework.test.web.servlet.MvcResult> first = executor.submit(() -> reschedule(promiseId, reschedule));
+            Future<org.springframework.test.web.servlet.MvcResult> second = executor.submit(() -> reschedule(promiseId, reschedule));
+            var firstResult = first.get();
+            var secondResult = second.get();
+            int firstStatus = firstResult.getResponse().getStatus();
+            int secondStatus = secondResult.getResponse().getStatus();
+            if (firstStatus != 200 && secondStatus != 200) {
+                throw new AssertionError(firstResult.getResponse().getContentAsString() + " / "
+                        + secondResult.getResponse().getContentAsString());
+            }
+            assertTrue((firstStatus == 200 && secondStatus == 409) || (firstStatus == 409 && secondStatus == 200));
+            var nextDate = OffsetDateTime.parse(nextScheduledAt).toInstant().atZone(ZoneId.of("Asia/Seoul")).toLocalDate();
+            assertEquals(1, jdbc.queryForObject("select count(*) from promise_date_usage where scheduled_date_kst = ?", Integer.class, nextDate));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     private String createWithKey(String body, String key) throws Exception {
         return mockMvc.perform(post("/api/promises")
                         .header("Authorization", authorization)
@@ -133,6 +163,14 @@ class PromiseControllerIntegrationTests {
                         .content(body))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
+    }
+
+    private org.springframework.test.web.servlet.MvcResult reschedule(String promiseId, String body) throws Exception {
+        return mockMvc.perform(patch("/api/promises/" + promiseId + "/schedule")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andReturn();
     }
 
     private static String extractPromiseId(String response) {

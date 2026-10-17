@@ -119,9 +119,15 @@ public class PromiseController {
         StudyRow study = jdbc.query("select intervention_ends_at from study_period s join participant p on p.study_period_id = s.id where p.id = ?",
                 rs -> rs.next() ? new StudyRow(null, rs.getTimestamp("intervention_ends_at").toInstant()) : null, participantId);
         var valid = validator.validate(new PromiseRequestValidator.Request(current.taskTitle(), current.toolType(), request.scheduledAt()), now, study.interventionEndsAt());
-        if (valid.scheduledAt().atZone(KST).toLocalDate().equals(current.scheduledAt().atZone(KST).toLocalDate()) &&
-                jdbc.queryForObject("select count(*) from promise_date_usage where participant_id = ? and scheduled_date_kst = ?", Long.class, participantId, valid.scheduledAt().atZone(KST).toLocalDate()) > 0)
+        var currentDate = current.scheduledAt().atZone(KST).toLocalDate();
+        var nextDate = valid.scheduledAt().atZone(KST).toLocalDate();
+        if (!nextDate.equals(currentDate) &&
+                jdbc.queryForObject("select count(*) from promise_date_usage where participant_id = ? and scheduled_date_kst = ?", Long.class, participantId, nextDate) > 0)
             throw error(HttpStatus.CONFLICT, "PROMISE_DATE_ALREADY_USED");
+        if (!nextDate.equals(currentDate)) {
+            jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?)",
+                    participantId, nextDate, timestamp(now));
+        }
         jdbc.update("insert into promise_schedule_revision(promise_id, version, previous_scheduled_at, new_scheduled_at, previous_date_kst, new_date_kst, changed_at) values (?, ?, ?, ?, ?, ?, ?)",
                 promiseId, current.scheduleVersion(), timestamp(current.scheduledAt()), timestamp(valid.scheduledAt()), current.scheduledAt().atZone(KST).toLocalDate(), valid.scheduledAt().atZone(KST).toLocalDate(), timestamp(now));
         jdbc.update("update promise set scheduled_at = ?, scheduled_date_kst = ?, auth_window_ends_at = ?, schedule_version = schedule_version + 1, row_version = row_version + 1, updated_at = ? where id = ? and row_version = ?",
