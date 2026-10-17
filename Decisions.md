@@ -544,7 +544,7 @@
 - 결정: 실제 멀티파트 사진 제출에서 DB에는 사진 메타데이터와 auth attempt 연결만 저장하고, 동일 `clientRequestId`·동일 지문은 기존 attempt를 반환하며 지문이 다르면 409로 거절한다.
 - 근거: 원시 사진 바이트를 로그·DB에 남기지 않고 외부/비공개 저장소 경계를 유지해야 하며, 중복 제출이 새 인증 시도를 만들면 안 된다는 정책.
 - 영향: 현재 구현은 저장소 메타데이터 경계까지 담당하고 실제 object storage 업로드 worker는 후속 연동 범위로 남긴다.
-- 검증: Docker/Testcontainers PostgreSQL 기반 멀티파트 제출 통합 테스트 2건 통과.
+- 검증: Docker/Testcontainers PostgreSQL 기반 멀티파트 제출 통합 테스트 2건과 전체 백엔드 테스트 56건이 모두 통과했다.
 
 ## DEV-20261018-01 — AGENTS 작업 기준 최신화
 
