@@ -46,6 +46,14 @@
 - `frontend\\npm run build`: 성공.
 - `git diff --check`: 성공.
 
+### SCRUM-76 / 화면 API 인수 문서 대조
+
+- 상태: 구현 대조 진행 중.
+- 갱신: `docs/api/SCREEN_API_HANDOFF.md`, `PROMISE_API_CONTRACT.md`, `PHOTO_SUBMISSION_CONTRACT.md`에 실제 약속·사진 API 검증 범위를 반영하고 폐기된 외부 기준 ID를 제거했다.
+- 검증 완료: 약속 생성·수정·취소, 사진 제출·판정 결과의 HTTP/DB 동시성 범위.
+- 남은 범위: FE/BE 역할별 인수 리뷰, 공통 response envelope 합의, 알림·집계·자기보고 전체 모듈 계약과 fixture.
+- Jira: SCRUM-76은 남은 인수 조건으로 진행 중이며 완료 처리하지 않는다.
+
 ### Docker 기반 DB 통합 검증
 
 - 상태: 완료 범위 검증됨.
