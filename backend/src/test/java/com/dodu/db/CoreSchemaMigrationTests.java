@@ -41,17 +41,17 @@ class CoreSchemaMigrationTests {
 
     @Test
     void coreAndAuthTablesAreCreatedOnCleanDatabase() throws SQLException {
-        assertEquals(15, count("select count(*) from information_schema.tables where table_schema = 'public' "
+        assertEquals(16, count("select count(*) from information_schema.tables where table_schema = 'public' "
                 + "and table_name in ('study_period','policy_version','participant','promise',"
                 + "'promise_schedule_revision','promise_date_usage','auth_attempt','validation_survey','behavior_event',"
                 + "'access_credential','participant_device','participant_session','notification_subscription','photo_asset',"
-                + "'promise_creation_request')"));
+                + "'promise_creation_request','access_failure_rate_limit')"));
     }
 
     @Test
     void rerunningMigrationAppliesNothingMore() {
         assertEquals(0, flyway.migrate().migrationsExecuted);
-        assertEquals(3, flyway.info().applied().length);
+        assertEquals(4, flyway.info().applied().length);
     }
 
     @Test

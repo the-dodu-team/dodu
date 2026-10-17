@@ -564,3 +564,14 @@
 - 대안: 확인되지 않은 3d64 페이지를 계속 기준으로 유지하는 방법은 잘못된 차단과 문서 오인을 만들 수 있어 배제했다.
 - 영향: 이후 작업은 저장소 원문과 접근 가능한 Notion 문서, dodu-mobile Jira를 사용한다. 원격 기준 문서가 별도로 제공되면 해당 링크와 승인 상태를 다시 확인한다.
 - 검증: AGENTS.md를 UTF-8로 재작성하고 링크·Jira 사이트·담당자·검증·커밋·동기화 규칙을 확인했다. git diff --check를 실행했다.
+- 검증: AGENTS.md를 UTF-8로 재작성하고 문서·Jira·검증 규칙을 확인했다. git diff --check를 실행했다.
+
+## DEV-20261018-12 — 참가자 코드 IP 임시 차단의 DB 연결
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-70 참가자 코드 실패 누적·임시 차단 API 연결
+- 결정: 참가자 코드 실패를 IP별 PostgreSQL 행으로 저장하고, 10분 창에서 10회 실패 시 15분 차단한다. 차단 중 요청은 기존 만료시각을 연장하지 않으며, 성공한 진입은 해당 IP의 실패 행을 초기화한다. 차단 응답은 `429`, `TOO_MANY_ATTEMPTS`, `Retry-After`로 통일한다.
+- 근거: SCRUM-70 승인 기준과 `docs/security/PARTICIPANT_ACCESS_CONTRACT.md`의 IP 차단 규칙. 예외·실패 상태를 인증 미완료와 섞지 않고 사진 재시도에는 적용하지 않는다.
+- 영향: Flyway V4 `access_failure_rate_limit`와 `POST /api/access/enter`의 실제 DB 연결이 추가됐다. 원시 접근 코드와 자격정보는 저장하지 않는다.
+- 남은 작업: 신뢰 프록시의 실제 IP 전달, 공유 저장소 보존·정리 상한, 봇 검증 제공자와 공격/오차단 QA는 운영 결정 및 별도 검증으로 남긴다.
+- 검증: Docker/Testcontainers PostgreSQL 기반 rate limiter·Flyway·HTTP 429 통합 테스트 통과. 전체 백엔드 회귀 테스트는 다음 커밋 전 재실행한다.

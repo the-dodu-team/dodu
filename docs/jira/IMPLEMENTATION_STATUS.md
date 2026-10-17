@@ -93,6 +93,14 @@
 - 기존 티켓의 완료 조건을 모두 충족하면 검증 결과와 함께 완료 처리한다.
 - 원격 Jira가 연결되지 않거나 권한이 없으면 로컬 문서에 대상 티켓·남은 범위·차단 사유를 기록하고 완료 처리하지 않는다.
 
+### SCRUM-70 / participant-code IP temporary block
+
+- Status: implementation connected; operational hardening remains.
+- Added: Flyway V4 `access_failure_rate_limit`, `AccessFailureRateLimiter`, and `/api/access/enter` integration.
+- Verified: 10 failures within 10 minutes produce a 15-minute block, blocked requests do not extend expiry, successful access clears the row, and HTTP 429 includes `TOO_MANY_ATTEMPTS` plus `Retry-After`.
+- Remaining: trusted-proxy source-IP configuration, bounded cleanup/retention, bot-token provider selection and validation, multi-node attack/false-positive QA.
+- Jira: SCRUM-70 remains in progress; it is not complete until the external deployment and bot-validation criteria are decided and verified.
+
 ## 3-6 Progress
 
 ### Database and migrations

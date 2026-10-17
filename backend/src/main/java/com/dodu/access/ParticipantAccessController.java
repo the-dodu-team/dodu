@@ -1,8 +1,11 @@
 package com.dodu.access;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,35 +20,44 @@ import org.springframework.web.server.ResponseStatusException;
 public class ParticipantAccessController {
     private final JdbcTemplate jdbc;
     private final AccessCredentialHasher hasher;
+    private final AccessFailureRateLimiter failureRateLimiter;
 
-    public ParticipantAccessController(JdbcTemplate jdbc) {
+    @Autowired
+    public ParticipantAccessController(JdbcTemplate jdbc, AccessFailureRateLimiter failureRateLimiter) {
         this.jdbc = jdbc;
+        this.failureRateLimiter = failureRateLimiter;
         this.hasher = new AccessCredentialHasher(System.getenv().getOrDefault(
                 "DODU_CREDENTIAL_PEPPER", "local-development-only"));
     }
 
     @PostMapping("/enter")
     @Transactional
-    public AccessResponse enter(@RequestBody AccessRequest request) {
+    public ResponseEntity<AccessResponse> enter(@RequestBody AccessRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = httpRequest.getRemoteAddr();
+        AccessFailureRateLimiter.BlockStatus blockStatus = failureRateLimiter.status(ipAddress);
+        if (blockStatus.blocked()) {
+            throw blocked(blockStatus.blockedUntil());
+        }
         if (request == null || blank(request.code()) || blank(request.deviceKey())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "code and deviceKey are required");
         }
 
         ParticipantRow participant = findParticipant(request.code());
         if (participant == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "ACCESS_REQUIRED");
+            return rejectFailure(ipAddress);
         }
 
         CredentialRow credential = jdbc.query("select secret_hash, revoked_at, expires_at from access_credential "
                         + "where participant_id = ? order by issued_at desc limit 1",
                 rs -> rs.next() ? new CredentialRow(rs.getString("secret_hash"),
-                        rs.getObject("revoked_at", Instant.class), rs.getObject("expires_at", Instant.class)) : null,
+                        rs.getTimestamp("revoked_at") == null ? null : rs.getTimestamp("revoked_at").toInstant(),
+                        rs.getTimestamp("expires_at") == null ? null : rs.getTimestamp("expires_at").toInstant()) : null,
                 participant.id());
         Instant now = Instant.now();
         if (credential == null || credential.revokedAt() != null ||
                 (credential.expiresAt() != null && !now.isBefore(credential.expiresAt())) ||
                 !hasher.matches(request.code(), credential.secretHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "ACCESS_REQUIRED");
+            return rejectFailure(ipAddress);
         }
 
         String deviceHash = hasher.hash(request.deviceKey());
@@ -58,14 +70,28 @@ public class ParticipantAccessController {
         jdbc.update("insert into participant_session(participant_id, participant_device_id, session_token_hash, "
                         + "lifecycle_status, issued_at, last_seen_at, expires_at) values (?, ?, ?, 'Active', ?, ?, ?)",
                 participant.id(), deviceId, tokenHash, now, now, participant.accessEndsAt());
-        return new AccessResponse(rawToken, participant.id().toString(), participant.accessEndsAt());
+        failureRateLimiter.clear(ipAddress);
+        return ResponseEntity.ok(new AccessResponse(rawToken, participant.id().toString(), participant.accessEndsAt()));
+    }
+
+    private ResponseEntity<AccessResponse> rejectFailure(String ipAddress) {
+        AccessFailureRateLimiter.BlockStatus status = failureRateLimiter.recordFailure(ipAddress);
+        if (status.blocked()) {
+            throw blocked(status.blockedUntil());
+        }
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "ACCESS_REQUIRED");
+    }
+
+    private static AccessBlockedException blocked(Instant blockedUntil) {
+        return new AccessBlockedException(blockedUntil);
     }
 
     private ParticipantRow findParticipant(String code) {
-        return jdbc.query("select id, access_ends_at, lifecycle_status from participant p "
+        return jdbc.query("select p.id, s.access_ends_at, p.lifecycle_status from participant p "
                         + "join study_period s on s.id = p.study_period_id where p.public_code = ?",
                 rs -> rs.next() ? new ParticipantRow(UUID.fromString(rs.getString("id")),
-                        rs.getObject("access_ends_at", Instant.class), rs.getString("lifecycle_status")) : null, code);
+                        rs.getTimestamp("access_ends_at") == null ? null : rs.getTimestamp("access_ends_at").toInstant(),
+                        rs.getString("lifecycle_status")) : null, code);
     }
 
     private UUID upsertDevice(UUID participantId, String deviceHash, Instant now) {
@@ -86,6 +112,21 @@ public class ParticipantAccessController {
 
     public record AccessRequest(String code, String deviceKey) { }
     public record AccessResponse(String accessToken, String participantId, Instant accessEndsAt) { }
+    public static final class AccessBlockedException extends RuntimeException {
+        private final Instant blockedUntil;
+
+        AccessBlockedException(Instant blockedUntil) { this.blockedUntil = blockedUntil; }
+        Instant blockedUntil() { return blockedUntil; }
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(AccessBlockedException.class)
+    ResponseEntity<ErrorResponse> accessBlocked(AccessBlockedException exception) {
+        long retryAfter = Math.max(1, exception.blockedUntil().getEpochSecond() - Instant.now().getEpochSecond());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(retryAfter))
+                .body(new ErrorResponse("TOO_MANY_ATTEMPTS"));
+    }
+    public record ErrorResponse(String code) { }
     private record ParticipantRow(UUID id, Instant accessEndsAt, String lifecycleStatus) { }
     private record CredentialRow(String secretHash, Instant revokedAt, Instant expiresAt) { }
 }
