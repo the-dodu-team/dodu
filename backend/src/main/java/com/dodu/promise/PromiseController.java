@@ -2,6 +2,7 @@ package com.dodu.promise;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.sql.Timestamp;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -50,7 +51,7 @@ public class PromiseController {
         StudyRow study = jdbc.query("select s.id, s.intervention_ends_at from study_period s "
                         + "join participant p on p.study_period_id = s.id where p.id = ?",
                 rs -> rs.next() ? new StudyRow(UUID.fromString(rs.getString("id")),
-                        rs.getObject("intervention_ends_at", Instant.class)) : null, participantId);
+                        rs.getTimestamp("intervention_ends_at").toInstant()) : null, participantId);
         if (study == null || study.interventionEndsAt() == null) throw error(HttpStatus.CONFLICT, "STUDY_PERIOD_ENDED");
         var valid = validator.validate(new PromiseRequestValidator.Request(request.taskTitle(), request.toolType(), request.scheduledAt()), now, study.interventionEndsAt());
         if (jdbc.queryForObject("select count(*) from promise where participant_id = ? and lifecycle_status in ('Scheduled','AuthAvailable','Evaluating')", Long.class, participantId) > 0)
@@ -65,12 +66,12 @@ public class PromiseController {
         if (existing == null) throw error(HttpStatus.CONFLICT, "PROMISE_CREATION_CONFLICT");
         if (!existing.requestFingerprint().equals(fingerprint)) throw error(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED");
         if (existing.promiseId() != null) return findPromise(existing.promiseId(), participantId);
-        UUID policyId = jdbc.queryForObject("select id from policy_version where effective_from <= ? order by effective_from desc limit 1", UUID.class, now);
+        UUID policyId = jdbc.queryForObject("select id from policy_version where effective_from <= ? order by effective_from desc limit 1", UUID.class, timestamp(now));
         if (policyId == null) throw error(HttpStatus.SERVICE_UNAVAILABLE, "POLICY_UNAVAILABLE");
         UUID promiseId = UUID.randomUUID();
         jdbc.update("insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst, tool_type, creation_type, lifecycle_status, auth_window_ends_at) values (?, ?, ?, ?, ?, ?, ?, 'NORMAL', 'Scheduled', ?)",
-                promiseId, participantId, policyId, valid.taskTitle(), valid.scheduledAt(), date, valid.toolType().name(), valid.scheduledAt().plusSeconds(1800));
-        jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?)", participantId, date, now);
+                promiseId, participantId, policyId, valid.taskTitle(), timestamp(valid.scheduledAt()), date, valid.toolType().name(), timestamp(valid.scheduledAt().plusSeconds(1800)));
+        jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?)", participantId, date, timestamp(now));
         jdbc.update("update promise_creation_request set promise_id = ? where participant_id = ? and idempotency_key = ?",
                 promiseId, participantId, key);
         return new PromiseResponse(promiseId, valid.taskTitle(), valid.toolType(), valid.scheduledAt(), 0);
@@ -89,7 +90,7 @@ public class PromiseController {
                         + "where id = ? and participant_id = ?",
                 rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")),
                         rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")),
-                        rs.getObject("scheduled_at", Instant.class), rs.getLong("row_version")) : null,
+                        rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version")) : null,
                 promiseId, participantId);
     }
 
@@ -97,7 +98,7 @@ public class PromiseController {
     public PromiseResponse active(@RequestHeader("Authorization") String authorization) {
         UUID participantId = participantFromBearer(authorization);
         return jdbc.query("select id, task_title, tool_type, scheduled_at, row_version from promise where participant_id = ? and lifecycle_status in ('Scheduled','AuthAvailable','Evaluating') order by scheduled_at limit 1",
-                rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")), rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")), rs.getObject("scheduled_at", Instant.class), rs.getLong("row_version")) : null, participantId);
+                rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")), rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")), rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version")) : null, participantId);
     }
 
     @PatchMapping("/{promiseId}/schedule")
@@ -108,7 +109,7 @@ public class PromiseController {
         PromiseRow current = jdbc.query("select task_title, tool_type, scheduled_at, row_version, schedule_version, lifecycle_status "
                         + "from promise where id = ? and participant_id = ? for update",
                 rs -> rs.next() ? new PromiseRow(rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")),
-                        rs.getObject("scheduled_at", Instant.class), rs.getLong("row_version"), rs.getInt("schedule_version"), rs.getString("lifecycle_status")) : null,
+                        rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version"), rs.getInt("schedule_version"), rs.getString("lifecycle_status")) : null,
                 promiseId, participantId);
         if (current == null) throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
         Instant now = Instant.now();
@@ -116,15 +117,15 @@ public class PromiseController {
         if (!current.scheduledAt().isAfter(now) || !current.lifecycleStatus().equals("Scheduled")) throw error(HttpStatus.CONFLICT, "PROMISE_NOT_MODIFIABLE");
         if (current.scheduleVersion() >= 2) throw error(HttpStatus.CONFLICT, "PROMISE_RESCHEDULE_LIMIT_REACHED");
         StudyRow study = jdbc.query("select intervention_ends_at from study_period s join participant p on p.study_period_id = s.id where p.id = ?",
-                rs -> rs.next() ? new StudyRow(null, rs.getObject("intervention_ends_at", Instant.class)) : null, participantId);
+                rs -> rs.next() ? new StudyRow(null, rs.getTimestamp("intervention_ends_at").toInstant()) : null, participantId);
         var valid = validator.validate(new PromiseRequestValidator.Request(current.taskTitle(), current.toolType(), request.scheduledAt()), now, study.interventionEndsAt());
         if (valid.scheduledAt().atZone(KST).toLocalDate().equals(current.scheduledAt().atZone(KST).toLocalDate()) &&
                 jdbc.queryForObject("select count(*) from promise_date_usage where participant_id = ? and scheduled_date_kst = ?", Long.class, participantId, valid.scheduledAt().atZone(KST).toLocalDate()) > 0)
             throw error(HttpStatus.CONFLICT, "PROMISE_DATE_ALREADY_USED");
         jdbc.update("insert into promise_schedule_revision(promise_id, version, previous_scheduled_at, new_scheduled_at, previous_date_kst, new_date_kst, changed_at) values (?, ?, ?, ?, ?, ?, ?)",
-                promiseId, current.scheduleVersion(), current.scheduledAt(), valid.scheduledAt(), current.scheduledAt().atZone(KST).toLocalDate(), valid.scheduledAt().atZone(KST).toLocalDate(), now);
+                promiseId, current.scheduleVersion(), timestamp(current.scheduledAt()), timestamp(valid.scheduledAt()), current.scheduledAt().atZone(KST).toLocalDate(), valid.scheduledAt().atZone(KST).toLocalDate(), timestamp(now));
         jdbc.update("update promise set scheduled_at = ?, scheduled_date_kst = ?, auth_window_ends_at = ?, schedule_version = schedule_version + 1, row_version = row_version + 1, updated_at = ? where id = ? and row_version = ?",
-                valid.scheduledAt(), valid.scheduledAt().atZone(KST).toLocalDate(), valid.scheduledAt().plusSeconds(1800), now, promiseId, request.expectedVersion());
+                timestamp(valid.scheduledAt()), valid.scheduledAt().atZone(KST).toLocalDate(), timestamp(valid.scheduledAt().plusSeconds(1800)), timestamp(now), promiseId, request.expectedVersion());
         return new PromiseResponse(promiseId, current.taskTitle(), current.toolType(), valid.scheduledAt(), request.expectedVersion() + 1);
     }
 
@@ -134,7 +135,7 @@ public class PromiseController {
                                   @PathVariable UUID promiseId, @RequestBody VersionRequest request) {
         UUID participantId = participantFromBearer(authorization);
         PromiseRow current = jdbc.query("select task_title, tool_type, scheduled_at, row_version, schedule_version, lifecycle_status from promise where id = ? and participant_id = ? for update",
-                rs -> rs.next() ? new PromiseRow(rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")), rs.getObject("scheduled_at", Instant.class), rs.getLong("row_version"), rs.getInt("schedule_version"), rs.getString("lifecycle_status")) : null,
+                rs -> rs.next() ? new PromiseRow(rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")), rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version"), rs.getInt("schedule_version"), rs.getString("lifecycle_status")) : null,
                 promiseId, participantId);
         if (current == null) throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
         if (current.rowVersion() != request.expectedVersion()) throw error(HttpStatus.CONFLICT, "PROMISE_VERSION_CONFLICT");
@@ -154,6 +155,8 @@ public class PromiseController {
     }
 
     private static ResponseStatusException error(HttpStatus status, String code) { return new ResponseStatusException(status, code); }
+
+    private static Timestamp timestamp(Instant instant) { return Timestamp.from(instant); }
 
     public record PromiseRequest(String taskTitle, PromiseRequestValidator.ToolType toolType, String scheduledAt) { }
     public record RescheduleRequest(String scheduledAt, long expectedVersion) { }
