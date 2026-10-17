@@ -27,6 +27,13 @@
 - 수정: 사진 제출·판정 결과 API의 PostgreSQL `timestamptz` 읽기·쓰기 변환을 명시했다.
 - 검증: 전체 백엔드 테스트 50건 통과. 사진 API의 운영 저장소·AI worker 연결은 여전히 남아 있다.
 
+### SCRUM-35/37 / 사진 판정 결과 상태 전이
+
+- 상태: 구현 진행 중.
+- 추가: `COMPLETED` 결과의 `AuthCompleted`, `TECH_ERROR` 결과의 `Closed/TechFailed` 전이와 취소·철회·중복 완료 보호.
+- 검증: `PhotoEvaluationResultControllerIntegrationTests` 2건 통과.
+- 남은 범위: 외부 사진 저장소·AI worker, 사진 제출 멀티파트 통합 테스트, T+30 지연 결과 전체 시나리오.
+
 ### Docker 기반 DB 통합 검증
 
 - 상태: 완료 범위 검증됨.
