@@ -3,12 +3,16 @@ package com.dodu.promise;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.sql.Timestamp;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.dodu.access.AccessCredentialHasher;
 import org.junit.jupiter.api.BeforeEach;
@@ -99,6 +103,40 @@ class PromiseControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(different))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void concurrentSameKeyRequestsCreateOnePromise() throws Exception {
+        String body = "{\"taskTitle\":\"concurrent task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
+                + scheduledAt + "\"}";
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<String> first = executor.submit(() -> createWithKey(body, "create-concurrent-1"));
+            Future<String> second = executor.submit(() -> createWithKey(body, "create-concurrent-1"));
+            String firstId = extractPromiseId(first.get());
+            String secondId = extractPromiseId(second.get());
+            assertEquals(firstId, secondId);
+            assertEquals(1, jdbc.queryForObject("select count(*) from promise_creation_request where idempotency_key = ?", Integer.class,
+                    "create-concurrent-1"));
+            assertEquals(1, jdbc.queryForObject("select count(*) from promise where task_title = ?", Integer.class,
+                    "concurrent task"));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private String createWithKey(String body, String key) throws Exception {
+        return mockMvc.perform(post("/api/promises")
+                        .header("Authorization", authorization)
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+    }
+
+    private static String extractPromiseId(String response) {
+        return response.replaceFirst(".*\\\"promiseId\\\":\\\"([^\\\"]+)\\\".*", "$1");
     }
 
     private static Timestamp timestamp(Instant instant) {
