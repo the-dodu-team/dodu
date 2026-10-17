@@ -19,7 +19,7 @@ import com.dodu.access.AccessCredentialHasher;
 
 @RestController
 @RequestMapping("/api/promises")
-public final class PromiseController {
+public class PromiseController {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private final JdbcTemplate jdbc;
     private final PromiseRequestValidator validator = new PromiseRequestValidator();

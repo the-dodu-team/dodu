@@ -14,7 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/access")
-public final class ParticipantAccessController {
+public class ParticipantAccessController {
     private final JdbcTemplate jdbc;
     private final AccessCredentialHasher hasher;
 
