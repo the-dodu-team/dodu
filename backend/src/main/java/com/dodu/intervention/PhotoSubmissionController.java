@@ -2,6 +2,7 @@ package com.dodu.intervention;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -65,7 +66,7 @@ public class PhotoSubmissionController {
                   from promise p
                  where p.id = ? and p.participant_id = ?
                 """, rs -> rs.next()
-                        ? new PromiseRow(rs.getObject("scheduled_at", Instant.class), rs.getString("lifecycle_status"))
+                        ? new PromiseRow(rs.getTimestamp("scheduled_at").toInstant(), rs.getString("lifecycle_status"))
                         : null, promiseId, participantId);
         if (promise == null) {
             throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
@@ -93,7 +94,7 @@ public class PhotoSubmissionController {
                  where promise_id = ? and client_request_id = ?
                 """, rs -> rs.next() ? new ExistingAttempt(
                         rs.getObject("id", UUID.class), rs.getString("request_fingerprint"),
-                        rs.getString("processing_status"), rs.getObject("request_received_at", Instant.class)) : null,
+                        rs.getString("processing_status"), rs.getTimestamp("request_received_at").toInstant()) : null,
                 promiseId, clientRequestId);
         if (existing != null) {
             if (!existing.requestFingerprint().equals(fingerprint)) {
@@ -107,13 +108,13 @@ public class PhotoSubmissionController {
         jdbc.update("""
                 insert into photo_asset(id, storage_key, content_type, byte_size, sha256_hash, received_at)
                 values (?, ?, ?, ?, ?, ?)
-                """, assetId, UUID.randomUUID(), contentType, content.length, sha256(content), now);
+                """, assetId, UUID.randomUUID(), contentType, content.length, sha256(content), timestamp(now));
         int insertedCount = jdbc.update("""
                 insert into auth_attempt(id, promise_id, client_request_id, request_fingerprint, tool_type,
                                          processing_status, request_received_at, valid_received_at, photo_asset_id)
                 values (?, ?, ?, ?, ?, 'Evaluating', ?, ?, ?)
                 on conflict (promise_id, client_request_id) do nothing
-                """, UUID.randomUUID(), promiseId, clientRequestId, fingerprint, toolType, now, now, assetId);
+                """, UUID.randomUUID(), promiseId, clientRequestId, fingerprint, toolType, timestamp(now), timestamp(now), assetId);
 
         ExistingAttempt inserted = jdbc.query("""
                 select id, request_fingerprint, processing_status, request_received_at
@@ -121,7 +122,7 @@ public class PhotoSubmissionController {
                  where promise_id = ? and client_request_id = ?
                 """, rs -> rs.next() ? new ExistingAttempt(
                         rs.getObject("id", UUID.class), rs.getString("request_fingerprint"),
-                        rs.getString("processing_status"), rs.getObject("request_received_at", Instant.class)) : null,
+                        rs.getString("processing_status"), rs.getTimestamp("request_received_at").toInstant()) : null,
                 promiseId, clientRequestId);
         if (inserted == null || !inserted.requestFingerprint().equals(fingerprint)) {
             throw error(HttpStatus.CONFLICT, "PHOTO_REQUEST_KEY_REUSED");
@@ -153,6 +154,8 @@ public class PhotoSubmissionController {
     private static ResponseStatusException error(HttpStatus status, String code) {
         return new ResponseStatusException(status, code);
     }
+
+    private static Timestamp timestamp(Instant instant) { return Timestamp.from(instant); }
 
     private static String sha256(byte[] content) {
         try {

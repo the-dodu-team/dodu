@@ -502,6 +502,15 @@
 - 영향: 제품 코드 변경 없이 실제 Spring MockMvc와 PostgreSQL Testcontainer 검증 범위를 확장한다.
 - 검증: `PromiseControllerIntegrationTests` 2건 통과. 병렬 요청 결과의 promiseId가 동일하고 생성 요청·약속 행이 각각 1개임을 확인했다.
 
+## DEV-20261018-06 — PostgreSQL 시각값의 JDBC 변환 명시
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-23 약속 API 및 SCRUM-35/37 사진 인증 API의 실제 PostgreSQL 연동
+- 결정: PostgreSQL `timestamptz` 읽기는 `Timestamp.toInstant()`로, 쓰기는 `Timestamp.from(Instant)`로 명시해 드라이버의 암시적 Java time 변환에 의존하지 않는다.
+- 근거: MockMvc·Testcontainers 통합 실행에서 PostgreSQL 드라이버가 `Instant` 직접 변환·바인딩을 거절한 실제 오류.
+- 영향: API 상태·시간 의미는 유지하고 JDBC 경계만 명시적으로 보정한다. 민감한 사진 데이터는 테스트 출력에 기록하지 않는다.
+- 검증: Docker 기반 전체 백엔드 테스트 50건, 실패 0·오류 0.
+
 ## DEV-20261018-01 — AGENTS 작업 기준 최신화
 
 - 날짜: 2026-10-18
