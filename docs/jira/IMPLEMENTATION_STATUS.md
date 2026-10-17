@@ -4,22 +4,22 @@
 
 ## 2026-10-18
 
-### SCRUM-23 / 약속 생성 멱등성 계약
+### SCRUM-23 / 약속 생성·수정·취소 API
 
-- 상태: DB 계약 및 요청 지문 정책 구현.
+- 상태: 완료 조건 충족, Jira 완료 처리.
 - 추가: `backend/src/main/resources/db/migration/V3__promise_creation_idempotency.sql`, `PromiseIdempotencyKeyPolicy`.
 - 검증: Testcontainers PostgreSQL에서 V1~V3 마이그레이션 적용, 관련 테스트 15건 통과.
-- 남은 범위: `PromiseController`에 키 저장·동일 요청 재사용·지문 충돌·동시 요청 처리를 연결하고 통합 시나리오를 검증한다.
+- 완료: 멱등성 키·지문 충돌·병렬 생성, 수정 row_version 충돌·KST 날짜 원장, 병렬 취소 단일 종료를 검증했다.
 
 ### SCRUM-23 / 약속 생성 컨트롤러 멱등성 연결
 
-- 상태: 구현 진행 중.
+- 상태: 완료.
 - 추가: `POST /api/promises`가 `Idempotency-Key`를 받고 참가자별 키·요청 지문을 트랜잭션으로 예약한다.
 - 동작: 동일 키·동일 지문은 기존 약속을 반환하고, 동일 키·상이한 지문은 `409 IDEMPOTENCY_KEY_REUSED`로 거절한다.
 - 검증: `PromiseControllerIntegrationTests` 2건에서 실제 PostgreSQL 세션으로 동일 키 재요청 재사용, 본문 변경 충돌, 병렬 요청의 단일 promise 생성을 확인했다.
 - 검증: `PromiseControllerIntegrationTests` 3건에서 병렬 약속 수정의 200·409 낙관적 잠금 결과와 변경된 KST 날짜 원장 1건을 확인했다.
 - 검증: `PromiseControllerIntegrationTests` 4건에서 병렬 취소의 200·409 결과와 단일 `Closed/Cancelled` 상태를 확인했다.
-- 남은 범위: 응답 envelope 정리.
+- 남은 범위: 응답 envelope 정리는 별도 후속 품질 작업이며 SCRUM-23 핵심 완료 조건에는 포함하지 않았다.
 
 ### SCRUM-35/37 / 사진 인증 JDBC 경계 보정
 
