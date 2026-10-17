@@ -7,10 +7,40 @@ import PromiseHistoryPage from './features/promise/PromiseHistoryPage'
 import { getKstDateKey } from './features/promise/formatPromise'
 import { reconfirmPromise } from './features/promise/reconfirmPromise'
 import type { PromiseDraft, PreviewPromise } from './features/promise/types'
+import ParticipantEntryPage from './features/access/ParticipantEntryPage'
+
+export default function App() {
+  const preview = import.meta.env.DEV
+    ? new URLSearchParams(window.location.search).get('preview')
+    : null
+
+  if (preview === 'entry') {
+    return <ParticipantEntryPreview />
+  }
+
+  return <HomePrototype />
+}
+
+// 개발용 화면 확인: 실제 참가자 코드 검사나 입장은 실행하지 않는다.
+function ParticipantEntryPreview() {
+  const [errorMessage, setErrorMessage] = useState('')
+
+  return (
+    <ParticipantEntryPage
+      errorMessage={errorMessage}
+      onClearError={() => setErrorMessage('')}
+      onSubmit={() =>
+        setErrorMessage(
+          '코드를 다시 확인해 주세요. 유효하지 않거나 만료된 코드예요.',
+        )
+      }
+    />
+  )
+}
 
 type PreviewScreen = 'home' | 'write' | 'confirm' | 'history'
 
-export default function App() {
+function HomePrototype() {
   const [screen, setScreen] = useState<PreviewScreen>('home')
   const [draft, setDraft] = useState<PromiseDraft>({
     taskName: '',
