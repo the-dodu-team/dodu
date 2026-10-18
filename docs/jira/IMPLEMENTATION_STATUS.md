@@ -57,3 +57,13 @@
 - Local tracking: NEXT04/NEXT05/NEXT07 and related DODU records.
 - Remote Jira: the current connected session has not been verified against the target `dodu-mobile` site; ticket creation, Sprint 3 assignment, and completion updates remain pending until that site context is active.
 - Remote tickets are not marked complete.
+
+## 2026-10-18 SCRUM-79 UI mock 검증 완료
+
+- 원격 Jira SCRUM-79: 완료 기준 3개 체크, 검증 댓글 저장, Done 확인. Sprint 3 유지.
+- 생성·확인·관리·수정·취소와 입력 오류, 재생성 수정 불가/한도, 실제 시작 시각 경계 차단을 브라우저에서 검증했다.
+- lint 종료 0(React 경고 3), frontend build 성공, npm run verify 성공. backend 테스트 40개 실패/오류/건너뜀 0.
+- 앱 화면 42장 및 Jira 증빙 1장 정리. 제품 코드 직접 수정과 커밋은 하지 않았다.
+- 상세: [QA 보고서](SCRUM-79_QA_20261018.md), [구조화 결과](SCRUM-79_QA_20261018.json).
+- 완료는 UI mock 범위다. SCRUM-24 API 연결과 TITLE-TECH-01, 모바일 실기기 QA는 별도다. 지정 Notion 루트 404로 최신 하위 전체 확인은 불가했다.
+- 이 항목은 과거의 원격 Jira 연결 미확인 기록과 구분되는 이번 직접 확인 결과다.

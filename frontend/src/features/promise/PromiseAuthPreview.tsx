@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react'
 import Button from '../../components/Button'
 import cameraIcon from '../../assets/icons/camera-filled.svg'
-import { formatStartTime } from './formatPromise'
 import type { PreviewPromise } from './types'
 
 type PromiseAuthPreviewProps = {
   promise: PreviewPromise
   onVerify: () => void
+}
+
+const AUTH_DURATION_MS = 30 * 60 * 1000
+
+function formatTime(timestamp: number) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(new Date(timestamp))
 }
 
 // 화면 확인용이며 실제 사진 인증이나 서버 저장은 실행하지 않는다.
@@ -19,8 +29,12 @@ export default function PromiseAuthPreview({
   const startsAt = Date.parse(
     `${promise.date}T${promise.startTime}:00+09:00`,
   )
-  const hasReachedStart = Number.isFinite(startsAt) && now >= startsAt
+  const endsAt = startsAt + AUTH_DURATION_MS
+  const hasValidTime = Number.isFinite(startsAt)
+  const hasReachedStart = hasValidTime && now >= startsAt
+  const hasExpired = hasValidTime && now >= endsAt
   const isVerified = promise.status === 'verified'
+  const canVerify = hasReachedStart && !hasExpired && !isVerified
 
   useEffect(() => {
     const updateTime = () => setNow(Date.now())
@@ -36,20 +50,45 @@ export default function PromiseAuthPreview({
     }
   }, [])
 
+  function handleVerify() {
+    // 화면 갱신 사이에 인증 시간이 끝나는 경우에도 실행하지 않는다.
+    const currentTime = Date.now()
+    setNow(currentTime)
+
+    if (
+      !hasValidTime ||
+      isVerified ||
+      currentTime < startsAt ||
+      currentTime >= endsAt
+    ) {
+      return
+    }
+
+    onVerify()
+  }
+
+  if (!hasValidTime) {
+    return null
+  }
+
   return (
     <div className="promise-auth-preview">
-      <p role="status">
-        {isVerified
-          ? '인증 완료 상태의 미리보기입니다. 실제 인증은 실행되지 않았어요.'
-          : hasReachedStart
-            ? '예정 시각에 도달했어요. 인증 버튼 미리보기입니다.'
-            : `${formatStartTime(promise.startTime)}부터 인증 버튼이 표시됩니다. (KST · 미리보기)`}
-      </p>
+      {!isVerified && (
+        <p role="status">
+          {hasExpired
+            ? '인증 시간이 종료되었어요.'
+            : `${formatTime(startsAt)} ~ ${formatTime(endsAt)} 사이에 인증할 수 있어요`}
+        </p>
+      )}
 
       {(hasReachedStart || isVerified) && (
-        <Button onClick={onVerify} disabled={isVerified}>
+        <Button onClick={handleVerify} disabled={!canVerify}>
           <img src={cameraIcon} alt="" width={16} height={16} />
-          {isVerified ? '인증 완료 · 미리보기' : '약속 인증하기'}
+          {isVerified
+            ? '인증 완료'
+            : hasExpired
+              ? '인증 시간 종료'
+              : '약속 인증하기'}
         </Button>
       )}
     </div>

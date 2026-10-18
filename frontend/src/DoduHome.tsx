@@ -8,7 +8,7 @@ type DoduHomeProps = {
   promise: PreviewPromise | null
   onCreate: () => void
   onEdit: () => void
-  onViewAll: () => void
+  onViewAll?: () => void
   onVerify: () => void
 }
 
@@ -84,10 +84,6 @@ export default function DoduHome({
           />
         )}
 
-        <p>
-          입력한 약속의 미리보기입니다. 실제 예약이나 알림은
-          실행되지 않으며 새로고침하면 사라집니다.
-        </p>
       </footer>
 
       {/*
