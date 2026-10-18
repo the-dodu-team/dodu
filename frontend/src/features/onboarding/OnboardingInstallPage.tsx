@@ -6,10 +6,14 @@ import addIcon from '../../assets/icons/checkbox-unchecked.svg'
 import homeIcon from '../../assets/icons/home-outline.svg'
 
 type OnboardingInstallPageProps = {
+  onNext: () => void
+  onBack: () => void
   onClose: () => void
 }
 
 export default function OnboardingInstallPage({
+  onNext,
+  onBack,
   onClose,
 }: OnboardingInstallPageProps) {
   const [showNotice, setShowNotice] = useState(false)
@@ -17,6 +21,9 @@ export default function OnboardingInstallPage({
   return (
     <div className="onboarding-page">
       <header className="onboarding-header">
+        <button type="button" className="onboarding-close" aria-label="이전 단계로" onClick={onBack}>
+          <span aria-hidden="true">←</span>
+        </button>
         <button
           type="button"
           className="onboarding-close"
@@ -91,8 +98,8 @@ export default function OnboardingInstallPage({
             </ol>
 
             <p className="onboarding-install-note">
-              브라우저에서 입력한 정보는 홈 화면 앱으로 이어지지 않아요.
-              홈 화면 앱에서 참가자 코드를 한 번 더 입력해 주세요.
+              홈 화면의 DODU 아이콘으로 다시 열어 주세요.
+              코드 입력 화면이 나타나면 참가자 코드를 입력해 주세요.
             </p>
           </div>
         </div>
@@ -113,9 +120,9 @@ export default function OnboardingInstallPage({
         <button
           type="button"
           className="onboarding-next"
-          onClick={() => setShowNotice(true)}
+          onClick={() => { if (showNotice) onNext(); else setShowNotice(true) }}
         >
-          홈 화면에 추가했어요
+          {showNotice ? '다음으로' : '홈 화면에 추가했어요'}
         </button>
       </footer>
     </div>

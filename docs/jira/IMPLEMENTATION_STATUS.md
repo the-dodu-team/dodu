@@ -57,3 +57,9 @@
 - Local tracking: NEXT04/NEXT05/NEXT07 and related DODU records.
 - Remote Jira: the current connected session has not been verified against the target `dodu-mobile` site; ticket creation, Sprint 3 assignment, and completion updates remain pending until that site context is active.
 - Remote tickets are not marked complete.
+
+## SCRUM-77 UI mock 완료 (2026-10-18)
+Jira Done. [QA 기록](SCRUM-77_QA_20261018.md) 참조. 실제 인증은 SCRUM-24, 전체 온보딩은 SCRUM-78.
+
+## SCRUM-78 UI mock 완료 (2026-10-18)
+Jira Done. 댓글은 사용자 직접 등록. [QA 기록](SCRUM-78_QA_20261018.md) 참조. 실제 권한 연결은 SCRUM-11.
