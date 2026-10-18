@@ -1,0 +1,17 @@
+{
+  "lint": "passed",
+  "jiraStatus": "Done",
+  "branches": [
+    "first_onboarding",
+    "return_home",
+    "access_closed",
+    "invalid_code"
+  ],
+  "notion": "404",
+  "build": "passed",
+  "ticket": "SCRUM-77",
+  "date": "2026-10-18",
+  "scope": "UI mock",
+  "commitPending": false,
+  "branchValidation": "77 standalone lint/build passed"
+}
