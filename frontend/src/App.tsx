@@ -15,10 +15,7 @@ import type {
 } from './features/promise/types'
 
 import ParticipantEntryPage from './features/access/ParticipantEntryPage'
-import OnboardingIntroPage from './features/onboarding/OnboardingIntroPage'
-import OnboardingInstallPage from './features/onboarding/OnboardingInstallPage'
-import OnboardingNotificationPage from './features/onboarding/OnboardingNotificationPage'
-import OnboardingCameraPage from './features/onboarding/OnboardingCameraPage'
+import OnboardingMockFlow from './features/onboarding/OnboardingMockFlow'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -112,50 +109,24 @@ export default function App() {
     return <ParticipantEntryPreview />
   }
 
-  if (preview === 'onboarding') {
-    return (
-      <OnboardingIntroPage
-        totalSteps={4}
-        onClose={() => {
-          window.location.search = '?preview=entry'
-        }}
-        onNext={() => {
-          window.location.search = '?preview=onboarding-install'
-        }}
-      />
-    )
-  }
-
-  if (preview === 'onboarding-install') {
-    return (
-      <OnboardingInstallPage
-        onClose={() => {
-          window.location.search = '?preview=entry'
-        }}
-      />
-    )
-  }
-
-  if (preview === 'onboarding-notification') {
-    return (
-      <OnboardingNotificationPage
-        onClose={() => {
-          window.location.search = '?preview=entry'
-        }}
-      />
-    )
-  }
-
   if (
+    preview === 'onboarding' ||
+    preview === 'onboarding-install' ||
+    preview === 'onboarding-notification' ||
     preview === 'onboarding-camera' ||
     preview === 'onboarding-camera-complete'
   ) {
+    const initialStep = preview === 'onboarding-install' ? 'install'
+      : preview === 'onboarding-notification' ? 'notification'
+        : preview === 'onboarding-camera' ? 'camera'
+          : preview === 'onboarding-camera-complete' ? 'complete' : 'intro'
+
     return (
-      <OnboardingCameraPage
-        isComplete={preview === 'onboarding-camera-complete'}
-        onClose={() => {
-          window.location.search = '?preview=entry'
-        }}
+      <OnboardingMockFlow
+        key={preview}
+        initialStep={initialStep}
+        onClose={() => { window.location.search = '?preview=entry' }}
+        onComplete={() => { window.location.search = '' }}
       />
     )
   }
@@ -172,19 +143,91 @@ export default function App() {
   return <HomePrototype />
 }
 
-// 개발용 화면 확인: 실제 참가자 코드 검사나 입장은 실행하지 않는다.
+// 개발 환경의 화면 분기 확인용이다. 실제 인증이나 세션 저장은 실행하지 않는다.
 function ParticipantEntryPreview() {
+  const [screen, setScreen] = useState<'entry' | 'closed'>('entry')
   const [errorMessage, setErrorMessage] = useState('')
+  const closedTitleRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    if (screen === 'closed') {
+      closedTitleRef.current?.focus()
+    } else {
+      document.getElementById('participant-code')?.focus()
+    }
+  }, [screen])
+
+  function handleSubmit(code: string) {
+    // 실제 빌드에서는 테스트 코드로 진입할 수 없게 한다.
+    if (!import.meta.env.DEV) return
+
+    setErrorMessage('')
+
+    // 참가자 코드와 토큰 원문은 로그나 저장소에 남기지 않는다.
+    switch (code.trim()) {
+      case 'DEMO-NEW':
+        window.location.search = '?preview=onboarding'
+        return
+      case 'DEMO-RETURN':
+        window.location.search = ''
+        return
+      case 'DEMO-CLOSED':
+        setScreen('closed')
+        return
+      default:
+        setErrorMessage(
+          '코드를 다시 확인해 주세요. 유효하지 않거나 만료된 코드예요.',
+        )
+    }
+  }
+
+  if (screen === 'closed') {
+    return (
+      <div className="entry-page">
+        <header className="entry-header">
+          <span className="app-header-logo">DODU</span>
+        </header>
+
+        <main className="entry-main" aria-labelledby="access-closed-title">
+          <div className="entry-form">
+            <div className="entry-content">
+              <h1
+                ref={closedTitleRef}
+                id="access-closed-title"
+                className="entry-title"
+                tabIndex={-1}
+              >
+                서비스 접근이 종료되었어요
+              </h1>
+              <p className="entry-description">
+                현재 참가자 코드로는 서비스를 이용할 수 없어요.
+                확인이 필요하면 운영자에게 문의해 주세요.
+              </p>
+            </div>
+
+            <footer className="entry-footer">
+              <button
+                type="button"
+                className="entry-submit"
+                onClick={() => {
+                  setErrorMessage('')
+                  setScreen('entry')
+                }}
+              >
+                코드 입력으로 돌아가기
+              </button>
+            </footer>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <ParticipantEntryPage
       errorMessage={errorMessage}
       onClearError={() => setErrorMessage('')}
-      onSubmit={() =>
-        setErrorMessage(
-          '코드를 다시 확인해 주세요. 유효하지 않거나 만료된 코드예요.',
-        )
-      }
+      onSubmit={handleSubmit}
     />
   )
 }

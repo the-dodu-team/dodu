@@ -3,16 +3,27 @@ import cameraIcon from '../../assets/icons/camera-filled.svg'
 
 type OnboardingCameraPageProps = {
   isComplete?: boolean
+  totalSteps: 3 | 4
+  isDenied: boolean
+  recoveryText: string
+  attempt: number
+  onRequest: () => void
+  onBack: () => void
   onClose: () => void
 }
 
 export default function OnboardingCameraPage({
   isComplete = false,
+  totalSteps, isDenied, recoveryText, attempt, onRequest,
+  onBack,
   onClose,
 }: OnboardingCameraPageProps) {
   return (
     <div className="onboarding-page">
       <header className="onboarding-header">
+        <button type="button" className="onboarding-close" aria-label="이전 단계로" onClick={onBack}>
+          <span aria-hidden="true">←</span>
+        </button>
         <button
           type="button"
           className="onboarding-close"
@@ -27,9 +38,9 @@ export default function OnboardingCameraPage({
         className="onboarding-main onboarding-permission"
         aria-labelledby="onboarding-camera-title"
       >
-        <p className="onboarding-step" aria-label="전체 4단계 중 4단계">
+        <p className="onboarding-step" aria-label={`전체 ${totalSteps}단계 중 ${totalSteps}단계`}>
           <span aria-hidden="true">
-            <strong>4</strong> / 4
+            <strong>{totalSteps}</strong> / {totalSteps}
           </span>
         </p>
 
@@ -102,15 +113,20 @@ export default function OnboardingCameraPage({
             </section>
           )}
         </div>
+        {isDenied && (
+          <section className="onboarding-camera-guide" aria-label="권한 복구 안내">
+            <p role="status" key={attempt}>권한이 아직 허용되지 않았어요. 설정을 확인한 뒤 다시 확인해 주세요.</p>
+            <p>{recoveryText}</p>
+            <p>설정 메뉴 이름은 OS와 브라우저 버전에 따라 다를 수 있어요.</p>
+          </section>
+        )}
       </main>
 
       <footer className="onboarding-footer">
         <button
           type="button"
           className="onboarding-next"
-          onClick={() => {
-            // 디자인 미리보기: 실제 권한 요청과 완료 처리는 연결 전이다.
-          }}
+          onClick={onRequest}
         >
           {!isComplete && (
             <span
@@ -119,7 +135,7 @@ export default function OnboardingCameraPage({
               aria-hidden="true"
             />
           )}
-          {isComplete ? '완료하기' : '카메라 권한 허용하기'}
+          {isComplete ? '완료하기' : isDenied ? '권한 다시 확인하기' : '카메라 권한 허용하기'}
         </button>
       </footer>
     </div>

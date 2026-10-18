@@ -2,15 +2,26 @@ import closeIcon from '../../assets/icons/close.svg'
 import bellIcon from '../../assets/icons/bell-filled.svg'
 
 type OnboardingNotificationPageProps = {
+  totalSteps: 3 | 4
+  isDenied: boolean
+  recoveryText: string
+  attempt: number
+  onRequest: () => void
+  onBack: () => void
   onClose: () => void
 }
 
 export default function OnboardingNotificationPage({
+  totalSteps, isDenied, recoveryText, attempt, onRequest,
+  onBack,
   onClose,
 }: OnboardingNotificationPageProps) {
   return (
     <div className="onboarding-page">
       <header className="onboarding-header">
+        <button type="button" className="onboarding-close" aria-label="이전 단계로" onClick={onBack}>
+          <span aria-hidden="true">←</span>
+        </button>
         <button
           type="button"
           className="onboarding-close"
@@ -25,9 +36,9 @@ export default function OnboardingNotificationPage({
         className="onboarding-main onboarding-permission"
         aria-labelledby="onboarding-notification-title"
       >
-        <p className="onboarding-step" aria-label="전체 4단계 중 3단계">
+        <p className="onboarding-step" aria-label={`전체 ${totalSteps}단계 중 ${totalSteps - 1}단계`}>
           <span aria-hidden="true">
-            <strong>3</strong> / 4
+            <strong>{totalSteps - 1}</strong> / {totalSteps}
           </span>
         </p>
 
@@ -53,17 +64,22 @@ export default function OnboardingNotificationPage({
             </p>
           </div>
         </div>
+        {isDenied && (
+          <section className="onboarding-camera-guide" aria-label="권한 복구 안내">
+            <p role="status" key={attempt}>권한이 아직 허용되지 않았어요. 설정을 확인한 뒤 다시 확인해 주세요.</p>
+            <p>{recoveryText}</p>
+            <p>설정 메뉴 이름은 OS와 브라우저 버전에 따라 다를 수 있어요.</p>
+          </section>
+        )}
       </main>
 
       <footer className="onboarding-footer">
         <button
           type="button"
           className="onboarding-next"
-          onClick={() => {
-            // 실제 알림 권한 요청은 연결 단계에서 구현한다.
-          }}
+          onClick={onRequest}
         >
-          알림 권한 허용하기
+          {isDenied ? '권한 다시 확인하기' : '알림 권한 허용하기'}
         </button>
       </footer>
     </div>
