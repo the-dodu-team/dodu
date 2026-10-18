@@ -1,8 +1,23 @@
+import { useEffect, useState } from 'react'
 import TodayPromiseCard from './components/TodayPromiseCard'
 import WeeklyPromiseCard from './components/WeeklyPromiseCard'
 import PromiseAuthPreview from './features/promise/PromiseAuthPreview'
 import { formatStartTime, getKstDateKey } from './features/promise/formatPromise'
 import type { PreviewPromise } from './features/promise/types'
+
+function formatScheduledLabel(promise: PreviewPromise) {
+  const date = new Date(`${promise.date}T00:00:00+09:00`)
+  if (!Number.isFinite(date.getTime())) return '날짜를 확인해 주세요'
+
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short',
+  }).formatToParts(date)
+  const month = parts.find((part) => part.type === 'month')?.value ?? ''
+  const day = parts.find((part) => part.type === 'day')?.value ?? ''
+  const weekday = parts.find((part) => part.type === 'weekday')?.value ?? ''
+
+  return `${month} ${day}(${weekday}) ${formatStartTime(promise.startTime)}`
+}
 
 type DoduHomeProps = {
   promise: PreviewPromise | null
@@ -19,8 +34,23 @@ export default function DoduHome({
   onViewAll,
   onVerify,
 }: DoduHomeProps) {
-  const todayPromise =
-    promise?.date === getKstDateKey() ? promise : null
+  const [today, setToday] = useState(getKstDateKey)
+
+  useEffect(() => {
+    const updateDate = () => setToday(getKstDateKey())
+    const timer = window.setInterval(updateDate, 1000)
+    window.addEventListener('focus', updateDate)
+    document.addEventListener('visibilitychange', updateDate)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', updateDate)
+      document.removeEventListener('visibilitychange', updateDate)
+    }
+  }, [])
+
+  // 현재 앱은 약속 한 개를 보관하므로 오늘 날짜로 제한하지 않고 표시한다.
+  // 인증 진행 중인 약속도 시작 시각이 지났다는 이유만으로 숨기지 않는다.
+  const upcomingPromise = promise
 
   /*
   const [connection, setConnection] = useState('확인 전')
@@ -48,12 +78,13 @@ export default function DoduHome({
     <>
       <TodayPromiseCard
         promise={
-          todayPromise
+          upcomingPromise
             ? {
-                taskName: todayPromise.taskName,
-                startTimeLabel: formatStartTime(todayPromise.startTime),
+                taskName: upcomingPromise.taskName,
+                startTimeLabel: formatScheduledLabel(upcomingPromise),
+                isToday: upcomingPromise.date === today,
                 toolLabel:
-                  todayPromise.tool === 'computer' ? '컴퓨터' : '실제 책',
+                  upcomingPromise.tool === 'computer' ? '컴퓨터' : '실제 책',
               }
             : null
         }
