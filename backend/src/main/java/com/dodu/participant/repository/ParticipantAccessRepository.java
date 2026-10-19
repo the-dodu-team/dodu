@@ -1,6 +1,9 @@
 package com.dodu.participant.repository;
 
 import com.dodu.participant.domain.DeviceStatus;
+import com.dodu.participant.domain.Participant;
+import com.dodu.participant.domain.ParticipantSession;
+import com.dodu.participant.domain.SessionContext;
 import com.dodu.participant.domain.SessionRevokeReason;
 import com.dodu.participant.domain.SessionStatus;
 import com.dodu.participant.domain.SubscriptionStatus;
@@ -15,7 +18,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * 입장·세션 발급에 필요한 저장 접근. 업무 규칙은 service에서 판단하고 여기서는 조회와 저장만 합니다.
+ * 입장·세션 발급과 세션 인증에 필요한 저장 접근. 업무 규칙은 service에서 판단하고 여기서는 조회와 저장만 합니다.
  * 시각 값은 pgjdbc가 안전하게 다루는 {@link OffsetDateTime}(UTC)으로 바꿔 넘기고 읽습니다.
  */
 @Repository
@@ -176,6 +179,63 @@ public class ParticipantAccessRepository {
                 .param("expiresAt", utc(expiresAt))
                 .query(UUID.class)
                 .single();
+    }
+
+    /**
+     * 세션 토큰 해시로 세션·참가자·연구 기간의 접근 종료 시각을 한 번에 읽습니다. 요청마다 호출되므로 조회만 하고
+     * 잠금은 걸지 않습니다({@code session_token_hash}에는 유니크 인덱스가 있습니다).
+     */
+    public Optional<SessionContext> findSessionByTokenHash(String tokenHash) {
+        return jdbc.sql("""
+                        select s.id as session_id,
+                               s.participant_id,
+                               s.lifecycle_status,
+                               s.revoke_reason,
+                               s.last_seen_at,
+                               s.expires_at,
+                               p.withdrawn_at,
+                               p.access_disabled_at,
+                               p.onboarding_completed_at,
+                               sp.access_ends_at
+                        from participant_session s
+                        join participant p on p.id = s.participant_id
+                        join study_period sp on sp.id = p.study_period_id
+                        where s.session_token_hash = :hash
+                        """)
+                .param("hash", tokenHash)
+                .query((rs, rowNum) -> {
+                    UUID participantId = rs.getObject("participant_id", UUID.class);
+                    Participant participant = new Participant(
+                            participantId,
+                            instant(rs, "withdrawn_at"),
+                            instant(rs, "access_disabled_at"),
+                            instant(rs, "onboarding_completed_at"));
+                    ParticipantSession session = new ParticipantSession(
+                            rs.getObject("session_id", UUID.class),
+                            participantId,
+                            SessionStatus.ACTIVE.dbValue().equals(rs.getString("lifecycle_status")),
+                            rs.getString("revoke_reason"),
+                            instant(rs, "last_seen_at"),
+                            instant(rs, "expires_at"));
+                    return new SessionContext(participant, session, instant(rs, "access_ends_at"));
+                })
+                .optional();
+    }
+
+    /**
+     * 세션의 마지막 접속 시각을 갱신합니다. {@code staleBefore}보다 오래된 경우에만 갱신해서, 같은 세션의
+     * 요청이 몰려도 쓰기는 한 번만 일어납니다.
+     */
+    public int touchSession(UUID sessionId, Instant now, Instant staleBefore) {
+        return jdbc.sql("""
+                        update participant_session
+                        set last_seen_at = :now
+                        where id = :id and last_seen_at < :staleBefore
+                        """)
+                .param("now", utc(now))
+                .param("id", sessionId)
+                .param("staleBefore", utc(staleBefore))
+                .update();
     }
 
     private static OffsetDateTime utc(Instant instant) {
