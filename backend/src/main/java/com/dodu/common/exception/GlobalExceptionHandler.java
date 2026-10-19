@@ -1,5 +1,7 @@
-package com.dodu.common.api;
+package com.dodu.common.exception;
 
+import com.dodu.common.api.ApiErrorResponse;
+import com.dodu.common.api.ApiTime;
 import com.dodu.common.exception.BusinessException;
 import com.dodu.common.exception.ErrorType;
 import java.time.Clock;
