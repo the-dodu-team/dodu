@@ -1,3 +1,5 @@
+import { getFinalPromiseRecord } from './features/promise/promiseHistory'
+import type { FinalPromiseRecord } from './features/promise/promiseHistory'
 import { useEffect, useRef, useState } from 'react'
 import AppHeader from './components/AppHeader'
 import DoduHome from './DoduHome'
@@ -8,6 +10,7 @@ import PromiseToolPage from './features/promise/PromiseToolPage'
 import PromiseConfirmPage from './features/promise/PromiseConfirmPage'
 import PromiseManagePage from './features/promise/PromiseManagePage'
 import { validateTaskName } from './features/promise/validateTaskName'
+import { getInterventionEndError } from './features/promise/validateInterventionEnd'
 import type {
   PromiseDraft,
   PreviewPromise,
@@ -101,6 +104,11 @@ function getCancelBlockedReason(
 }
 
 export default function App() {
+  // 개발용 종료 경계 확인값이다. 실제 API 연결 시 운영 데이터의 종료시각으로 대체한다.
+  const mockEnd = import.meta.env.DEV
+    ? new URLSearchParams(window.location.search).get('mockInterventionEndsAt')
+    : null
+  const interventionEndsAt = mockEnd === null ? undefined : Date.parse(mockEnd)
   const preview = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('preview')
     : null
@@ -136,11 +144,12 @@ export default function App() {
       <HomePrototype
         key={preview}
         initialScreen={preview === 'promise-name' ? 'write' : 'time'}
+        interventionEndsAt={interventionEndsAt}
       />
     )
   }
 
-  return <HomePrototype />
+  return <HomePrototype interventionEndsAt={interventionEndsAt} />
 }
 
 // 개발 환경의 화면 분기 확인용이다. 실제 인증이나 세션 저장은 실행하지 않는다.
@@ -243,10 +252,12 @@ type PreviewScreen =
 
 type HomePrototypeProps = {
   initialScreen?: PreviewScreen
+  interventionEndsAt?: number
 }
 
 function HomePrototype({
   initialScreen = 'home',
+  interventionEndsAt,
 }: HomePrototypeProps) {
   const [screen, setScreen] = useState<PreviewScreen>(initialScreen)
 
@@ -261,6 +272,7 @@ function HomePrototype({
   const [selectedTool, setSelectedTool] = useState<PromiseTool | null>(null)
   const [confirmError, setConfirmError] = useState('')
   const [promise, setPromise] = useState<ManagedPreviewPromise | null>(null)
+  const [pastResults, setPastResults] = useState<FinalPromiseRecord[]>([])
   const [editError, setEditError] = useState('')
   const [homeNotice, setHomeNotice] = useState('')
   const [now, setNow] = useState(Date.now)
@@ -303,14 +315,25 @@ function HomePrototype({
     ).length
   }
 
+  function isFinalizedDate(date: string) {
+    return pastResults.some(record => record.date === date) ||
+      Boolean(promise?.date === date && getFinalPromiseRecord(promise, Date.now()))
+  }
+
   function getDateBlockedReason(date: string) {
+    // 종료된 약속이 있는 날짜에는 새 약속을 중복 생성하지 않는다.
+    if (isFinalizedDate(date)) {
+      return date === getKstParts(Date.now()).date
+        ? '이미 오늘의 약속 만들기 횟수를 모두 사용했어요'
+        : `${formatDateLabel(date)}의 약속 만들기 횟수를 모두 사용했어요`
+    }
     const cancelledCount = getCancelledCount(date)
 
     if (
       recreationUsedDatesRef.current.has(date) ||
       cancelledCount >= 2
     ) {
-      return `${formatDateLabel(date)}에는 취소 후 다시 만들 수 있는 횟수를 모두 사용했어요. 다른 날짜를 선택해 주세요.`
+      return `${formatDateLabel(date)}에는 이미 약속을 한 번 다시 만들었어요. 다른 날을 선택해 주세요.`
     }
 
     return ''
@@ -318,7 +341,7 @@ function HomePrototype({
 
   function openCreator() {
     // 현재 미리보기는 저장된 약속 한 개를 관리한다.
-    if (promise) {
+    if (promise && !getFinalPromiseRecord(promise, Date.now())) {
       setNow(Date.now())
       setScreen('manage')
       return
@@ -379,7 +402,7 @@ function HomePrototype({
   function savePreview() {
     if (creationInProgressRef.current) return
 
-    if (promise) {
+    if (promise && !getFinalPromiseRecord(promise, Date.now())) {
       setConfirmError('이미 저장된 약속이 있어요.')
       return
     }
@@ -408,6 +431,12 @@ function HomePrototype({
       setConfirmError(
         '시간이 지났거나 선택 가능한 범위를 벗어났어요. 이전 단계에서 날짜와 시간을 다시 선택해 주세요.',
       )
+      return
+    }
+
+    const endError = getInterventionEndError(timestamp, interventionEndsAt)
+    if (endError) {
+      setConfirmError(endError)
       return
     }
 
@@ -444,6 +473,12 @@ function HomePrototype({
       recreationUsedDatesRef.current.add(date)
     }
 
+    // 새 약속으로 교체하기 전에 이전 최종 결과를 한 번만 보관한다.
+    const previousResult = getFinalPromiseRecord(promise, current)
+    if (previousResult) {
+      setPastResults(previous => previous.some(record => record.date === previousResult.date)
+        ? previous : [...previous, previousResult])
+    }
     setDraft(nextDraft)
     setPromise(nextPromise)
     cancellationInProgressRef.current = false
@@ -481,6 +516,12 @@ function HomePrototype({
       timestamp > current + 72 * HOUR
     ) {
       setEditError('현재 시각 +5분 ~ +72시간 사이로 다시 선택해 주세요.')
+      return
+    }
+
+    const endError = getInterventionEndError(timestamp, interventionEndsAt)
+    if (endError) {
+      setEditError(endError)
       return
     }
 
@@ -573,7 +614,7 @@ function HomePrototype({
     const current = Date.now()
 
     setPromise((previous) => {
-      if (!previous || previous.status === 'verified') return previous
+      if (!previous || previous.status !== 'pending') return previous
 
       const startsAt = Date.parse(getScheduledAt(previous))
 
@@ -612,6 +653,9 @@ function HomePrototype({
       <PromiseTimePage
         key="create-time"
         initialValue={scheduledAt}
+        getDateBlockedReason={getDateBlockedReason}
+        isDateUnavailable={isFinalizedDate}
+        interventionEndsAt={interventionEndsAt}
         onBack={(value) => {
           setScheduledAt(value)
           setScreen('write')
@@ -689,6 +733,7 @@ function HomePrototype({
         key={`edit-time-${getScheduledAt(promise)}`}
         initialValue={getScheduledAt(promise)}
         mode="edit"
+        interventionEndsAt={interventionEndsAt}
         blockedReason={editBlockedReason}
         saveError={editError}
         onBack={() => {
@@ -713,6 +758,7 @@ function HomePrototype({
 
           <DoduHome
             promise={promise}
+            pastResults={pastResults}
             onCreate={openCreator}
             onEdit={openManager}
             onVerify={verifyPreviewPromise}

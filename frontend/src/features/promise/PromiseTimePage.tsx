@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import arrowLeftIcon from '../../assets/icons/arrow-left.svg'
+import { getInterventionEndError } from './validateInterventionEnd'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -13,6 +14,12 @@ function dateKey(timestamp: number) {
 function dateLabel(date: string) {
   const [, month, day] = date.split('-')
   return `${Number(month)}/${Number(day)}`
+}
+
+function earliestTimeLabel(timestamp: number, today: string) {
+  const kst = new Date(timestamp + KST_OFFSET)
+  const hour = kst.getUTCHours()
+  return `${dateKey(timestamp) === today ? '오늘' : dateLabel(dateKey(timestamp))} ${hour < 12 ? '오전' : '오후'} ${hour % 12 || 12}:${String(kst.getUTCMinutes()).padStart(2, '0')}`
 }
 
 function getInitialParts(value: string) {
@@ -138,6 +145,9 @@ type PromiseTimePageProps = {
   mode?: 'create' | 'edit'
   blockedReason?: string
   saveError?: string
+  getDateBlockedReason?: (date: string) => string
+  isDateUnavailable?: (date: string) => boolean
+  interventionEndsAt?: number
   onBack: (scheduledAt: string) => void
   onNext: (scheduledAt: string) => void
 }
@@ -147,6 +157,9 @@ export default function PromiseTimePage({
   mode = 'create',
   blockedReason = '',
   saveError = '',
+  getDateBlockedReason,
+  isDateUnavailable,
+  interventionEndsAt,
   onBack,
   onNext,
 }: PromiseTimePageProps) {
@@ -157,6 +170,7 @@ export default function PromiseTimePage({
   const [minute, setMinute] = useState(initial.minute)
   const [selected, setSelected] = useState(initial.selected)
   const [now, setNow] = useState(Date.now)
+  const [checkedDate, setCheckedDate] = useState('')
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
@@ -175,21 +189,24 @@ export default function PromiseTimePage({
   const timestamp = Date.parse(scheduledAt)
   const originalTimestamp = Date.parse(initialValue)
   const hasChanged = timestamp !== originalTimestamp
+  // 날짜 제한은 다음으로를 눌렀을 때 표시하고, 다른 날짜를 고르면 해제한다.
+  const dateError = checkedDate === date ? getDateBlockedReason?.(date) ?? '' : ''
 
   const errorMessage = !selected
     ? ''
     : !Number.isFinite(timestamp)
       ? '날짜와 시간을 다시 선택해 주세요.'
       : timestamp < now + 5 * MINUTE
-        ? '지금부터 5분 이후로 정해 주세요.'
+        ? `지금부터 5분 이후로 정할 수 있어요. ${earliestTimeLabel(Math.ceil((now + 5 * MINUTE) / (5 * MINUTE)) * 5 * MINUTE, today)}부터 선택해 주세요.`
         : timestamp > now + 72 * HOUR
           ? '지금부터 72시간 이내로 정해 주세요.'
-          : ''
+          : getInterventionEndError(timestamp, interventionEndsAt)
 
   const canContinue =
     selected &&
     Number.isFinite(timestamp) &&
     errorMessage === '' &&
+    !dateError &&
     !blockedReason &&
     (!isEditing || hasChanged)
 
@@ -238,13 +255,19 @@ export default function PromiseTimePage({
             const current = Date.now()
             setNow(current)
 
+            if (getDateBlockedReason?.(date)) {
+              setCheckedDate(date)
+              return
+            }
+
             if (
               selected &&
               !blockedReason &&
               (!isEditing || hasChanged) &&
               Number.isFinite(timestamp) &&
               timestamp >= current + 5 * MINUTE &&
-              timestamp <= current + 72 * HOUR
+              timestamp <= current + 72 * HOUR &&
+              !getInterventionEndError(timestamp, interventionEndsAt)
             ) {
               onNext(scheduledAt)
             }
@@ -306,13 +329,19 @@ export default function PromiseTimePage({
                   key={item}
                   type="button"
                   className={
-                    item === date
+                    item === date && dateError
+                      ? 'promise-date-chip promise-date-chip--error'
+                      : item === date
                       ? 'promise-date-chip promise-date-chip--selected'
                       : 'promise-date-chip'
                   }
                   aria-pressed={item === date}
+                  disabled={item === checkedDate && Boolean(isDateUnavailable?.(item))}
+                  aria-invalid={item === date && Boolean(dateError)}
+                  aria-describedby={item === date && dateError ? 'promise-date-error' : undefined}
                   onClick={() => {
                     setDate(item)
+                    if (item !== date) setCheckedDate('')
                     setSelected(true)
                   }}
                 >
@@ -321,6 +350,12 @@ export default function PromiseTimePage({
                 </button>
               ))}
             </div>
+
+            {dateError && (
+              <p id="promise-date-error" className="promise-date-error" role="alert">
+                {dateError}
+              </p>
+            )}
 
             <div className="promise-time-wheel">
               <TimeWheel

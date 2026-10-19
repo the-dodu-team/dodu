@@ -68,10 +68,10 @@ export default function TodayPromiseCard({
       ) : (
         <div className="today-promise-empty">
           <h3 className="today-promise-empty-title">
-            다가오는 약속이 없어요
+            오늘은 약속이 없어요
           </h3>
           <p className="today-promise-empty-description">
-            예정된 작업이 있나요?
+            오늘 해야 할 일이 있나요?
             <br />
             약속을 만들어보세요
           </p>
