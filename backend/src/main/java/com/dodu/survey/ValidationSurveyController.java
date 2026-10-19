@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,13 +24,9 @@ public final class ValidationSurveyController {
     private final ValidationSurveyPolicy policy;
     private final Clock clock;
 
-    public ValidationSurveyController(JdbcTemplate jdbc) {
-        this(jdbc, new ValidationSurveyPolicy(), Clock.systemUTC());
-    }
-
-    ValidationSurveyController(JdbcTemplate jdbc, ValidationSurveyPolicy policy, Clock clock) {
+    public ValidationSurveyController(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
-        this.policy = policy;
+        this.policy = new ValidationSurveyPolicy();
         this.clock = clock;
     }
 
