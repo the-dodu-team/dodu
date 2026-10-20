@@ -50,7 +50,7 @@ class CoreSchemaMigrationTests {
     @Test
     void rerunningMigrationAppliesNothingMore() {
         assertEquals(0, flyway.migrate().migrationsExecuted);
-        assertEquals(1, flyway.info().applied().length);
+        assertEquals(flyway.info().all().length, flyway.info().applied().length);
     }
 
     @Test
@@ -144,13 +144,30 @@ class CoreSchemaMigrationTests {
         exec("insert into access_credential(participant_id, secret_hash, issued_at) "
                 + "values ('" + participant + "', 'secret-j1', now())");
         String original = scalar("select id::text from access_credential where secret_hash = 'secret-j1'");
+        // V2부터 참가자당 유효한 자격(revoked_at is null)은 1개뿐이라, 실제 재발급 순서대로 기존 자격을 먼저 폐기합니다.
+        exec("update access_credential set revoked_at = now() where secret_hash = 'secret-j1'");
         exec("insert into access_credential(participant_id, secret_hash, issued_at, replaces_credential_id) "
                 + "values ('" + participant + "', 'secret-j2', now(), '" + original + "')");
+        // 아래 두 검증이 "유효한 자격 1개" 제약에 먼저 걸리지 않고 각자의 제약만 확인하도록 j2도 폐기합니다.
+        exec("update access_credential set revoked_at = now() where secret_hash = 'secret-j2'");
         assertViolates("uq_access_credential_replaces", () -> exec("insert into access_credential("
                 + "participant_id, secret_hash, issued_at, replaces_credential_id) values ('" + participant
                 + "', 'secret-j3', now(), '" + original + "')"));
         assertViolates("uq_access_credential_secret_hash", () -> exec("insert into access_credential("
                 + "participant_id, secret_hash, issued_at) values ('" + participant + "', 'secret-j1', now())"));
+    }
+
+    @Test
+    void onlyOneActiveCredentialPerParticipantAndNewOneAllowedAfterRevoke() throws SQLException {
+        // V2: 유효한 자격(revoked_at is null)은 참가자당 1개. 폐기하면 새 자격을 발급할 수 있습니다.
+        String participant = seedParticipant("K");
+        exec("insert into access_credential(participant_id, secret_hash, issued_at) "
+                + "values ('" + participant + "', 'secret-k1', now())");
+        assertViolates("ux_access_credential_one_active_per_participant", () -> exec("insert into access_credential("
+                + "participant_id, secret_hash, issued_at) values ('" + participant + "', 'secret-k2', now())"));
+        exec("update access_credential set revoked_at = now() where secret_hash = 'secret-k1'");
+        exec("insert into access_credential(participant_id, secret_hash, issued_at) "
+                + "values ('" + participant + "', 'secret-k2', now())");
     }
 
     private static void assertViolates(String constraintName, Executable action) {
