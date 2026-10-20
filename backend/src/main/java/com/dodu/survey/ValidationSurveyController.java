@@ -2,9 +2,9 @@ package com.dodu.survey;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
+import com.dodu.participant.service.ParticipantAuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,19 +22,18 @@ public final class ValidationSurveyController {
     private final JdbcTemplate jdbc;
     private final ValidationSurveyPolicy policy;
     private final Clock clock;
+    private final ParticipantAuthService authService;
 
-    public ValidationSurveyController(JdbcTemplate jdbc) {
-        this(jdbc, new ValidationSurveyPolicy(), Clock.systemUTC());
-    }
-
-    ValidationSurveyController(JdbcTemplate jdbc, ValidationSurveyPolicy policy, Clock clock) {
+    public ValidationSurveyController(JdbcTemplate jdbc, Clock clock, ParticipantAuthService authService) {
         this.jdbc = jdbc;
-        this.policy = policy;
+        this.policy = new ValidationSurveyPolicy();
         this.clock = clock;
+        this.authService = authService;
     }
 
     @GetMapping
-    public SurveyResponse get(@PathVariable UUID promiseId, @RequestHeader("Authorization") String authorization) {
+    public SurveyResponse get(@PathVariable UUID promiseId,
+                              @RequestHeader(value = "Authorization", required = false) String authorization) {
         UUID participantId = participantFor(authorization);
         return find(promiseId, participantId);
     }
@@ -61,7 +60,8 @@ public final class ValidationSurveyController {
     }
 
     @PostMapping
-    public SurveyResponse submit(@PathVariable UUID promiseId, @RequestHeader("Authorization") String authorization,
+    public SurveyResponse submit(@PathVariable UUID promiseId,
+                                 @RequestHeader(value = "Authorization", required = false) String authorization,
                                  @RequestBody SurveySubmission request) {
         UUID participantId = participantFor(authorization);
         Instant now = clock.instant();
@@ -106,23 +106,7 @@ public final class ValidationSurveyController {
     }
 
     private UUID participantFor(String authorization) {
-        String token = token(authorization);
-        try {
-            return jdbc.queryForObject("""
-                    select participant_id from participant_session
-                     where session_token_hash = encode(digest(?, 'sha256'), 'hex')
-                       and lifecycle_status = 'Active' and expires_at > now()
-                    """, UUID.class, token);
-        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid session");
-        }
-    }
-
-    private static String token(String authorization) {
-        if (authorization == null || !authorization.startsWith("Bearer ") || authorization.length() <= 7) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "bearer token required");
-        }
-        return authorization.substring(7).trim();
+        return authService.authenticate(authorization).participant().id();
     }
 
     public record SurveySubmission(Boolean actualStarted, String startOrder, String startDelayBucket, String noStartReason) {}
