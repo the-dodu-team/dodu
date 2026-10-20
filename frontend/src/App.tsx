@@ -1,10 +1,17 @@
+import SelfReportPreview from './features/self-report/SelfReportPreview'
+import type { Ref } from 'react'
+import type { PreviewHomeControls } from './features/self-report/SelfReportPreview'
+import { HistoryPage, SelfReportPage, ReportReminder } from './features/self-report/ReportScreens'
+import { asReportTarget, reportKey } from './features/self-report/selfReportModel'
+import type { ReportTarget } from './features/self-report/selfReportModel'
+import { useSelfReportMock } from './features/self-report/useSelfReportMock'
 import PhotoAuthMockFlow from './features/photo-auth/PhotoAuthMockFlow'
 import PhotoAuthPreview from './features/photo-auth/PhotoAuthPreview'
 import { usePhotoAuthMock } from './features/photo-auth/usePhotoAuthMock'
 import { photoPromiseStatus, promiseKey } from './features/photo-auth/photoAuthModel'
 import { getFinalPromiseRecord } from './features/promise/promiseHistory'
 import type { FinalPromiseRecord } from './features/promise/promiseHistory'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import AppHeader from './components/AppHeader'
 import DoduHome from './DoduHome'
 
@@ -116,6 +123,13 @@ export default function App() {
   const preview = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('preview')
     : null
+
+  if (preview === 'self-report') {
+    return <SelfReportPreview renderHome={(records, controls) => (
+      <HomePrototype initialPastResults={records} previewControls={controls}
+        interventionEndsAt={interventionEndsAt} />
+    )} />
+  }
 
   if (preview === 'photo-auth') return <PhotoAuthPreview />
 
@@ -256,14 +270,19 @@ type PreviewScreen =
   | 'manage'
   | 'edit-time'
   | 'photo-auth'
+  | 'history'
 
 type HomePrototypeProps = {
+  initialPastResults?: FinalPromiseRecord[]
+  previewControls?: Ref<PreviewHomeControls>
   initialScreen?: PreviewScreen
   interventionEndsAt?: number
 }
 
 function HomePrototype({
   initialScreen = 'home',
+  initialPastResults = [],
+  previewControls,
   interventionEndsAt,
 }: HomePrototypeProps) {
   const [screen, setScreen] = useState<PreviewScreen>(initialScreen)
@@ -286,10 +305,16 @@ function HomePrototype({
   const [recoveryDate, setRecoveryDate] = useState<string | null>(null)
   const [technicalRecoveryUsedDates, setTechnicalRecoveryUsedDates] = useState<Set<string>>(() => new Set())
   const technicalClosedDatesRef = useRef<Set<string>>(new Set())
-  const [pastResults, setPastResults] = useState<FinalPromiseRecord[]>([])
+  const [pastResults, setPastResults] = useState<FinalPromiseRecord[]>(() => [...initialPastResults])
   const [editError, setEditError] = useState('')
   const [homeNotice, setHomeNotice] = useState('')
   const [now, setNow] = useState(Date.now)
+  const [archivedReportTargets, setArchivedReportTargets] = useState<ReportTarget[]>([])
+  const currentReportTarget = asReportTarget(promise, now)
+  const report = useSelfReportMock(
+    currentReportTarget ? [...archivedReportTargets, currentReportTarget] : archivedReportTargets,
+    now, screen === 'home',
+  )
 
   // 취소 기록은 인증 결과와 구분하여 메모리에만 보관한다.
   const [cancelledPromises, setCancelledPromises] = useState<CancelledPreviewPromise[]>([])
@@ -497,6 +522,11 @@ function HomePrototype({
     }
 
     // 새 약속으로 교체하기 전에 이전 최종 결과를 한 번만 보관한다.
+    const previousReportTarget = asReportTarget(promise, current)
+    if (previousReportTarget) {
+      setArchivedReportTargets(previous => previous.some(target => reportKey(target) === reportKey(previousReportTarget))
+        ? previous : [...previous, previousReportTarget])
+    }
     const previousResult = getFinalPromiseRecord(promise, current)
     if (previousResult) {
       setPastResults(previous => previous.some(record => record.date === previousResult.date)
@@ -674,6 +704,22 @@ function HomePrototype({
     setRecoveryDate(promise.date)
   }
 
+  // 미리보기 화면도 같은 홈 인스턴스를 유지하며 이벤트에서 이동한다.
+  useImperativeHandle(previewControls, () => ({
+    home: () => setScreen('home'),
+    create: openCreator,
+  }))
+
+  if (report.activeTarget) {
+    return <SelfReportPage key={reportKey(report.activeTarget)} target={report.activeTarget}
+      onClose={report.dismiss} onSkip={() => report.skip(report.activeTarget!)} onSubmit={report.submit} />
+  }
+  if (screen === 'history') {
+    const currentResult = getFinalPromiseRecord(promise, now)
+    return <HistoryPage records={currentResult ? [...pastResults, currentResult] : pastResults}
+      onBack={() => setScreen('home')} onCreate={openCreator} />
+  }
+
   if (screen === 'photo-auth' && photo.session) {
     return <PhotoAuthMockFlow session={photo.session} dispatch={photo.dispatch}
       recoveryUsed={technicalRecoveryUsedDates.has(photo.session.promise.date)}
@@ -797,7 +843,8 @@ function HomePrototype({
   }
 
   return (
-    <main className="home-page">
+    <>
+    <main className="home-page" inert={Boolean(report.reminderTarget)}>
       <AppHeader />
 
       {screen === 'home' && (
@@ -811,10 +858,15 @@ function HomePrototype({
             pastResults={pastResults}
             onCreate={openCreator}
             onEdit={openManager}
+            onViewAll={() => setScreen('history')}
             onVerify={verifyPreviewPromise}
           />
         </>
       )}
     </main>
+    {report.reminderTarget && <ReportReminder target={report.reminderTarget}
+      onWrite={() => report.open(report.reminderTarget!)}
+      onSkip={() => report.skip(report.reminderTarget!)} onDismiss={report.dismiss} />}
+    </>
   )
 }
