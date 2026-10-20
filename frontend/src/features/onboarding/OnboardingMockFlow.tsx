@@ -1,3 +1,4 @@
+import { detectOnboardingPlatform } from './detectOnboardingPlatform'
 import { useEffect, useRef, useState } from 'react'
 import OnboardingIntroPage from './OnboardingIntroPage'
 import OnboardingInstallPage from './OnboardingInstallPage'
@@ -18,8 +19,9 @@ type Props = {
 export default function OnboardingMockFlow({
   initialStep = 'intro', onClose, onComplete,
 }: Props) {
-  const [platform, setPlatform] = useState<Platform>('ios')
-  const [step, setStep] = useState<Step>(initialStep)
+  // const [platform, setPlatform] = useState<Platform>('ios')
+  const [platform, setPlatform] = useState<Platform>(detectOnboardingPlatform)
+  const [step, setStep] = useState<Step>(() => initialStep === 'install' && platform !== 'ios' ? 'notification' : initialStep)
   const [notification, setNotification] = useState<Permission>('default')
   const [camera, setCamera] = useState<Permission>(
     initialStep === 'complete' ? 'granted' : 'default',
