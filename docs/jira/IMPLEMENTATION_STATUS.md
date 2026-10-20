@@ -1,5 +1,13 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-10-19 — SCRUM-79 후속 수정 / SCRUM-82 홈 일부
+
+- 지난 약속: KST 월~일 최종 인증 결과만 집계, 새 약속 저장 후 기록 보존, 디자인 빈 상태 문구와 하단 날짜 안내.
+- 날짜·시간 단계에서 생성·재생성 날짜 제한 검사. 공식 종료시각을 전달받는 생성·수정 경계 검사 및 최종 저장 재검사.
+- 검증: 브라우저 기록 보존·시간/날짜 오류·재생성 제한·공식 종료 mock 경계, 자동 검사 및 lint/build. 상세: `SCRUM-82_HOME_QA_20261019.md/json`.
+- 남은 작업: 실제 API 상태 복원/종료시각 전달, 사진 인증 및 기록 전체 화면, 실기기 검증. SCRUM-82 전체 완료로 처리하지 않는다. Jira 댓글은 사용자 요청에 따라 작성하지 않는다.
+- 백엔드 로컬 변경은 보존하며 이번 커밋 범위에서 제외한다.
+
 이 파일은 구현 완료 범위와 Jira 추적 상태를 함께 기록한다. 구현이 완료된 항목은 관련 티켓의 완료 조건과 검증 결과를 남긴다. 원격 Jira 상태를 변경할 수 없는 경우에는 완료로 표시하지 않고 사유를 기록한다.
 
 ## 2026-10-16
@@ -57,3 +65,24 @@
 - Local tracking: NEXT04/NEXT05/NEXT07 and related DODU records.
 - Remote Jira: the current connected session has not been verified against the target `dodu-mobile` site; ticket creation, Sprint 3 assignment, and completion updates remain pending until that site context is active.
 - Remote tickets are not marked complete.
+
+## 2026-10-18 SCRUM-79 UI mock 검증 완료
+
+- 원격 Jira SCRUM-79: 완료 기준 3개 체크, 검증 댓글 저장, Done 확인. Sprint 3 유지.
+- 생성·확인·관리·수정·취소와 입력 오류, 재생성 수정 불가/한도, 실제 시작 시각 경계 차단을 브라우저에서 검증했다.
+- lint 종료 0(React 경고 3), frontend build 성공, npm run verify 성공. backend 테스트 40개 실패/오류/건너뜀 0.
+- 앱 화면 42장 및 Jira 증빙 1장 정리. 제품 코드 직접 수정과 커밋은 하지 않았다.
+- 상세: [QA 보고서](SCRUM-79_QA_20261018.md), [구조화 결과](SCRUM-79_QA_20261018.json).
+- 완료는 UI mock 범위다. SCRUM-24 API 연결과 TITLE-TECH-01, 모바일 실기기 QA는 별도다. 지정 Notion 루트 404로 최신 하위 전체 확인은 불가했다.
+- 이 항목은 과거의 원격 Jira 연결 미확인 기록과 구분되는 이번 직접 확인 결과다.
+
+## SCRUM-77 — 2026-10-18 UI mock 완료
+원격 Jira Done 확인. 분기 및 lint/build 검증은 [QA 기록](SCRUM-77_QA_20261018.md)과 [구조화 기록](SCRUM-77_QA_20261018.json) 참조. 77 브랜치 커밋 1c0cf74 및 원격 푸시 완료. 78 브랜치 커밋 5d9e99e에도 통합됨. 실제 인증은 SCRUM-24 범위.
+
+## SCRUM-78 UI mock 완료 (2026-10-18)
+Jira Done. 댓글 미등록. [QA 기록](SCRUM-78_QA_20261018.md) 참조. 77·78 개별 브랜치에서 커밋·검증 수행.
+
+## SCRUM-82 관련 부분 구현 — 다가오는 약속 (2026-10-18)
+- 사용자 요청으로 현재 79 브랜치에서 홈 카드의 날짜 제한 제거, 제목 변경, KST 날짜·요일·시간 및 오늘 태그 표시를 반영한다.
+- 이번 주 약속은 변경하지 않는다. 82 전체 완료나 실제 서버 상태 연결을 의미하지 않는다. Jira 상태 변경·댓글 작성 미수행.
+- 저장본 lint/build 성공. 사용자 캡처 표시 확인. 자정·미래 날짜 브라우저 재검증은 미실행.

@@ -1,0 +1,20 @@
+{
+  "jiraStatus": "Done",
+  "scope": "UI mock",
+  "build": "passed",
+  "lint": "passed",
+  "date": "2026-10-18",
+  "notion": "404",
+  "devicePermissionsTested": false,
+  "ticket": "SCRUM-78",
+  "commentPosted": false,
+  "flows": [
+    "ios4",
+    "other3",
+    "permission_denied",
+    "permission_recheck",
+    "back",
+    "close",
+    "complete"
+  ]
+}
