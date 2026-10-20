@@ -13,7 +13,7 @@ function load(file) {
   if (/\.(svg|png|css)$/.test(file)) return { default: file }
   if (cache.has(file)) return cache.get(file).exports
   const mod = { exports: {} }; cache.set(file, mod)
-  const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: {
+  const code = ts.transpileModule(fs.readFileSync(file, 'utf8').replaceAll('import.meta.env.DEV', 'true'), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022,
   }}).outputText
   new Function('require', 'module', 'exports', code)(name => name.startsWith('.')

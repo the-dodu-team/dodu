@@ -1,3 +1,7 @@
+import PhotoAuthMockFlow from './features/photo-auth/PhotoAuthMockFlow'
+import PhotoAuthPreview from './features/photo-auth/PhotoAuthPreview'
+import { usePhotoAuthMock } from './features/photo-auth/usePhotoAuthMock'
+import { photoPromiseStatus, promiseKey } from './features/photo-auth/photoAuthModel'
 import { getFinalPromiseRecord } from './features/promise/promiseHistory'
 import type { FinalPromiseRecord } from './features/promise/promiseHistory'
 import { useEffect, useRef, useState } from 'react'
@@ -112,6 +116,8 @@ export default function App() {
   const preview = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('preview')
     : null
+
+  if (preview === 'photo-auth') return <PhotoAuthPreview />
 
   if (preview === 'entry') {
     return <ParticipantEntryPreview />
@@ -249,6 +255,7 @@ type PreviewScreen =
   | 'confirm'
   | 'manage'
   | 'edit-time'
+  | 'photo-auth'
 
 type HomePrototypeProps = {
   initialScreen?: PreviewScreen
@@ -271,7 +278,14 @@ function HomePrototype({
   const [scheduledAt, setScheduledAt] = useState('')
   const [selectedTool, setSelectedTool] = useState<PromiseTool | null>(null)
   const [confirmError, setConfirmError] = useState('')
-  const [promise, setPromise] = useState<ManagedPreviewPromise | null>(null)
+  const [storedPromise, setPromise] = useState<ManagedPreviewPromise | null>(null)
+  const photo = usePhotoAuthMock()
+  const promise: ManagedPreviewPromise | null = storedPromise && photo.session &&
+    promiseKey(storedPromise) === promiseKey(photo.session.promise)
+    ? { ...storedPromise, status: photoPromiseStatus(photo.session) } : storedPromise
+  const [recoveryDate, setRecoveryDate] = useState<string | null>(null)
+  const [technicalRecoveryUsedDates, setTechnicalRecoveryUsedDates] = useState<Set<string>>(() => new Set())
+  const technicalClosedDatesRef = useRef<Set<string>>(new Set())
   const [pastResults, setPastResults] = useState<FinalPromiseRecord[]>([])
   const [editError, setEditError] = useState('')
   const [homeNotice, setHomeNotice] = useState('')
@@ -321,6 +335,13 @@ function HomePrototype({
   }
 
   function getDateBlockedReason(date: string) {
+    // 기술복구는 취소 후 재생성과 구분한다. 가능 여부는 개발용 서버 응답 가정이다.
+    if (date === recoveryDate && !technicalRecoveryUsedDates.has(date)) return ''
+    if (technicalClosedDatesRef.current.has(date) || (promise?.date === date && promise.status === 'techFailed')) {
+      return date === getKstParts(Date.now()).date
+        ? '이미 오늘의 약속 만들기 횟수를 모두 사용했어요'
+        : `${formatDateLabel(date)}의 약속 만들기 횟수를 모두 사용했어요`
+    }
     // 종료된 약속이 있는 날짜에는 새 약속을 중복 생성하지 않는다.
     if (isFinalizedDate(date)) {
       return date === getKstParts(Date.now()).date
@@ -340,8 +361,9 @@ function HomePrototype({
   }
 
   function openCreator() {
+    setRecoveryDate(null)
     // 현재 미리보기는 저장된 약속 한 개를 관리한다.
-    if (promise && !getFinalPromiseRecord(promise, Date.now())) {
+    if (promise && promise.status !== 'techFailed' && !getFinalPromiseRecord(promise, Date.now())) {
       setNow(Date.now())
       setScreen('manage')
       return
@@ -402,7 +424,7 @@ function HomePrototype({
   function savePreview() {
     if (creationInProgressRef.current) return
 
-    if (promise && !getFinalPromiseRecord(promise, Date.now())) {
+    if (promise && promise.status !== 'techFailed' && !getFinalPromiseRecord(promise, Date.now())) {
       setConfirmError('이미 저장된 약속이 있어요.')
       return
     }
@@ -450,7 +472,8 @@ function HomePrototype({
     }
 
     // 해당 날짜의 취소 기록이 있으면 사용자 재생성 약속이다.
-    const isRecreated = getCancelledCount(date) > 0
+    const isTechnicalRecovery = date === recoveryDate
+    const isRecreated = !isTechnicalRecovery && getCancelledCount(date) > 0
 
     const nextDraft: PromiseDraft = {
       taskName: nameValidation.taskName,
@@ -479,6 +502,10 @@ function HomePrototype({
       setPastResults(previous => previous.some(record => record.date === previousResult.date)
         ? previous : [...previous, previousResult])
     }
+    if (promise?.status === 'techFailed') technicalClosedDatesRef.current.add(promise.date)
+    if (isTechnicalRecovery) setTechnicalRecoveryUsedDates(previous => new Set([...previous, date]))
+    setRecoveryDate(null)
+    photo.dispatch({ type: 'clear' })
     setDraft(nextDraft)
     setPromise(nextPromise)
     cancellationInProgressRef.current = false
@@ -609,6 +636,7 @@ function HomePrototype({
     return undefined
   }
 
+  /* 기존 즉시 인증 mock은 사진 확인·판정 흐름으로 대체한다.
   // 화면 확인용 상태 변경이다. 실제 사진 인증이나 서버 저장은 실행하지 않는다.
   function verifyPreviewPromise() {
     const current = Date.now()
@@ -628,6 +656,28 @@ function HomePrototype({
 
       return { ...previous, status: 'verified' }
     })
+  }
+
+  */
+  function verifyPreviewPromise() {
+    if (!import.meta.env.DEV || !promise) return
+    photo.dispatch({ type: 'open', promise })
+    setScreen('photo-auth')
+  }
+
+  function openTechnicalRecovery() {
+    if (!promise || photo.session?.stage !== 'tech-failed-recoverable') return
+    if (technicalRecoveryUsedDates.has(promise.date)) {
+      return
+    }
+    openCreator()
+    setRecoveryDate(promise.date)
+  }
+
+  if (screen === 'photo-auth' && photo.session) {
+    return <PhotoAuthMockFlow session={photo.session} dispatch={photo.dispatch}
+      recoveryUsed={technicalRecoveryUsedDates.has(photo.session.promise.date)}
+      onClose={() => setScreen('home')} onRecover={openTechnicalRecovery} />
   }
 
   if (screen === 'write') {
