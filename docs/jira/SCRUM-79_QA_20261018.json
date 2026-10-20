@@ -1,0 +1,52 @@
+{
+  "ticket": "SCRUM-79",
+  "date": "2026-10-18",
+  "scope": "local UI mock S04-S06",
+  "result": "complete",
+  "jiraChanged": true,
+  "jiraStatus": "Done",
+  "acceptanceCriteriaChecked": 3,
+  "jiraCommentSaved": true,
+  "lint": {
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "build": {
+    "exitCode": 0,
+    "modules": 47
+  },
+  "verify": {
+    "exitCode": 0,
+    "backendTests": 40,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "recreatedPromiseEditBlocked": "browser_verified",
+  "recreatedConfirmationCopy": "browser_verified",
+  "liveStartBoundary": "browser_verified_2026-10-18T19:25+09:00",
+  "draftBackAndExit": "browser_verified",
+  "recreationLimitAndOtherDate": "browser_verified",
+  "appScreenshots": 42,
+  "jiraEvidenceScreenshots": 1,
+  "productSourceChangedByQa": false,
+  "committed": false,
+  "blockers": [],
+  "remainingOutsideScope": [
+    "SCRUM-24 API integration",
+    "TITLE-TECH-01 shared text contract",
+    "Mobile device IME/accessibility QA",
+    "Notion root 404 prevents full latest subtree recheck"
+  ],
+  "report": "SCRUM-79_QA_20261018.md",
+  "warningFixCandidate": {
+    "status": "user_applied_static_checks_passed",
+    "change": "cancelled history ref to immutable state",
+    "lintExitCode": 0,
+    "lintWarnings": 0,
+    "typecheckExitCode": 0,
+    "appliedToFrontend": true,
+    "runtimeRetested": false
+  }
+}
