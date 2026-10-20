@@ -1,0 +1,12 @@
+{
+  "ticket": "SCRUM-82",
+  "date": "2026-10-19",
+  "scope": "홈 문구 및 월~일 최종 결과 집계, 하단 날짜 안내",
+  "status": "partial_validation_passed",
+  "passed": ["actual_source_logic_tests", "react_static_render_tests", "browser_click_history_retention", "date_step_limit_errors", "recreation_limit", "time_range_errors", "official_end_mock_create_edit", "frontend_lint", "frontend_build"],
+  "not_run": ["official_end_server_data_connection", "physical_device", "server_integration"],
+  "test_command": "npm run test:home --workspace frontend",
+  "design_unconfirmed": ["mock_evaluating_footer", "mock_expired_footer", "mock_verified_footer"],
+  "delivery_scope": "검증한 프론트엔드 및 기록만 커밋·푸시 대상. 백엔드 제외",
+  "jira_updated": false
+}
