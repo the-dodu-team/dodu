@@ -612,3 +612,11 @@
 - Alternatives: retain direct `Instant.now()` and enforce the end only in workers; rejected because tests and request boundaries would diverge.
 - Impact: deterministic promise boundary tests are possible, and late new submissions are rejected with `INTERVENTION_CLOSED` while delayed processing remains handled by the result path.
 - Verification: targeted promise/photo integration tests and full `npm run verify`.
+
+## DEV-20261021-03 Mono ticket closure audit
+
+- Background: the remaining mono-assigned Sprint 3 tickets mix code-completable stories with cross-role approvals and external operations.
+- Choice: transition only SCRUM-31 and SCRUM-32 after their acceptance evidence; keep tickets with missing external or cross-role criteria open and record their exact blockers in Jira and local status tracking.
+- Rationale: a commit or policy class alone is not evidence that an external worker, notification scheduler, FE handoff, provider decision, or PO approval is complete.
+- Impact: Jira status remains aligned with verifiable scope and does not hide unfinished work behind the integration branch.
+- Verification: Jira comments 10057–10061, transitions of SCRUM-31 and SCRUM-32, and the repository test run.
