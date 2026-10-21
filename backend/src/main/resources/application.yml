@@ -4,6 +4,12 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:${DODU_DB_PORT:5432}/${DODU_DB_NAME:dodu}
     username: ${DODU_DB_USERNAME:dodu}
-    password: ${DODU_DB_PASSWORD:dodu-local}
+    password: ${DODU_DB_PASSWORD:dodu}
   flyway:
     locations: classpath:db/migration
+
+# 참가자 입장 코드 해시용 서버 비밀 값(pepper). 환경변수로만 주입하며 저장소에 값을 적지 않습니다.
+# 비어 있거나 32바이트보다 짧으면 서버가 시작되지 않습니다.
+dodu:
+  access:
+    code-pepper: ${DODU_ACCESS_CODE_PEPPER:}
