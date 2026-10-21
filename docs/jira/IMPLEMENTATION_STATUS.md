@@ -155,3 +155,7 @@
 - Jira: 완료.
 - 범위: 약속 작성·확인·상세·수정·취소의 UI 상태와 입력 경계.
 - 후속: 서버 API 연결 및 실제 DB 동시성 검증은 SCRUM-23 범위다.
+## Integration branch migration reconciliation
+
+- `origin/dev`의 참가자 접근 V2와 기존 사진 제출 V2가 충돌해 사진 제출 마이그레이션을 `V5__photo_submission_storage.sql`로 승격했다.
+- 승격 전 전체 검증은 Flyway duplicate version 2로 실패했으며, 수정 후 Docker 기반 전체 검증을 다시 수행한다.

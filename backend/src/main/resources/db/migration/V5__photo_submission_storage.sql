@@ -1,4 +1,4 @@
--- V2: photo submission metadata and the attempt-to-asset relationship.
+-- V5: photo submission metadata and the attempt-to-asset relationship.
 -- Raw photo bytes stay in an external/private object store; PostgreSQL stores metadata only.
 
 create table photo_asset (
