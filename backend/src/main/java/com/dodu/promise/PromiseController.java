@@ -1,6 +1,7 @@
 package com.dodu.promise;
 
 import java.time.Instant;
+import java.time.Clock;
 import java.time.ZoneId;
 import java.sql.Timestamp;
 import java.util.UUID;
@@ -23,11 +24,15 @@ import com.dodu.access.AccessCredentialHasher;
 public class PromiseController {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private final JdbcTemplate jdbc;
+    private final Clock clock;
     private final PromiseRequestValidator validator = new PromiseRequestValidator();
     private final AccessCredentialHasher hasher = new AccessCredentialHasher(
             System.getenv().getOrDefault("DODU_CREDENTIAL_PEPPER", "local-development-only"));
 
-    public PromiseController(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    public PromiseController(JdbcTemplate jdbc, Clock clock) {
+        this.jdbc = jdbc;
+        this.clock = clock;
+    }
 
     @PostMapping
     @Transactional
@@ -43,11 +48,14 @@ public class PromiseController {
                 throw error(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED");
             }
             if (existing.promiseId() == null) {
-                throw error(HttpStatus.CONFLICT, "PROMISE_CREATION_IN_PROGRESS");
+                existing = awaitCreationCompletion(participantId, key);
+                if (existing == null || existing.promiseId() == null) {
+                    throw error(HttpStatus.CONFLICT, "PROMISE_CREATION_IN_PROGRESS");
+                }
             }
             return findPromise(existing.promiseId(), participantId);
         }
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         StudyRow study = jdbc.query("select s.id, s.intervention_ends_at from study_period s "
                         + "join participant p on p.study_period_id = s.id where p.id = ?",
                 rs -> rs.next() ? new StudyRow(UUID.fromString(rs.getString("id")),
@@ -75,6 +83,20 @@ public class PromiseController {
         jdbc.update("update promise_creation_request set promise_id = ? where participant_id = ? and idempotency_key = ?",
                 promiseId, participantId, key);
         return new PromiseResponse(promiseId, valid.taskTitle(), valid.toolType(), valid.scheduledAt(), 0);
+    }
+
+    private CreationRequest awaitCreationCompletion(UUID participantId, String key) {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            CreationRequest current = findCreationRequest(participantId, key);
+            if (current == null || current.promiseId() != null) return current;
+            try {
+                Thread.sleep(25L);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return current;
+            }
+        }
+        return findCreationRequest(participantId, key);
     }
 
     private CreationRequest findCreationRequest(UUID participantId, String key) {
@@ -112,7 +134,7 @@ public class PromiseController {
                         rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version"), rs.getInt("schedule_version"), rs.getString("lifecycle_status")) : null,
                 promiseId, participantId);
         if (current == null) throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         if (current.rowVersion() != request.expectedVersion()) throw error(HttpStatus.CONFLICT, "PROMISE_VERSION_CONFLICT");
         if (!current.scheduledAt().isAfter(now) || !current.lifecycleStatus().equals("Scheduled")) throw error(HttpStatus.CONFLICT, "PROMISE_NOT_MODIFIABLE");
         if (current.scheduleVersion() >= 2) throw error(HttpStatus.CONFLICT, "PROMISE_RESCHEDULE_LIMIT_REACHED");
@@ -145,7 +167,7 @@ public class PromiseController {
                 promiseId, participantId);
         if (current == null) throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
         if (current.rowVersion() != request.expectedVersion()) throw error(HttpStatus.CONFLICT, "PROMISE_VERSION_CONFLICT");
-        if (!current.scheduledAt().isAfter(Instant.now()) || !current.lifecycleStatus().equals("Scheduled")) throw error(HttpStatus.CONFLICT, "PROMISE_NOT_MODIFIABLE");
+        if (!current.scheduledAt().isAfter(clock.instant()) || !current.lifecycleStatus().equals("Scheduled")) throw error(HttpStatus.CONFLICT, "PROMISE_NOT_MODIFIABLE");
         jdbc.update("update promise set lifecycle_status = 'Closed', final_outcome = 'Cancelled', closed_at = now(), updated_at = now(), row_version = row_version + 1 where id = ? and row_version = ?",
                 promiseId, request.expectedVersion());
         return new PromiseResponse(promiseId, current.taskTitle(), current.toolType(), current.scheduledAt(), request.expectedVersion() + 1);

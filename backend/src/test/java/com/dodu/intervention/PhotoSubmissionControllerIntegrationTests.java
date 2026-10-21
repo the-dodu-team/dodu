@@ -50,7 +50,7 @@ class PhotoSubmissionControllerIntegrationTests {
         UUID policyId = UUID.randomUUID();
         promiseId = UUID.randomUUID();
         Instant now = Instant.now();
-        jdbc.update("insert into study_period(id, code) values (?, ?)", studyId, "photo-study-" + suffix);
+        jdbc.update("insert into study_period(id, code, intervention_ends_at) values (?, ?, ?)", studyId, "photo-study-" + suffix, Timestamp.from(now.plusSeconds(3_600)));
         jdbc.update("insert into policy_version(id, version, effective_from) values (?, ?, ?)", policyId, "photo-policy-" + suffix, Timestamp.from(now.minusSeconds(60)));
         jdbc.update("insert into participant(id, study_period_id, public_code, lifecycle_status, enrolled_at) values (?, ?, ?, 'Active', ?)", participantId, studyId, "photo-" + suffix, Timestamp.from(now));
         jdbc.update("insert into participant_device(id, participant_id, device_key_hash, lifecycle_status, first_seen_at, last_seen_at) values (?, ?, ?, 'Active', ?, ?)", deviceId, participantId, "photo-device-" + suffix, Timestamp.from(now), Timestamp.from(now));
