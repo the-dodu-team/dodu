@@ -1,0 +1,10 @@
+{
+  "lint": "passed",
+  "ticket": "SCRUM-82",
+  "weeklyChanged": false,
+  "jiraCompleted": false,
+  "branch": "Feature/SCRUM-79-promise-ui",
+  "date": "2026-10-18",
+  "build": "passed",
+  "scope": "upcoming card partial"
+}
