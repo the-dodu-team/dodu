@@ -140,3 +140,8 @@
 - Added: result persistence now requires the server-stored `valid_received_at` to satisfy `scheduled_at <= valid_received_at < scheduled_at + 30 minutes`, while still checking participant ownership, withdrawal, and `Evaluating` state in the same update.
 - Verified: an accepted attempt can be completed after the intervention window, while an attempt without a valid accepted receipt remains `Evaluating` and returns 409.
 - Remaining: external AI worker callback authentication, previous-attempt/withdrawal race matrix, and production result delivery are not complete.
+## SCRUM-77 UI mock
+
+- Jira: 완료.
+- 범위: 참가자 코드 입력·오류·최초/재진입/접근 종료 mock 분기와 포커스 복귀.
+- 후속: 실제 인증 API 연결은 SCRUM-24, 전체 온보딩은 SCRUM-78에서 담당한다.

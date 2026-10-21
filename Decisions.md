@@ -583,3 +583,8 @@
 - 근거: D04·D08·D10·D11 및 SCRUM-84 완료 기준. 알림·callback 도착 자체는 사진 접수 증거가 아니다.
 - 영향: 새 사진 제출 창은 기존처럼 닫힌 상태를 유지하며, 결과 저장 경계만 서버 기록 기반으로 강화한다.
 - 검증: Docker/Testcontainers PostgreSQL MockMvc에서 마감 후 정상 접수 결과와 `valid_received_at` 없는 결과를 각각 확인했다.
+## DEV-20261018-77 — 참가자 진입 mock 분기
+
+- 배경: 참가자 코드 입력·오류·접근 종료 mock 분기와 포커스 복귀를 통합 브랜치에 포함한다.
+- 근거: SCRUM-77 완료 기준이며 실제 인증 API는 SCRUM-24, 전체 온보딩은 SCRUM-78 범위다.
+- 검증: 통합 브랜치에서 frontend lint/build를 다시 실행한다.
