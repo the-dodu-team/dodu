@@ -1,0 +1,51 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const ts = require('typescript')
+const mod = { exports: {} }
+const source = fs.readFileSync(path.join(__dirname, '../src/features/self-report/selfReportModel.ts'), 'utf8')
+const code = ts.transpileModule(source, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText
+new Function('require', 'module', 'exports', code)(require, mod, mod.exports)
+const m = mod.exports
+const target = { date: '2026-12-31', startTime: '12:00', taskName: '작업', tool: 'book', status: 'verified' }
+assert.equal(m.reportWindow(target).promptedAt, Date.parse('2027-01-01T11:00:00+09:00'))
+assert.equal(m.reportWindow({ ...target, startTime: '11:59' }).promptedAt, Date.parse('2026-12-31T18:00:00+09:00'))
+assert.equal(m.reportWindow({ ...target, startTime: '00:00' }).promptedAt, Date.parse('2026-12-31T18:00:00+09:00'))
+const { promptedAt, expiresAt } = m.reportWindow(target)
+assert.equal(m.canAnswer(target, undefined, promptedAt - 1), false)
+assert.equal(m.canAnswer(target, undefined, promptedAt), true)
+assert.equal(m.canAnswer(target, undefined, expiresAt - 1), true)
+assert.equal(m.canAnswer(target, undefined, expiresAt), false)
+for (const status of ['cancelled', 'techFailed', 'permissionBlocked', 'withdrawn', 'evaluating', 'techError']) {
+  assert.equal(m.asReportTarget({ ...target, status }, expiresAt), null)
+}
+assert.equal(m.asReportTarget({ ...target, status: 'pending' }, Date.parse('2026-12-31T12:29:59+09:00')), null)
+assert.equal(m.asReportTarget({ ...target, status: 'pending' }, Date.parse('2026-12-31T12:30:00+09:00')).status, 'unverified')
+const key = m.reportKey(target)
+let store = m.reportReducer({}, { type: 'seen', target, now: promptedAt })
+assert.equal(store[key].reprompted, true)
+assert.equal(m.reportReducer(store, { type: 'seen', target, now: promptedAt }), store)
+store = m.reportReducer(store, { type: 'skip', target, now: promptedAt })
+assert.equal(store[key].status, 'skipped')
+assert.equal(store[key].answers.started, 'unknown')
+const yes = { started: 'yes', order: 'after', delay: 'within-5', reason: null }
+assert.equal(m.reportReducer(store, { type: 'submit', target, now: promptedAt, answers: yes }), store)
+assert.equal(m.reportReducer({}, { type: 'submit', target, now: expiresAt, answers: yes })[key], undefined)
+assert.equal(m.completeAnswers(m.emptyAnswers), false)
+assert.equal(m.completeAnswers({ ...yes, delay: null }), false)
+assert.equal(m.completeAnswers({ ...yes, order: 'before', delay: null }), true)
+assert.equal(m.completeAnswers({ ...yes, order: 'without-auth', delay: null }), true)
+assert.equal(m.completeAnswers({ ...yes, order: 'unknown', delay: null }), true)
+assert.equal(m.completeAnswers({ ...m.emptyAnswers, started: 'no' }), false)
+assert.equal(m.completeAnswers({ ...m.emptyAnswers, started: 'no', reason: 'schedule' }), true)
+const submitted = m.reportReducer({}, { type: 'submit', target, now: promptedAt, answers: { ...yes, order: 'before', reason: 'other' } })
+assert.equal(submitted[key].answers.delay, null)
+assert.equal(submitted[key].answers.reason, null)
+assert.equal(target.status, 'verified')
+assert.equal(m.reportStatus(target, undefined, expiresAt), 'expired')
+assert.equal(m.reportStatus(target, submitted[key], expiresAt), 'submitted')
+assert.equal(m.latestTargets([target, target, { ...target, date: '2027-01-01' }]).length, 2)
+assert.equal(m.latestTargets([target, { ...target, date: '2027-01-01' }])[0].date, '2027-01-01')
+console.log('Self-report: eligibility, schedule, expiry, skip, deduplication, conditional answers, result separation passed.')
