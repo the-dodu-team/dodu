@@ -173,3 +173,11 @@
 - New photo attempts join the participant study and are rejected after `intervention_ends_at` through `InterventionLifecycleGate`; delayed results for valid pre-end receipts remain a separate path.
 - Verification: targeted Spring integration tests plus the full repository verification are required after this change.
 - Remaining for SCRUM-86: connect the gate to every production notification and recovery scheduler; those paths are not present in this repository.
+
+### Kangmin/mono Sprint 3 closure audit — 2026-10-21
+
+- Completed in Jira after evidence review: SCRUM-31, SCRUM-32.
+- Completed earlier and still done: SCRUM-23.
+- Implementation evidence recorded but not complete: SCRUM-70 (trusted proxy, shared-store/multi-node operations, bot validation and QA), SCRUM-76 (FE/BE acceptance and common envelope), SCRUM-83 (external object storage/AI worker boundary), SCRUM-84 (callback authentication and full race matrix), SCRUM-85 (retry/backoff worker and recovery queue), SCRUM-86 (notification and recovery scheduler connections), SCRUM-87 (self-report/notification/FE integration).
+- Planning or approval dependent and not closed: SCRUM-6, SCRUM-9, SCRUM-14, SCRUM-17, SCRUM-20, SCRUM-21, SCRUM-25, SCRUM-35, SCRUM-37, SCRUM-75. These require other-role acceptance, external service/provider decisions, or broader integration scope; no false completion was recorded.
+- All Jira updates in this audit use the verified `dodu-mobile` site and Sprint 3 cloud ID. Other owners' tickets were not transitioned.

@@ -612,3 +612,4 @@
 - Alternatives: retain direct `Instant.now()` and enforce the end only in workers; rejected because tests and request boundaries would diverge.
 - Impact: deterministic promise boundary tests are possible, and late new submissions are rejected with `INTERVENTION_CLOSED` while delayed processing remains handled by the result path.
 - Verification: targeted promise/photo integration tests and full `npm run verify`.
+
