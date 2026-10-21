@@ -19,26 +19,26 @@
 - 검증: `PromiseControllerIntegrationTests` 2건에서 실제 PostgreSQL 세션으로 동일 키 재요청 재사용, 본문 변경 충돌, 병렬 요청의 단일 promise 생성을 확인했다.
 - 검증: `PromiseControllerIntegrationTests` 3건에서 병렬 약속 수정의 200·409 낙관적 잠금 결과와 변경된 KST 날짜 원장 1건을 확인했다.
 - 검증: `PromiseControllerIntegrationTests` 4건에서 병렬 취소의 200·409 결과와 단일 `Closed/Cancelled` 상태를 확인했다.
-- 남은 범위: 응답 envelope 정리는 별도 후속 품질 작업이며 SCRUM-23 핵심 완료 조건에는 포함하지 않았다.
+- 남은 범위: 응답 형식 정리는 별도 후속 품질 작업이며 SCRUM-23 핵심 완료 조건에는 포함하지 않았다.
 
 ### SCRUM-35/37 / 사진 인증 JDBC 경계 보정
 
 - 상태: 연동 경계 보정.
 - 수정: 사진 제출·판정 결과 API의 PostgreSQL `timestamptz` 읽기·쓰기 변환을 명시했다.
-- 검증: 전체 백엔드 테스트 50건 통과. 사진 API의 운영 저장소·AI worker 연결은 여전히 남아 있다.
+- 검증: 전체 백엔드 테스트 50건 통과. 사진 API의 운영 저장소·AI 작업자 연결은 여전히 남아 있다.
 
 ### SCRUM-35/37 / 사진 판정 결과 상태 전이
 
 - 상태: 구현 진행 중.
 - 추가: `COMPLETED` 결과의 `AuthCompleted`, `TECH_ERROR` 결과의 `Closed/TechFailed` 전이와 취소·철회·중복 완료 보호.
 - 검증: `PhotoEvaluationResultControllerIntegrationTests` 2건 통과.
-- 남은 범위: 외부 사진 저장소·AI worker, 사진 제출 멀티파트 통합 테스트, T+30 지연 결과 전체 시나리오.
+- 남은 범위: 외부 사진 저장소·AI 작업자, 사진 제출 멀티파트 통합 테스트, T+30 지연 결과 전체 시나리오.
 
 ### SCRUM-35 / 사진 제출 멀티파트 통합 검증
 
 - 상태: 메타데이터 저장·중복 요청 범위 검증됨.
 - 검증: 실제 MockMvc multipart와 PostgreSQL에서 사진 메타데이터·attempt 연결, 동일 요청 재사용, 지문 변경 409를 확인했다(2건).
-- 남은 범위: 외부/private object storage 업로드, AI worker 연동, T+30 지연 결과 전체 시나리오.
+- 남은 범위: 외부 비공개 객체 저장소 업로드, AI 작업자 연동, T+30 지연 결과 전체 시나리오.
 
 ### 전체 검증 회귀 결과
 
@@ -51,7 +51,7 @@
 - 상태: 구현 대조 진행 중.
 - 갱신: `docs/api/SCREEN_API_HANDOFF.md`, `PROMISE_API_CONTRACT.md`, `PHOTO_SUBMISSION_CONTRACT.md`에 실제 약속·사진 API 검증 범위를 반영하고 폐기된 외부 기준 ID를 제거했다.
 - 검증 완료: 약속 생성·수정·취소, 사진 제출·판정 결과의 HTTP/DB 동시성 범위.
-- 남은 범위: FE/BE 역할별 인수 리뷰, 공통 response envelope 합의, 알림·집계·자기보고 전체 모듈 계약과 fixture.
+- 남은 범위: FE/BE 역할별 인수 리뷰, 공통 응답 형식 합의, 알림·집계·자기보고 전체 모듈 계약과 테스트 fixture.
 - Jira: SCRUM-76은 남은 인수 조건으로 진행 중이며 완료 처리하지 않는다.
 
 ### Docker 기반 DB 통합 검증
@@ -60,7 +60,7 @@
 - 확인: Docker Desktop 엔진에서 Testcontainers PostgreSQL 16을 기동하고 Flyway V1/V2를 실제 적용했다.
 - 수정: 사진 자산 중복 제약조건 테스트가 의도한 인덱스를 단독 검증하도록 fixture를 분리했고, 트랜잭션 프록시 대상 Controller의 Spring 컨텍스트 기동을 보정했다.
 - 검증: `backend\\mvnw.cmd test` — 46건 실행, 실패 0, 오류 0.
-- 남은 범위: 제품 기능의 전체 수용조건과 외부 알림·사진 저장소·AI worker 연동은 별도 작업이다.
+- 남은 범위: 제품 기능의 전체 수용조건과 외부 알림·사진 저장소·AI 작업자 연동은 별도 작업이다.
 - 대응 Jira: SCRUM-83 검증 범위에 반영. 티켓 완료 여부는 사진 제출 저장 기능의 전체 수용조건 충족 후 판단한다.
 
 ## 2026-10-16
@@ -68,7 +68,7 @@
 ### 외부 기준·Jira 연결 확인 결과
 
 - Notion 기준 페이지: 확인 실패. 연결된 Notion 통합이 `object_not_found (404)`를 반환하여 `3d64c293-890d-80cc-940b-dc3cef7aa32c` 및 하위 항목의 최신 내용을 읽지 못했다.
-- Jira 연결: `codex_apps` Atlassian 연결에서 `https://dodu-mobile.atlassian.net`을 확인했다. `SCRUM-22` 조회와 보드 1의 활성 `SCRUM Sprint 3`를 확인했으며, 이후 Jira 작업은 이 연결과 cloud ID를 사용한다.
+- Jira 연결: `codex_apps` Atlassian 연결에서 `https://dodu-mobile.atlassian.net`을 확인했다. `SCRUM-22` 조회와 보드 1의 활성 `SCRUM Sprint 3`를 확인했으며, 이후 Jira 작업은 이 연결과 클라우드 ID를 사용한다.
 - 참고: 별도 일반 Atlassian 연결은 `https://dodu-app.atlassian.net`을 반환하므로 사용하지 않는다.
 
 ### NEXT01 / 참가자 식별·재발급·접근 제어
@@ -84,7 +84,7 @@
 - 상태: 구현 진행 중
 - 완료 범위: 약속 생성, 활성 약속 조회, 생성 입력 경계 검증, 서버 시간 기준 검증, 약속 날짜 사용 원장, 수정·취소 API 초안
 - 검증: 요청 경계 단위 테스트 통과, 백엔드 패키징 통과
-- 남은 범위: DB 통합 테스트, 멱등성, 수정·취소 동시성 검증, 응답 envelope 정리, 프런트 연결
+- 남은 범위: DB 통합 테스트, 멱등성, 수정·취소 동시성 검증, 응답 형식 정리, 프런트 연결
 - 원격 티켓: 현재 연결된 Jira 권한으로 `dodu-mobile` 상태 변경 불가
 
 ### 적용 규칙
@@ -93,91 +93,91 @@
 - 기존 티켓의 완료 조건을 모두 충족하면 검증 결과와 함께 완료 처리한다.
 - 원격 Jira가 연결되지 않거나 권한이 없으면 로컬 문서에 대상 티켓·남은 범위·차단 사유를 기록하고 완료 처리하지 않는다.
 
-### SCRUM-70 / participant-code IP temporary block
+### SCRUM-70 / 참가자 코드 IP 임시 차단
 
-- Status: implementation connected; operational hardening remains.
-- Added: Flyway V4 `access_failure_rate_limit`, `AccessFailureRateLimiter`, and `/api/access/enter` integration.
-- Verified: 10 failures within 10 minutes produce a 15-minute block, blocked requests do not extend expiry, successful access clears the row, and HTTP 429 includes `TOO_MANY_ATTEMPTS` plus `Retry-After`.
-- Remaining: trusted-proxy source-IP configuration, bounded cleanup/retention, bot-token provider selection and validation, multi-node attack/false-positive QA.
-- Jira: SCRUM-70 remains in progress; it is not complete until the external deployment and bot-validation criteria are decided and verified.
+- 상태: 구현 연동 완료, 운영 보강 작업 남음.
+- 추가: Flyway V4 `access_failure_rate_limit`, `AccessFailureRateLimiter`, `/api/access/enter` 연동.
+- 검증: 10분 안에 10회 실패하면 15분 차단되고, 차단 중 요청은 만료 시각을 연장하지 않으며, 접근 성공 시 기록이 초기화되고, HTTP 429에 `TOO_MANY_ATTEMPTS`와 `Retry-After`가 포함되는 것을 확인했다.
+- 남은 범위: 신뢰 프록시 원본 IP 설정, 제한된 정리·보관, 봇 토큰 제공자 선정·검증, 다중 노드 공격·오탐 QA.
+- Jira: SCRUM-70은 진행 중으로 유지한다. 외부 배포와 봇 검증 조건을 결정하고 확인하기 전에는 완료할 수 없다.
 
-## 3-6 Progress
+## 3-6 진행 현황
 
-### Database and migrations
+### 데이터베이스 및 마이그레이션
 
-- Status: foundation confirmed.
-- Confirmed: PostgreSQL/Flyway dependencies, V1 schema, access/promise/auth/survey tables and constraints.
-- Remaining: product-level integration scenarios, concurrency/idempotency verification, and external service integration.
+- 상태: 기반 구성 확인.
+- 확인: PostgreSQL/Flyway 의존성, V1 스키마, 접근·약속·인증·설문 테이블과 제약조건.
+- 남은 범위: 제품 수준 통합 시나리오, 동시성·멱등성 검증, 외부 서비스 연동.
 
-### Notifications and photo authentication
+### 알림 및 사진 인증
 
-- Status: policy layer confirmed; integration API remains open.
-- Confirmed: T/T+10/T+20/T+30 boundaries, one concurrent Evaluating attempt, and late valid submission result preservation in existing policy tests.
-- Remaining: notification delivery jobs and photo upload/evaluation API integration.
+- 상태: 정책 계층 확인, 연동 API는 미완료.
+- 확인: T/T+10/T+20/T+30 경계, 동시에 하나만 허용하는 Evaluating 시도, 지연된 정상 제출 결과 보존을 기존 정책 테스트에서 확인했다.
+- 남은 범위: 알림 발송 작업과 사진 업로드·판정 API 연동.
 
-### Authentication history and self-report
+### 인증 이력 및 자기보고
 
-- Status: eligibility and 48-hour response boundary implemented.
-- Added: backend/src/main/java/com/dodu/survey/ValidationSurveyPolicy.java
-- Verified: only AuthCompleted/AuthIncomplete are eligible; availableAt is inclusive and expiresAt is exclusive.
-- Added: backend/src/main/java/com/dodu/survey/ValidationSurveyController.java
-- Verified: participant-scoped survey read/submit endpoints, server-side 48-hour boundary, duplicate submission conflict, and separate actual_started fields from promise authentication outcome.
-- Remaining: history screen integration and production notification wiring.
+- 상태: 대상 판정과 48시간 응답 경계 구현.
+- 추가: `backend/src/main/java/com/dodu/survey/ValidationSurveyPolicy.java`
+- 검증: `AuthCompleted`와 `AuthIncomplete`만 대상이 되고, `availableAt`은 포함하며 `expiresAt`은 제외하는 것을 확인했다.
+- 추가: `backend/src/main/java/com/dodu/survey/ValidationSurveyController.java`
+- 검증: 참가자 범위 설문 조회·제출 API, 서버 기준 48시간 경계, 중복 제출 충돌, 약속 인증 결과와 `actual_started` 필드 분리를 확인했다.
+- 남은 범위: 이력 화면 연동과 운영 알림 연결.
 
-### Figma fidelity
+### Figma 화면 일치도
 
-- Status: not started.
-- Remaining: compare Figma handoff frames and adjust frontend UI.
+- 상태: 미착수.
+- 남은 범위: Figma 핸드오프 화면을 비교하고 프런트엔드 UI를 보정한다.
 
-### Ticket synchronization
+### 티켓 동기화
 
-- Local tracking: NEXT04/NEXT05/NEXT07 and related DODU records.
-- Remote Jira: the current connected session is verified against `dodu-mobile` with Sprint 3. Each implementation commit is synchronized to its matching ticket; completion is still limited to tickets whose acceptance criteria are fully satisfied and assigned to `mono`.
-- Remote tickets are not marked complete.
-### SCRUM-84 / accepted receipt guard for delayed result
+- 로컬 추적: NEXT04/NEXT05/NEXT07 및 관련 DODU 기록.
+- 원격 Jira: 현재 연결 세션은 Sprint 3이 있는 `dodu-mobile` 기준으로 확인했다. 각 구현 커밋은 대응 티켓에 동기화하며, 완료 처리는 수용 조건을 모두 충족하고 `mono`에게 할당된 티켓으로 제한한다.
+- 원격 티켓은 근거 없이 완료 처리하지 않는다.
+### SCRUM-84 / 지연 결과를 위한 정상 접수 보호
 
-- Status: partial implementation verified; full external AI/result lifecycle remains open.
-- Added: result persistence now requires the server-stored `valid_received_at` to satisfy `scheduled_at <= valid_received_at < scheduled_at + 30 minutes`, while still checking participant ownership, withdrawal, and `Evaluating` state in the same update.
-- Verified: an accepted attempt can be completed after the intervention window, while an attempt without a valid accepted receipt remains `Evaluating` and returns 409.
-- Remaining: external AI worker callback authentication, previous-attempt/withdrawal race matrix, and production result delivery are not complete.
-## SCRUM-77 UI mock
+- 상태: 부분 구현 검증, 외부 AI·결과 전체 생명주기는 미완료.
+- 추가: 결과 저장 시 서버에 저장된 `valid_received_at`이 `scheduled_at <= valid_received_at < scheduled_at + 30 minutes`를 만족하도록 하고, 같은 갱신에서 참가자 소유권·철회 여부·`Evaluating` 상태도 확인한다.
+- 검증: 정상 접수된 시도는 개입 창 이후에도 완료할 수 있고, 정상 접수 근거가 없는 시도는 `Evaluating`으로 남아 409를 반환한다.
+- 남은 범위: 외부 AI 작업자 콜백 인증, 이전 시도·철회 동시성 검증표, 운영 결과 전달.
+## SCRUM-77 UI 목업
 
 - Jira: 완료.
-- 범위: 참가자 코드 입력·오류·최초/재진입/접근 종료 mock 분기와 포커스 복귀.
+- 범위: 참가자 코드 입력·오류·최초/재진입/접근 종료 목업 분기와 포커스 복귀.
 - 후속: 실제 인증 API 연결은 SCRUM-24, 전체 온보딩은 SCRUM-78에서 담당한다.
-## SCRUM-78 UI mock
+## SCRUM-78 UI 목업
 
 - Jira: 완료.
 - 범위: 서비스 소개·PWA 안내·권한 복구 화면과 참가자 진입 뒤 분기.
 - 후속: 실제 권한·세션 API 연결과 운영 PWA 검증은 별도 범위다.
-## SCRUM-79 UI mock
+## SCRUM-79 UI 목업
 
 - Jira: 완료.
 - 범위: 약속 작성·확인·상세·수정·취소의 UI 상태와 입력 경계.
 - 후속: 서버 API 연결 및 실제 DB 동시성 검증은 SCRUM-23 범위다.
-## Integration branch migration reconciliation
+## 통합 브랜치 마이그레이션 조정
 
 - `origin/dev`의 참가자 접근 V2와 기존 사진 제출 V2가 충돌해 사진 제출 마이그레이션을 `V5__photo_submission_storage.sql`로 승격했다.
 - 승격 전 전체 검증은 Flyway duplicate version 2로 실패했으며, 수정 후 Docker 기반 전체 검증을 다시 수행한다.
-## Sprint 3 integration branch — 2026-10-21
+## Sprint 3 통합 브랜치 — 2026-10-21
 
-- Branch: `integration/sprint-3-20261021`
+- 브랜치: `integration/sprint-3-20261021`
 - PR: https://github.com/the-dodu-team/dodu/pull/18 → `dev`
-- Merged product branches: SCRUM-62, SCRUM-64, SCRUM-69, SCRUM-70, SCRUM-77, SCRUM-78, SCRUM-79, SCRUM-80, SCRUM-81, plus latest `origin/dev`.
-- Verification: `npm run verify` passed; frontend lint/build passed, backend 174 tests passed, Docker/Testcontainers PostgreSQL and Flyway V1–V5 passed, and `git diff --check` passed.
-- Jira completion policy: only mono-owned tickets may be completed from this work; other owners' tickets remain unchanged.
-### SCRUM-31/32/86 — server clock and official intervention end enforcement
+- 병합한 제품 브랜치: SCRUM-62, SCRUM-64, SCRUM-69, SCRUM-70, SCRUM-77, SCRUM-78, SCRUM-79, SCRUM-80, SCRUM-81 및 최신 `origin/dev`.
+- 검증: `npm run verify` 성공, 프런트엔드 lint/build 성공, 백엔드 174개 테스트 통과, Docker/Testcontainers PostgreSQL과 Flyway V1~V5 통과, `git diff --check` 통과.
+- Jira 완료 정책: 이번 작업에서는 `mono` 담당 티켓만 완료할 수 있으며, 다른 담당자의 티켓은 변경하지 않는다.
+### SCRUM-31/32/86 — 서버 시각 및 공식 개입 종료 강제
 
-- Status: implemented on the integration branch; Jira completion remains limited to the acceptance criteria actually covered by the current code and tests.
-- Promise create/reschedule/cancel now use the injected application `Clock` for server-time decisions.
-- New photo attempts join the participant study and are rejected after `intervention_ends_at` through `InterventionLifecycleGate`; delayed results for valid pre-end receipts remain a separate path.
-- Verification: targeted Spring integration tests plus the full repository verification are required after this change.
-- Remaining for SCRUM-86: connect the gate to every production notification and recovery scheduler; those paths are not present in this repository.
+- 상태: 통합 브랜치에 구현됨. Jira 완료 처리는 현재 코드와 테스트가 실제로 확인한 수용 조건으로 제한한다.
+- 약속 생성·수정·취소는 주입된 애플리케이션 `Clock`으로 서버 시각을 판단한다.
+- 신규 사진 시도는 참가자의 스터디에 연결해 `intervention_ends_at` 이후 `InterventionLifecycleGate`로 거절한다. 종료 전 정상 접수 결과의 지연 처리는 별도 경로로 유지한다.
+- 검증: 이 변경에 대한 Spring 통합 테스트와 저장소 전체 검증을 실행했다.
+- SCRUM-86 남은 범위: 운영 알림과 복구 스케줄러 전체에 게이트를 연결해야 하며, 해당 경로는 현재 저장소에 구현되어 있지 않다.
 
-### Kangmin/mono Sprint 3 closure audit — 2026-10-21
+### 강민(mono) Sprint 3 완료 감사 — 2026-10-21
 
-- Completed in Jira after evidence review: SCRUM-31, SCRUM-32.
-- Completed earlier and still done: SCRUM-23.
-- Implementation evidence recorded but not complete: SCRUM-70 (trusted proxy, shared-store/multi-node operations, bot validation and QA), SCRUM-76 (FE/BE acceptance and common envelope), SCRUM-83 (external object storage/AI worker boundary), SCRUM-84 (callback authentication and full race matrix), SCRUM-85 (retry/backoff worker and recovery queue), SCRUM-86 (notification and recovery scheduler connections), SCRUM-87 (self-report/notification/FE integration).
-- Planning or approval dependent and not closed: SCRUM-6, SCRUM-9, SCRUM-14, SCRUM-17, SCRUM-20, SCRUM-21, SCRUM-25, SCRUM-35, SCRUM-37, SCRUM-75. These require other-role acceptance, external service/provider decisions, or broader integration scope; no false completion was recorded.
-- All Jira updates in this audit use the verified `dodu-mobile` site and Sprint 3 cloud ID. Other owners' tickets were not transitioned.
+- 근거 검토 후 Jira 완료 처리: SCRUM-31, SCRUM-32.
+- 이전에 완료 처리되어 현재도 완료 상태: SCRUM-23.
+- 구현 근거는 기록했지만 미완료: SCRUM-70(신뢰 프록시, 공유 저장소·다중 노드 운영, 봇 검증·QA), SCRUM-76(FE/BE 인수와 공통 응답 형식), SCRUM-83(외부 객체 저장소·AI 작업자 경계), SCRUM-84(콜백 인증과 전체 동시성 검증표), SCRUM-85(재시도·백오프 작업자와 복구 큐), SCRUM-86(알림·복구 스케줄러 연결), SCRUM-87(자기보고·알림·FE 연동).
+- 기획 또는 승인 의존으로 미완료: SCRUM-6, SCRUM-9, SCRUM-14, SCRUM-17, SCRUM-20, SCRUM-21, SCRUM-25, SCRUM-35, SCRUM-37, SCRUM-75. 다른 역할의 인수, 외부 서비스·제공자 결정 또는 더 넓은 통합 범위가 필요하므로 허위 완료 처리하지 않았다.
+- 이번 감사의 모든 Jira 변경은 확인된 `dodu-mobile` 사이트와 Sprint 3 클라우드 ID를 사용했다. 다른 담당자의 티켓은 상태를 변경하지 않았다.
