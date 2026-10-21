@@ -159,3 +159,10 @@
 
 - `origin/dev`의 참가자 접근 V2와 기존 사진 제출 V2가 충돌해 사진 제출 마이그레이션을 `V5__photo_submission_storage.sql`로 승격했다.
 - 승격 전 전체 검증은 Flyway duplicate version 2로 실패했으며, 수정 후 Docker 기반 전체 검증을 다시 수행한다.
+## Sprint 3 integration branch — 2026-10-21
+
+- Branch: `integration/sprint-3-20261021`
+- PR: https://github.com/the-dodu-team/dodu/pull/18 → `dev`
+- Merged product branches: SCRUM-62, SCRUM-64, SCRUM-69, SCRUM-70, SCRUM-77, SCRUM-78, SCRUM-79, SCRUM-80, SCRUM-81, plus latest `origin/dev`.
+- Verification: `npm run verify` passed; frontend lint/build passed, backend 174 tests passed, Docker/Testcontainers PostgreSQL and Flyway V1–V5 passed, and `git diff --check` passed.
+- Jira completion policy: only mono-owned tickets may be completed from this work; other owners' tickets remain unchanged.
