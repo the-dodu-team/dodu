@@ -26,7 +26,10 @@ export default function PromiseAuthPreview({
   const hasReachedStart = hasValidTime && now >= startsAt
   const hasExpired = hasValidTime && now >= endsAt
   const isVerified = promise.status === 'verified'
-  const canVerify = hasReachedStart && !hasExpired && promise.status === 'pending'
+  const canVerify = import.meta.env.DEV && hasReachedStart && (
+    (!hasExpired && promise.status === 'pending') ||
+    ['evaluating', 'techError', 'techFailed', 'verified', 'unverified'].includes(promise.status)
+  )
 
   useEffect(() => {
     const updateTime = () => setNow(Date.now())
@@ -49,9 +52,10 @@ export default function PromiseAuthPreview({
 
     if (
       !hasValidTime ||
-      promise.status !== 'pending' ||
+      !import.meta.env.DEV ||
       currentTime < startsAt ||
-      currentTime >= endsAt
+      (promise.status === 'pending' && currentTime >= endsAt) ||
+      ['cancelled', 'withdrawn', 'permissionBlocked'].includes(promise.status)
     ) {
       return
     }
@@ -67,7 +71,9 @@ export default function PromiseAuthPreview({
     <div className="promise-auth-preview">
       {!isVerified && (
         <p role="status">
-          {promise.status === 'evaluating'
+          {promise.status === 'techFailed' || promise.status === 'techError'
+            ? '사용자 실패로 기록되지 않아요'
+            : promise.status === 'evaluating'
             ? '사진 판정 결과를 기다리고 있어요.'
             : hasExpired
             ? '인증 시간이 종료되었어요.'
@@ -78,7 +84,9 @@ export default function PromiseAuthPreview({
       {(hasReachedStart || isVerified) && (
         <Button onClick={handleVerify} disabled={!canVerify}>
           <img src={cameraIcon} alt="" width={16} height={16} />
-          {isVerified
+          {promise.status === 'techFailed' || promise.status === 'techError'
+            ? '인증 결과'
+            : isVerified
             ? '인증 완료'
             : promise.status === 'evaluating'
               ? '판정 대기 중'

@@ -59,7 +59,7 @@ export default function OnboardingIntroPage({
           </div>
         </div>
 
-        <div className="onboarding-platform-info">
+        {totalSteps === 4 && <div className="onboarding-platform-info">
           <span
             className="onboarding-platform-icon"
             style={{ maskImage: `url("${infoIcon}")` }}
@@ -68,7 +68,7 @@ export default function OnboardingIntroPage({
           <p>
             iPhone은 홈 화면에 추가해야 알림을 받을 수 있어요.
           </p>
-        </div>
+        </div>}
       </main>
 
       <footer className="onboarding-footer">

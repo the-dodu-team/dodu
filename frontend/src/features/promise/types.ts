@@ -8,5 +8,5 @@ export type PromiseDraft = {
 
 export type PreviewPromise = PromiseDraft & {
   date: string
-  status: 'pending' | 'verified' | 'unverified' | 'evaluating' | 'techFailed' | 'permissionBlocked' | 'cancelled' | 'withdrawn'
+  status: 'pending' | 'verified' | 'unverified' | 'evaluating' | 'techError' | 'techFailed' | 'permissionBlocked' | 'cancelled' | 'withdrawn'
 }
