@@ -8,6 +8,7 @@ import { getKstDateKey } from './features/promise/formatPromise'
 import { reconfirmPromise } from './features/promise/reconfirmPromise'
 import type { PromiseDraft, PreviewPromise } from './features/promise/types'
 import ParticipantEntryPage from './features/access/ParticipantEntryPage'
+import OnboardingMockFlow from './features/onboarding/OnboardingMockFlow'
 
 export default function App() {
   const preview = import.meta.env.DEV
@@ -18,21 +19,28 @@ export default function App() {
     return <ParticipantEntryPreview />
   }
 
-  // 77에서는 최초 진입 화면만 재현한다. 전체 온보딩은 78에서 연결한다.
-  if (preview === 'onboarding') {
+  if (
+    preview === 'onboarding' ||
+    preview === 'onboarding-install' ||
+    preview === 'onboarding-notification' ||
+    preview === 'onboarding-camera' ||
+    preview === 'onboarding-camera-complete'
+  ) {
+    const initialStep = preview === 'onboarding-install' ? 'install'
+      : preview === 'onboarding-notification' ? 'notification'
+        : preview === 'onboarding-camera' ? 'camera'
+          : preview === 'onboarding-camera-complete' ? 'complete' : 'intro'
+
     return (
-      <main className="entry-page">
-        <div className="entry-content">
-          <h1 className="entry-title">약속을 행동으로 이어드려요</h1>
-          <p className="entry-description">최초 참가자의 온보딩 진입 미리보기입니다.</p>
-          <button type="button" className="entry-submit"
-            onClick={() => { window.location.search = '?preview=entry' }}>
-            코드 입력으로 돌아가기
-          </button>
-        </div>
-      </main>
+      <OnboardingMockFlow
+        key={preview}
+        initialStep={initialStep}
+        onClose={() => { window.location.search = '?preview=entry' }}
+        onComplete={() => { window.location.search = '' }}
+      />
     )
   }
+
   return <HomePrototype />
 }
 

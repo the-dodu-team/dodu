@@ -133,3 +133,67 @@ button:focus-visible { outline: 3px solid #be741d; outline-offset: 4px; }
 .entry-submit {display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 50px; padding: 12px 16px; border: 0; border-radius: 16px; background: #5f43ff; color: #ffffff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;}
 .entry-submit:disabled {background: #eef0f5; color: #a2a9ba; opacity: 1; cursor: not-allowed;}
 .entry-submit:focus-visible {outline: 3px solid #5f43ff; outline-offset: 4px;}
+
+/* 온보딩 공통 */
+.onboarding-page {display: flex; flex-direction: column; width: 100%; max-width: 430px; min-height: 100dvh; margin: 0 auto; padding-top: env(safe-area-inset-top, 0px); background: linear-gradient(to bottom, #f4f4fa, #f7f7fb); color: #161a29; font-family: 'Pretendard', system-ui, sans-serif; line-height: 1.4; letter-spacing: -0.015em;}
+.onboarding-header {display: flex; align-items: center; flex-shrink: 0; height: 48px; padding: 0 6px 0 16px;}
+.onboarding-close {display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent;}
+.onboarding-close img {display: block;}
+.onboarding-main {width: 100%; max-width: none; margin: 0; padding: 20px 24px 24px;}
+.onboarding-step {margin: 0; color: #a2a9ba; font-size: 14px; font-weight: 500;}
+.onboarding-step strong {color: #5f43ff; font-weight: 600;}
+.onboarding-title {margin: 0; color: #161a29; font-size: 24px; font-weight: 600; line-height: 1.4; letter-spacing: -0.015em; overflow-wrap: break-word;}
+.onboarding-footer {margin-top: auto; padding: 8px 16px max(16px, env(safe-area-inset-bottom, 0px)); background: #f5f6fa; backdrop-filter: blur(6px);}
+.onboarding-next {display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 50px; padding: 12px 16px; border: 0; border-radius: 16px; background: #5f43ff; color: #ffffff; font: inherit; font-size: 16px; font-weight: 600;}
+.onboarding-close:focus-visible, .onboarding-next:focus-visible {outline: 3px solid #5f43ff; outline-offset: 4px;}
+
+/* 온보딩 1단계: 서비스 소개 */
+.onboarding-intro {display: flex; flex-direction: column; gap: 20px; padding-right: 32px; padding-left: 32px;}
+.onboarding-illustration {display: flex; align-items: center; justify-content: center; height: 257px;}
+.onboarding-illustration img {display: block; width: min(256px, 100%); height: auto; transform: rotate(-14.4437deg);}
+.onboarding-intro-copy {display: flex; flex-direction: column; gap: 12px;}
+.onboarding-intro-description {display: flex; flex-direction: column; gap: 4px; color: #6b7285; font-size: 15px; font-weight: 500;}
+.onboarding-intro-description p {margin: 0;}
+.onboarding-platform-info {display: flex; align-items: flex-start; gap: 8px; padding: 14px 16px; border-radius: 16px; background: #eef0f5;}
+.onboarding-platform-info img {display: block; flex-shrink: 0;}
+.onboarding-platform-info p {min-width: 0; margin: 0; color: #4e5568; font-size: 13px; font-weight: 400;}
+.onboarding-platform-icon {display: block; flex-shrink: 0; width: 20px; height: 20px; background: #a2a9ba; mask-repeat: no-repeat; mask-position: center; mask-size: contain;}
+
+/* 온보딩 공통 헤드라인 */
+.onboarding-headline {display: flex; flex-direction: column; gap: 4px;}
+.onboarding-overline {margin: 0; color: #5668b4; font-size: 15px; font-weight: 600;}
+.onboarding-description {margin: 4px 0 0; color: #6b7285; font-size: 15px; font-weight: 500;}
+
+/* 온보딩 2단계: 홈 화면 추가 안내 */
+.onboarding-install {display: flex; flex-direction: column; gap: 48px;}
+.onboarding-install-body {display: flex; flex-direction: column; gap: 24px;}
+.onboarding-install-card {display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 24px; background: #ffffff;}
+.onboarding-install-steps {display: flex; flex-direction: column; gap: 16px; margin: 0; padding: 0; list-style: none;}
+.onboarding-install-steps li {display: flex; align-items: center; gap: 12px; color: #161a29; font-size: 15px; font-weight: 500;}
+.onboarding-step-number {display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: #ebe9fb; color: #5f43ff; font-size: 14px; font-weight: 600;}
+.onboarding-install-steps li > span:nth-child(2) {flex: 1; min-width: 0; word-break: keep-all; overflow-wrap: break-word;}
+.onboarding-install-icon {display: block; flex: 0 0 20px; width: 20px; height: 20px; background: #6b7285; mask-repeat: no-repeat; mask-position: center; mask-size: contain;}
+.onboarding-install-icon--share {transform: rotate(-90deg);}
+.onboarding-install-note {margin: 0; padding: 16px; border-radius: 12px; background: #eef0f5; color: #4e5568; font-size: 13px; font-weight: 400; overflow-wrap: break-word;}
+.onboarding-install-footer {display: flex; flex-direction: column; gap: 8px;}
+.onboarding-install-notice {display: flex; align-items: flex-start; gap: 8px; padding: 12px 16px; border-radius: 12px; background: #ebe9fb; color: #5f43ff;}
+.onboarding-install-notice img {display: block; flex-shrink: 0;}
+.onboarding-install-notice p {min-width: 0; margin: 0; font-size: 14px; font-weight: 600;}
+.onboarding-notice-icon {display: block; flex-shrink: 0; width: 20px; height: 20px; background: #5f43ff; mask-repeat: no-repeat; mask-position: center; mask-size: contain;}
+
+/* 온보딩 권한 안내 */
+.onboarding-permission {display: flex; flex-direction: column; gap: 48px;}
+.onboarding-permission-body {display: flex; flex-direction: column; gap: 20px;}
+.onboarding-permission-icon {display: block; flex-shrink: 0; width: 48px; height: 48px; background: #a2a9ba; mask-repeat: no-repeat; mask-position: center; mask-size: contain;}
+
+/* 온보딩 4단계: 카메라 안내 */
+.onboarding-camera-body {display: flex; flex-direction: column; gap: 24px;}
+.onboarding-camera-description {font-size: 14px;}
+.onboarding-camera-guide {display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 16px; border: 0; border-radius: 16px; background: #ffffff;}
+.onboarding-camera-guide h2 {margin: 0; color: #161a29; font-size: 15px; font-weight: 600;}
+.onboarding-camera-platform {display: flex; flex-direction: column; gap: 4px; margin: 0;}
+.onboarding-camera-platform dt {color: #6b7285; font-size: 13px; font-weight: 400;}
+.onboarding-camera-platform dd {display: flex; align-items: center; gap: 4px; margin: 0; padding: 10px 12px; border-radius: 10px; background: #eef0f5; color: #363c4d; font-size: 14px; font-weight: 600;}
+.onboarding-menu-symbol {display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px;}
+.onboarding-camera-note {margin: 0; color: #6b7285; font-size: 13px; font-weight: 400;}
+.onboarding-button-icon {display: block; flex-shrink: 0; width: 20px; height: 20px; background: currentColor; mask-repeat: no-repeat; mask-position: center; mask-size: contain;}
