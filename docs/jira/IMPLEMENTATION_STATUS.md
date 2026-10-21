@@ -166,3 +166,10 @@
 - Merged product branches: SCRUM-62, SCRUM-64, SCRUM-69, SCRUM-70, SCRUM-77, SCRUM-78, SCRUM-79, SCRUM-80, SCRUM-81, plus latest `origin/dev`.
 - Verification: `npm run verify` passed; frontend lint/build passed, backend 174 tests passed, Docker/Testcontainers PostgreSQL and Flyway V1–V5 passed, and `git diff --check` passed.
 - Jira completion policy: only mono-owned tickets may be completed from this work; other owners' tickets remain unchanged.
+### SCRUM-31/32/86 — server clock and official intervention end enforcement
+
+- Status: implemented on the integration branch; Jira completion remains limited to the acceptance criteria actually covered by the current code and tests.
+- Promise create/reschedule/cancel now use the injected application `Clock` for server-time decisions.
+- New photo attempts join the participant study and are rejected after `intervention_ends_at` through `InterventionLifecycleGate`; delayed results for valid pre-end receipts remain a separate path.
+- Verification: targeted Spring integration tests plus the full repository verification are required after this change.
+- Remaining for SCRUM-86: connect the gate to every production notification and recovery scheduler; those paths are not present in this repository.

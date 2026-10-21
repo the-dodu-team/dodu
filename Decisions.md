@@ -604,3 +604,11 @@
 - 선택: 이미 존재하는 V2 참가자 접근 지원은 유지하고 사진 제출 마이그레이션 파일을 V5로 승격한다.
 - 영향: 신규 통합 DB에서 V1→V5가 순서대로 적용되며 기존 스키마 의미는 유지된다.
 - 검증: Docker 기반 `npm run verify`를 수정 후 재실행한다.
+## DEV-20261021-02 Promise/photo lifecycle time and official-end gate
+
+- Background: promise mutation and photo submission paths still used wall-clock calls or did not enforce the study's official intervention end.
+- Choice: inject the application `Clock` into `PromiseController`, and require the photo submission path to pass `InterventionLifecycleGate` before creating a new attempt.
+- Evidence: server time is the final authority; after official intervention end only already accepted work may be processed. A new photo submission is not an accepted receipt.
+- Alternatives: retain direct `Instant.now()` and enforce the end only in workers; rejected because tests and request boundaries would diverge.
+- Impact: deterministic promise boundary tests are possible, and late new submissions are rejected with `INTERVENTION_CLOSED` while delayed processing remains handled by the result path.
+- Verification: targeted promise/photo integration tests and full `npm run verify`.

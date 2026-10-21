@@ -29,6 +29,7 @@ public class PhotoSubmissionController {
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final InterventionWindowPolicy windowPolicy;
+    private final InterventionLifecycleGate lifecycleGate = new InterventionLifecycleGate();
     private final AccessCredentialHasher hasher;
 
     @Autowired
@@ -62,17 +63,24 @@ public class PhotoSubmissionController {
 
         Instant now = clock.instant();
         PromiseRow promise = jdbc.query("""
-                select p.scheduled_at, p.lifecycle_status
+                select p.scheduled_at, p.lifecycle_status, s.intervention_ends_at
                   from promise p
+                  join participant participant on participant.id = p.participant_id
+                  join study_period s on s.id = participant.study_period_id
                  where p.id = ? and p.participant_id = ?
                 """, rs -> rs.next()
-                        ? new PromiseRow(rs.getTimestamp("scheduled_at").toInstant(), rs.getString("lifecycle_status"))
+                        ? new PromiseRow(rs.getTimestamp("scheduled_at").toInstant(), rs.getString("lifecycle_status"),
+                                rs.getTimestamp("intervention_ends_at") == null ? null : rs.getTimestamp("intervention_ends_at").toInstant())
                         : null, promiseId, participantId);
         if (promise == null) {
             throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
         }
         if ("Closed".equals(promise.lifecycleStatus()) || "Cancelled".equals(promise.lifecycleStatus())) {
             throw error(HttpStatus.CONFLICT, "PROMISE_NOT_ACTIVE");
+        }
+        if (promise.interventionEndsAt() == null || lifecycleGate.decide(now, promise.interventionEndsAt(), false)
+                != InterventionLifecycleGate.Decision.NEW_WORK_ALLOWED) {
+            throw error(HttpStatus.CONFLICT, "INTERVENTION_CLOSED");
         }
         if (windowPolicy.validateNewPhotoSubmission(promise.scheduledAt()) !=
                 InterventionWindowPolicy.PhotoSubmissionDecision.ALLOWED) {
@@ -167,6 +175,6 @@ public class PhotoSubmissionController {
 
     public record PhotoAttemptResponse(UUID attemptId, UUID promiseId, String processingStatus, Instant receivedAt) { }
     public record ErrorResponse(String code) { }
-    private record PromiseRow(Instant scheduledAt, String lifecycleStatus) { }
+    private record PromiseRow(Instant scheduledAt, String lifecycleStatus, Instant interventionEndsAt) { }
     private record ExistingAttempt(UUID id, String requestFingerprint, String processingStatus, Instant requestReceivedAt) { }
 }
