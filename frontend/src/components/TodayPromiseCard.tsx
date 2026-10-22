@@ -13,12 +13,16 @@ type TodayPromiseCardProps = {
   promise: TodayPromise | null
   onCreate?: () => void
   onEdit?: () => void
+  canCreate?: boolean
+  canEdit?: boolean
 }
 
 export default function TodayPromiseCard({
   promise,
   onCreate,
   onEdit,
+  canCreate = true,
+  canEdit = true,
 }: TodayPromiseCardProps) {
   return (
     <section
@@ -30,7 +34,7 @@ export default function TodayPromiseCard({
           다가오는 약속
         </h2>
 
-        {promise && (
+        {promise && canEdit && (
           <button
             type="button"
             className="home-card-action"
@@ -75,7 +79,7 @@ export default function TodayPromiseCard({
             <br />
             약속을 만들어보세요
           </p>
-          <Button onClick={onCreate} disabled={!onCreate}>
+          <Button onClick={onCreate} disabled={!onCreate || !canCreate}>
             약속 만들기
           </Button>
         </div>

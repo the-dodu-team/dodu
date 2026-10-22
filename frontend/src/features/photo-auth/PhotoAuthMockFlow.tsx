@@ -1,3 +1,4 @@
+import { interventionClosed } from '../home/homeState'
 import { useEffect, useRef, useState } from 'react'
 import type { Dispatch } from 'react'
 import closeIcon from '../../assets/icons/close.svg'
@@ -16,6 +17,7 @@ type Props = {
   onClose: () => void
   onRecover: () => void
   recoveryUsed?: boolean
+  interventionEndsAt?: number
 }
 
 function ToolPicture({ book, photo = false }: { book: boolean; photo?: boolean }) {
@@ -47,7 +49,7 @@ function SummaryCard({ session, result }: { session: PhotoSession; result: boole
 }
 
 // S08~S09 UI mock이다. 카메라·사진 업로드·판정 API는 호출하지 않는다.
-export default function PhotoAuthMockFlow({ session, dispatch, onClose, onRecover, recoveryUsed = false }: Props) {
+export default function PhotoAuthMockFlow({ session, dispatch, onClose, onRecover, recoveryUsed = false, interventionEndsAt }: Props) {
   const [now, setNow] = useState(Date.now)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const { stage } = session
@@ -55,7 +57,7 @@ export default function PhotoAuthMockFlow({ session, dispatch, onClose, onRecove
   const result = !['ready', 'preview', 'evaluating'].includes(stage)
   const evaluating = stage === 'evaluating'
   const remaining = Math.max(0, Math.ceil((session.endsAt - now) / 60_000))
-  const canAct = canSubmitPhoto(session, now)
+  const canAct = canSubmitPhoto(session, now) && !interventionClosed(now, interventionEndsAt)
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
@@ -95,7 +97,11 @@ export default function PhotoAuthMockFlow({ session, dispatch, onClose, onRecove
   }
   // TODO: 기술복구 기회 소진 후 재실패의 전용 문구는 미정이다. 설명 축약과 버튼 비활성은 임시 표시다.
   const copy = result ? resultCopy[stage as keyof typeof resultCopy] : null
-  const send = (type: 'capture' | 'retake' | 'submit') => dispatch({ type, now: Date.now() })
+  const send = (type: 'capture' | 'retake' | 'submit') => {
+    const current = Date.now()
+    if (interventionClosed(current, interventionEndsAt)) return
+    dispatch({ type, now: current })
+  }
   const retry = stage === 'rejected' || stage === 'technical-error'
 
   if (!import.meta.env.DEV) return null
