@@ -6,18 +6,23 @@ type TodayPromise = {
   taskName: string
   startTimeLabel: string
   toolLabel: string
+  isToday?: boolean
 }
 
 type TodayPromiseCardProps = {
   promise: TodayPromise | null
   onCreate?: () => void
   onEdit?: () => void
+  canCreate?: boolean
+  canEdit?: boolean
 }
 
 export default function TodayPromiseCard({
   promise,
   onCreate,
   onEdit,
+  canCreate = true,
+  canEdit = true,
 }: TodayPromiseCardProps) {
   return (
     <section
@@ -26,10 +31,10 @@ export default function TodayPromiseCard({
     >
       <div className="home-card-heading">
         <h2 id="today-promise-title" className="today-promise-label">
-          오늘 약속
+          다가오는 약속
         </h2>
 
-        {promise && (
+        {promise && canEdit && (
           <button
             type="button"
             className="home-card-action"
@@ -43,9 +48,14 @@ export default function TodayPromiseCard({
 
       {promise ? (
         <>
-          <h3 className="today-promise-name" title={promise.taskName}>
-            {promise.taskName}
-          </h3>
+          <div className="upcoming-promise-name-row">
+            <h3 className="today-promise-name" title={promise.taskName}>
+              {promise.taskName}
+            </h3>
+            {promise.isToday && (
+              <span className="upcoming-promise-today-tag">오늘</span>
+            )}
+          </div>
 
           <p className="today-promise-detail">
             <img src={clockIcon} alt="" width={16} height={16} />
@@ -69,7 +79,7 @@ export default function TodayPromiseCard({
             <br />
             약속을 만들어보세요
           </p>
-          <Button onClick={onCreate} disabled={!onCreate}>
+          <Button onClick={onCreate} disabled={!onCreate || !canCreate}>
             약속 만들기
           </Button>
         </div>

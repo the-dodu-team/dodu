@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "test:promise-preview": "node --experimental-strip-types --test src/features/promise/reconfirmPromise.test.mjs",
+    "lint": "oxlint src tests vite.config.ts",
+    "test:home": "node tests/home-history.test.cjs",
+    "test:photo": "node tests/photo-auth.test.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

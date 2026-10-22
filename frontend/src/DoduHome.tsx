@@ -1,26 +1,69 @@
+import { getHomeState, interventionClosed } from './features/home/homeState'
+import './features/home/home-states.css'
+import { getFinalPromiseRecord } from './features/promise/promiseHistory'
+import type { FinalPromiseRecord } from './features/promise/promiseHistory'
+import { useEffect, useState } from 'react'
 import TodayPromiseCard from './components/TodayPromiseCard'
 import WeeklyPromiseCard from './components/WeeklyPromiseCard'
 import PromiseAuthPreview from './features/promise/PromiseAuthPreview'
 import { formatStartTime, getKstDateKey } from './features/promise/formatPromise'
 import type { PreviewPromise } from './features/promise/types'
 
+function formatScheduledLabel(promise: PreviewPromise) {
+  const date = new Date(`${promise.date}T00:00:00+09:00`)
+  if (!Number.isFinite(date.getTime())) return '날짜를 확인해 주세요'
+
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short',
+  }).formatToParts(date)
+  const month = parts.find((part) => part.type === 'month')?.value ?? ''
+  const day = parts.find((part) => part.type === 'day')?.value ?? ''
+  const weekday = parts.find((part) => part.type === 'weekday')?.value ?? ''
+
+  return `${month} ${day.endsWith('일') ? day : `${day}일`}(${weekday}) ${formatStartTime(promise.startTime)}`
+}
+
 type DoduHomeProps = {
   promise: PreviewPromise | null
+  pastResults?: FinalPromiseRecord[]
   onCreate: () => void
   onEdit: () => void
-  onViewAll: () => void
+  onViewAll?: () => void
   onVerify: () => void
+  interventionEndsAt?: number
 }
 
 export default function DoduHome({
   promise,
+  pastResults = [],
   onCreate,
   onEdit,
   onViewAll,
   onVerify,
+  interventionEndsAt,
 }: DoduHomeProps) {
-  const todayPromise =
-    promise?.date === getKstDateKey() ? promise : null
+  const [now, setNow] = useState(Date.now)
+  const today = getKstDateKey()
+
+  useEffect(() => {
+    const updateDate = () => setNow(Date.now())
+    const timer = window.setInterval(updateDate, 1000)
+    window.addEventListener('focus', updateDate)
+    document.addEventListener('visibilitychange', updateDate)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', updateDate)
+      document.removeEventListener('visibilitychange', updateDate)
+    }
+  }, [])
+
+  // 현재 앱은 약속 한 개를 보관하므로 오늘 날짜로 제한하지 않고 표시한다.
+  // 인증 진행 중인 약속도 시작 시각이 지났다는 이유만으로 숨기지 않는다.
+  const finalResult = getFinalPromiseRecord(promise, now)
+  const state = getHomeState(promise, now)
+  const ended = interventionClosed(now, interventionEndsAt)
+  const upcomingPromise = ['ended', 'empty', 'blocked'].includes(state) ? null : promise
+  const finalRecords = finalResult ? [...pastResults, finalResult] : pastResults
 
   /*
   const [connection, setConnection] = useState('확인 전')
@@ -48,46 +91,38 @@ export default function DoduHome({
     <>
       <TodayPromiseCard
         promise={
-          todayPromise
+          upcomingPromise
             ? {
-                taskName: todayPromise.taskName,
-                startTimeLabel: formatStartTime(todayPromise.startTime),
+                taskName: upcomingPromise.taskName,
+                startTimeLabel: formatScheduledLabel(upcomingPromise),
+                isToday: upcomingPromise.date === today,
                 toolLabel:
-                  todayPromise.tool === 'computer' ? '컴퓨터' : '실제 책',
+                  upcomingPromise.tool === 'computer' ? '컴퓨터' : '실제 책',
               }
             : null
         }
         onCreate={onCreate}
         onEdit={onEdit}
+        canCreate={!ended && state !== 'blocked'}
+        canEdit={!ended && state === 'scheduled'}
       />
 
       <WeeklyPromiseCard
-        records={
-          promise
-            ? [
-                {
-                  date: promise.date,
-                  status: promise.status,
-                },
-              ]
-            : []
-        }
+        records={finalRecords}
+        todayKey={today}
         onViewAll={onViewAll}
       />
 
       <footer className="home-footer">
-        {promise && (
+        {promise && !['cancelled', 'withdrawn', 'permissionBlocked'].includes(promise.status) && (
           <PromiseAuthPreview
             key={promise.date + promise.startTime}
             promise={promise}
             onVerify={onVerify}
+            interventionEndsAt={interventionEndsAt}
           />
         )}
 
-        <p>
-          입력한 약속의 미리보기입니다. 실제 예약이나 알림은
-          실행되지 않으며 새로고침하면 사라집니다.
-        </p>
       </footer>
 
       {/*
