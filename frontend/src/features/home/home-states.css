@@ -1,0 +1,21 @@
+/* 기존 홈 카드와 공통 포커스 스타일을 재사용한다. */
+.home-page { background: linear-gradient(#f4f4fa, #f7f7fb); min-width: 0; }
+.home-page .home-card-action { min-height: 44px; }
+.home-page .today-promise-detail strong { overflow-wrap: anywhere; }
+.home-page .today-promise-name { white-space: normal; overflow-wrap: anywhere; }
+.home-page .home-footer { position: sticky; bottom: 0; background: linear-gradient(#f7f7fbef, #f7f7fb); padding-top: 16px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.home-page .promise-auth-preview .button { min-height: 50px; border-radius: 16px; }
+.home-state-dev { max-width: 430px; margin: 0 auto; padding: 12px 16px; font-size: 13px; }
+.home-state-dev label { display: block; }
+.home-state-dev select { width: 100%; min-height: 44px; font: inherit; margin-top: 8px; }
+.access-end-page { max-width: 430px; min-height: 100dvh; margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) 16px 0; background: linear-gradient(#f4f4fa, #f7f7fb); }
+.access-end-page .app-header { height: 48px; margin: 0; }
+.access-end-main { display: flex; flex-direction: column; min-height: calc(100dvh - 72px); padding: 0; margin: 0; }
+.access-end-content { margin-top: 80px; text-align: center; }
+.access-end-icon { display: grid; place-items: center; width: 96px; height: 96px; margin: 0 auto 24px; border-radius: 50%; background: #ebe8ff; color: #6240ff; }
+.access-end-icon svg { width: 40px; height: 40px; }
+.access-end-content h1 { font-size: 24px; line-height: 1.4; margin: 0 0 12px; font-weight: 600; letter-spacing: -.015em; }
+.access-end-content p { font-size: 14px; line-height: 1.4; color: #6b7285; margin: 0; overflow-wrap: anywhere; }
+.access-end-main footer { margin-top: auto; padding: 40px 0 max(24px, env(safe-area-inset-bottom)); }
+.access-end-main .button { width: 100%; min-height: 50px; border-radius: 16px; }
+@media (max-width: 359px) { .access-end-content p br { display: none; } }
