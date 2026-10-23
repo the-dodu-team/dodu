@@ -159,6 +159,13 @@
 
 - `origin/dev`의 참가자 접근 V2와 기존 사진 제출 V2가 충돌해 사진 제출 마이그레이션을 `V5__photo_submission_storage.sql`로 승격했다.
 - 승격 전 전체 검증은 Flyway duplicate version 2로 실패했으며, 수정 후 Docker 기반 전체 검증을 다시 수행한다.
+### SCRUM-31 / 동일 멱등성 키 병렬 약속 생성 경합 보정 — 2026-10-23
+
+- 상태: 구현 및 검증 완료. Jira 완료 상태는 기존 완료 상태를 유지한다.
+- 변경: `PromiseController`가 멱등성 키 원장을 활성 약속·KST 날짜 검증보다 먼저 선점하도록 순서를 변경했다. 동일 키의 후속 요청은 첫 요청의 결과를 반환한다.
+- 근거: 병렬 요청이 두 번의 날짜 검증을 통과한 뒤 후속 요청이 `PROMISE_DATE_ALREADY_USED`로 실패하던 경합을 제거해야 한다.
+- 검증: Docker/Testcontainers PostgreSQL에서 대상 병렬 테스트 통과, 전체 `npm run verify` 통과(백엔드 174개 테스트, 실패 0·오류 0, Flyway V1~V5, 프런트엔드 lint/build, 패키징).
+
 ## Sprint 3 통합 브랜치 — 2026-10-21
 
 - 브랜치: `integration/sprint-3-20261021`

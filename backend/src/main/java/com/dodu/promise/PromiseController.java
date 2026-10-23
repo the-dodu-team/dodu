@@ -62,18 +62,27 @@ public class PromiseController {
                         rs.getTimestamp("intervention_ends_at").toInstant()) : null, participantId);
         if (study == null || study.interventionEndsAt() == null) throw error(HttpStatus.CONFLICT, "STUDY_PERIOD_ENDED");
         var valid = validator.validate(new PromiseRequestValidator.Request(request.taskTitle(), request.toolType(), request.scheduledAt()), now, study.interventionEndsAt());
+        int creationRequestInserted = jdbc.update("insert into promise_creation_request(participant_id, idempotency_key, request_fingerprint) "
+                        + "values (?, ?, ?) on conflict (participant_id, idempotency_key) do nothing",
+                participantId, key, fingerprint);
+        if (creationRequestInserted == 0) {
+            existing = findCreationRequest(participantId, key);
+            if (existing == null || !existing.requestFingerprint().equals(fingerprint)) {
+                throw error(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED");
+            }
+            if (existing.promiseId() == null) {
+                existing = awaitCreationCompletion(participantId, key);
+                if (existing == null || existing.promiseId() == null) {
+                    throw error(HttpStatus.CONFLICT, "PROMISE_CREATION_IN_PROGRESS");
+                }
+            }
+            return findPromise(existing.promiseId(), participantId);
+        }
         if (jdbc.queryForObject("select count(*) from promise where participant_id = ? and lifecycle_status in ('Scheduled','AuthAvailable','Evaluating')", Long.class, participantId) > 0)
             throw error(HttpStatus.CONFLICT, "PROMISE_ACTIVE_EXISTS");
         var date = valid.scheduledAt().atZone(KST).toLocalDate();
         if (jdbc.queryForObject("select count(*) from promise_date_usage where participant_id = ? and scheduled_date_kst = ?", Long.class, participantId, date) > 0)
             throw error(HttpStatus.CONFLICT, "PROMISE_DATE_ALREADY_USED");
-        jdbc.update("insert into promise_creation_request(participant_id, idempotency_key, request_fingerprint) "
-                        + "values (?, ?, ?) on conflict (participant_id, idempotency_key) do nothing",
-                participantId, key, fingerprint);
-        existing = findCreationRequest(participantId, key);
-        if (existing == null) throw error(HttpStatus.CONFLICT, "PROMISE_CREATION_CONFLICT");
-        if (!existing.requestFingerprint().equals(fingerprint)) throw error(HttpStatus.CONFLICT, "IDEMPOTENCY_KEY_REUSED");
-        if (existing.promiseId() != null) return findPromise(existing.promiseId(), participantId);
         UUID policyId = jdbc.queryForObject("select id from policy_version where effective_from <= ? order by effective_from desc limit 1", UUID.class, timestamp(now));
         if (policyId == null) throw error(HttpStatus.SERVICE_UNAVAILABLE, "POLICY_UNAVAILABLE");
         UUID promiseId = UUID.randomUUID();
