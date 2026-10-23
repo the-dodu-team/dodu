@@ -620,3 +620,10 @@
 - Rationale: a commit or policy class alone is not evidence that an external worker, notification scheduler, FE handoff, provider decision, or PO approval is complete.
 - Impact: Jira status remains aligned with verifiable scope and does not hide unfinished work behind the integration branch.
 - Verification: Jira comments 10057–10061, transitions of SCRUM-31 and SCRUM-32, and the repository test run.
+## DEV-20261023-01 자기보고 응답 기간 24시간 재확인
+
+- 배경: PO가 최신 운영 문서 기준 자기보고 응답 기간을 24시간으로 재확인했고, 저장소 구현에는 과거 48시간 값이 남아 있었다.
+- 결정: 자기보고 `expiresAt`을 최초 안내 가능 시각(`availableAt`)부터 24시간 뒤로 계산한다. `availableAt`은 포함하고 `expiresAt`은 제외한다.
+- 근거: 사용자가 제공한 최신 기준 확인과 `OPEN_DECISIONS.md`의 D02·D07·D12, 수용 체크리스트의 24시간 만료 조건.
+- 영향: 기존 48시간 정책 코드는 폐기하며, 공식 종료 후 개별 자기보고 접근도 동일한 24시간 경계를 따른다. 자기보고 미응답은 다음 약속 생성을 차단하지 않는다.
+- 검증: `ValidationSurveyPolicyTests`에서 24시간 만료 시각과 만료 시각의 배타성을 확인한다.

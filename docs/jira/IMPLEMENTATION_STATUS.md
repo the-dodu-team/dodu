@@ -117,11 +117,11 @@
 
 ### 인증 이력 및 자기보고
 
-- 상태: 대상 판정과 48시간 응답 경계 구현.
+- 상태: 대상 판정과 24시간 응답 경계 구현.
 - 추가: `backend/src/main/java/com/dodu/survey/ValidationSurveyPolicy.java`
 - 검증: `AuthCompleted`와 `AuthIncomplete`만 대상이 되고, `availableAt`은 포함하며 `expiresAt`은 제외하는 것을 확인했다.
 - 추가: `backend/src/main/java/com/dodu/survey/ValidationSurveyController.java`
-- 검증: 참가자 범위 설문 조회·제출 API, 서버 기준 48시간 경계, 중복 제출 충돌, 약속 인증 결과와 `actual_started` 필드 분리를 확인했다.
+- 검증: 참가자 범위 설문 조회·제출 API, 서버 기준 24시간 경계, 중복 제출 충돌, 약속 인증 결과와 `actual_started` 필드 분리를 확인했다.
 - 남은 범위: 이력 화면 연동과 운영 알림 연결.
 
 ### Figma 화면 일치도

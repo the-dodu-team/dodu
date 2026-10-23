@@ -21,6 +21,6 @@ public final class ValidationSurveyPolicy {
 
     public Instant expiresAt(Instant availableAt) {
         if (availableAt == null) throw new IllegalArgumentException("availableAt must not be null");
-        return availableAt.plus(Duration.ofHours(48));
+        return availableAt.plus(Duration.ofHours(24));
     }
 }
