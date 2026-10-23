@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.dodu.participant.service.ParticipantAuthService;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,7 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/promises/{promiseId}/validation-survey")
-public final class ValidationSurveyController {
+public class ValidationSurveyController {
     private final JdbcTemplate jdbc;
     private final ValidationSurveyPolicy policy;
     private final Clock clock;

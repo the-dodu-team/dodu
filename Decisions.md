@@ -415,3 +415,223 @@
 - 대안: 원본마다 복구 한도를 초기화하거나 모든 네트워크 retry를 새 약속으로 만드는 방식은 날짜 한도를 우회하므로 배제했다. 기술복구 약속의 재수정 가능 여부는 제품 결정이 명확하지 않아 성공 actions를 임의 고정하지 않는다.
 - 영향: 앱/DB 동작 변경 없음. 키 형식·저장·보관은 기술 제안이고 제품 승인과 구분한다. 실제 구현은 팀 계약 인수 및 DB/인증 연결 후 진행한다. 기존 원문·mock과 사용자 .vscode는 보존한다.
 - 검증: JSON6개 envelope/오류 유형, 새 ID·원본/최종 KST 날짜 연결, T+30, 개별 한도, Evaluating과 TechFailed 분리, 공식 종료 경계를 검사한다. 상대 링크·git diff --check 확인. HTTP/DB 테스트 미실행. PR8 CodeRabbit 리뷰 본문의 포커스 전환 테스트 제안은 별도 프론트 브랜치의 정확성 보완으로, 이번 계약의 보안/성능 필수 수정과는 구분해 미변경이다.
+## DEV-20261016-01 — SCRUM-83 사진 제출의 원자적 저장 경계
+
+- 날짜: 2026-10-16
+- 관련 Jira/작업: SCRUM-83, 사진 제출 API·DB 저장·원자적 판정 예약 통합
+- 변경 파일: `backend/src/main/java/com/dodu/intervention/PhotoSubmissionController.java`, `PhotoSubmissionFingerprint.java`, `backend/src/main/resources/db/migration/V2__photo_submission_storage.sql`, `docs/api/PHOTO_SUBMISSION_CONTRACT.md`
+- 배경: 기존 정책 클래스는 사진 제출 시간 경계와 attempt identity를 검증했지만, 활성 세션 소유권·DB 저장·요청 멱등·다중 서버 동시 Evaluating 제약을 HTTP 경계에 연결하지 않았다.
+- 결정: multipart 요청의 서버 수신시각과 활성 세션의 참가자 소유권을 먼저 검증하고, 외부 저장소를 가리키는 사진 메타데이터와 `auth_attempt`를 한 트랜잭션에 저장한다. 같은 약속·요청 키는 같은 fingerprint일 때 기존 attempt를 반환하고, 다른 본문은 충돌로 처리한다. `auth_attempt`의 기존 부분 유니크 인덱스를 동시 Evaluating 예약의 DB 최종 기준으로 사용한다.
+- 근거: `docs/dodu/sources/SERVICE_POLICY_v2.5.md` §3~8, `docs/dodu/OPEN_DECISIONS.md` D04·D08·D10·D11, 기존 `InterventionWindowPolicy`·`PhotoAttemptIdentityPolicy`와 SCRUM-83 완료 기준.
+- 대안 및 선택 이유: 프로세스 메모리 예약만 사용하는 방법은 다중 서버에서 중복 Evaluating을 허용할 수 있어 제외했다. 사진 원문을 DB에 저장하는 방법은 민감 데이터 노출면을 늘리므로 저장 키와 검증 메타데이터만 저장한다.
+- 영향·주의점: 객체 저장소 업로드·삭제, AI 결과 저장, 지연 결과·철회 보호는 이 커밋에서 완료하지 않고 SCRUM-84~86으로 남긴다. Docker/Testcontainers가 unavailable이면 DB 통합 검증을 완료로 표시하지 않는다.
+- 검증: `PhotoSubmissionFingerprintTests` 2건 성공. 전체 DB 마이그레이션·동시성 통합 테스트는 Docker 환경에서 별도 실행한다.
+
+## DEV-20261016-02 — SCRUM-83 V2 사진 메타데이터 연결 검증 준비
+
+- 날짜: 2026-10-16
+- 관련 Jira/작업: SCRUM-83
+- 변경 파일: `backend/src/test/java/com/dodu/db/CoreSchemaMigrationTests.java`
+- 배경: V2 마이그레이션은 사진 메타데이터와 인증 시도를 연결하지만, 기존 통합 테스트는 V1 테이블 수와 기존 `auth_attempt` 제약만 확인했다.
+- 결정: Testcontainers가 실행 가능한 환경에서 `photo_asset` 생성, `auth_attempt.photo_asset_id` 연결, 하나의 사진 자산을 두 attempt가 공유하지 못하는 부분 유니크 인덱스를 검증한다.
+- 근거: `V2__photo_submission_storage.sql`, SCRUM-83 완료 기준의 photo_asset/attempt 저장 요구.
+- 영향·주의점: 테스트는 Docker/Testcontainers가 없으면 실행할 수 없으며, 실행 전까지 SCRUM-83 완료 조건으로 표시하지 않는다.
+- 검증: 테스트 컴파일은 관련 단위 테스트 실행 시 성공했다. Docker 통합 실행은 환경 부재로 아직 실패 상태다.
+
+## DEV-20261016-03 — SCRUM-84 판정 결과의 소유권·현재 attempt 원자성
+
+- 날짜: 2026-10-16
+- 관련 Jira/작업: SCRUM-84
+- 결정: 결과 저장은 활성 세션의 참가자, 약속 소유자, 철회되지 않은 참가자, `Evaluating` 현재 상태를 하나의 SQL UPDATE 조건으로 확인한다. 상태가 이미 종료되었거나 철회된 경우 결과를 덮어쓰지 않는다.
+- 근거: SCRUM-84 완료 기준, D05·D08·D10, 기존 `auth_attempt` 상태 모델.
+- 주의: 실제 동시성·지연 결과·철회 경쟁은 Docker/Testcontainers 통합 검증 전까지 완료로 표시하지 않는다.
+
+## DEV-20261016-04 — SCRUM-85 지연 판정 복구의 동일 attempt 제한
+
+- 날짜: 2026-10-16
+- 관련 Jira/작업: SCRUM-85
+- 결정: 마감 후 내부 복구는 T 이전에 정상 접수된 동일 attempt이고 현재 상태가 `Evaluating`인 경우에만 허용한다. T+30 이후 새 사진 제출, 완료·거절·기술실패·철회 attempt 재처리는 허용하지 않는다.
+- 근거: D04·D08·D10·D11 및 SCRUM-85 완료 기준.
+- 주의: retry/backoff 큐와 실제 DB 상태 경쟁 검증은 후속 통합 단계로 남긴다.
+
+## DEV-20261016-05 — SCRUM-86 공식 종료 후 신규 작업 차단
+
+- 날짜: 2026-10-16
+- 관련 Jira/작업: SCRUM-86
+- 결정: 공식 개입 종료 이후에는 신규 작업을 닫고, 종료 전에 정상 접수된 attempt의 내부 처리만 별도 상태로 허용한다. 종료 전에는 신규 작업을 허용한다.
+- 근거: D03·D04·D10·D11 및 SCRUM-86 완료 기준.
+- 주의: 실제 약속·알림·기술복구 서비스의 오래된 작업 무효화는 통합 연결 단계에서 검증한다.
+
+## DEV-20261018-02 — 전체 통합 테스트의 Spring 프록시·제약조건 검증 수정
+
+- 날짜: 2026-10-18
+- 관련 범위: Docker/Testcontainers 전체 백엔드 테스트, SCRUM-83 사진 메타데이터 연결 검증
+- 배경: Docker 재기동 후 전체 테스트에서 실제 DB 마이그레이션은 성공했지만, 사진 자산 중복 테스트가 다른 유니크 제약조건을 먼저 검증했고, Spring의 기본 CGLIB 프록시가 final Controller를 생성하지 못했다.
+- 결정: 사진 자산 중복 테스트의 두 번째 attempt에 고유 요청 fingerprint와 비Evaluating 상태를 사용해 photo_asset 연결 제약을 단독 검증한다. 트랜잭션 프록시가 필요한 Controller는 final을 제거해 Spring이 프록시화할 수 있게 한다.
+- 근거: 전체 Maven 테스트 실패 로그, Flyway V1/V2 실제 적용 로그, Spring AOP의 CGLIB 프록시 오류, V2 부분 유니크 인덱스 검증 의도.
+- 대안: 테스트에서 실패한 제약조건을 허용하거나 Spring AOP를 전역 비활성화하는 방법은 실제 무결성·트랜잭션 검증을 약화하므로 선택하지 않았다.
+- 영향: 런타임 API 계약과 DB 스키마는 변경하지 않는다. Controller는 기존 트랜잭션 경계를 유지하면서 Spring 프록시 가능한 형태가 된다.
+- 검증: Docker 기반 전체 백엔드 테스트 46건을 실행해 모두 통과했다. Flyway V1/V2가 Testcontainers PostgreSQL에 실제 적용됐고 Spring 애플리케이션 컨텍스트도 기동됐다.
+
+## DEV-20261018-03 — 약속 생성 멱등성 저장 계약
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-23 약속 생성 API의 중복 요청 방지
+- 결정: 참가자별 `Idempotency-Key`와 요청 지문을 `promise_creation_request`에 보관하고, 동일 키·동일 지문은 동일 약속을 재사용하며 동일 키·상이한 지문은 충돌로 처리한다. 키와 지문은 참가자 범위로 격리한다.
+- 근거: SCRUM-23 완료 기준의 동시 요청 안정성, D03·D05·D06·D11 미결정 사항을 침범하지 않는 요청 중복 처리 범위.
+- 대안: 약속 본문에 키를 직접 추가하거나 애플리케이션 메모리 캐시만 사용하는 방식은 DB 트랜잭션·재시작·다중 인스턴스 동작을 보장하지 못하므로 선택하지 않았다.
+- 영향: V3 마이그레이션과 순수 요청 지문 정책이 추가된다. 기존 약속 상태·응답 계약은 컨트롤러 연결 단계에서 유지한다.
+- 검증: 정책 단위 테스트 2건과 Testcontainers 기반 Flyway V1~V3 마이그레이션 검증을 실행해 모두 통과했다.
+
+## DEV-20261018-04 — 약속 생성 멱등성의 트랜잭션 연결
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-23 `POST /api/promises`
+- 결정: 요청 인증 후 멱등성 키와 지문을 먼저 조회하고, 신규 키는 `INSERT ... ON CONFLICT DO NOTHING`으로 예약한다. 예약 획득 후 약속 생성과 키 연결을 같은 트랜잭션에서 처리한다.
+- 근거: 동일 키 동시 요청의 단일 약속 보장, 동일 키·상이한 본문의 충돌 검출, 프로세스 재시작·다중 인스턴스에서도 유지되는 DB 기준 상태.
+- 대안: 애플리케이션 메모리 락이나 약속 테이블에 임의 필드를 추가하는 방식은 영속성과 참가자 범위 격리를 보장하지 못해 배제했다.
+- 영향: 생성 API는 `Idempotency-Key` 헤더를 요구하며, 기존 약속·수정·취소 API의 상태 계약은 변경하지 않는다.
+- 검증: Docker 기반 전체 백엔드 테스트 48건, 실패 0·오류 0. 추가한 Spring/MockMvc/PostgreSQL 통합 시나리오 1건도 통과했으며 동일 키 재요청은 동일 약속을 반환하고 지문 충돌은 409로 거절됨을 확인했다.
+
+## DEV-20261018-05 — 약속 생성 동시 요청 통합 검증
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-23 약속 생성 멱등성의 병렬 요청 처리
+- 결정: 동일 참가자·동일 키의 두 HTTP 요청을 병렬 실행해 DB 유니크 키 대기와 기존 약속 재조회를 통합 검증한다.
+- 근거: 단순 순차 재요청만으로는 두 요청이 동시에 활성 약속 검사를 통과하는 경합을 검출할 수 없다.
+- 영향: 제품 코드 변경 없이 실제 Spring MockMvc와 PostgreSQL Testcontainer 검증 범위를 확장한다.
+- 검증: `PromiseControllerIntegrationTests` 2건 통과. 병렬 요청 결과의 promiseId가 동일하고 생성 요청·약속 행이 각각 1개임을 확인했다.
+
+## DEV-20261018-06 — PostgreSQL 시각값의 JDBC 변환 명시
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-23 약속 API 및 SCRUM-35/37 사진 인증 API의 실제 PostgreSQL 연동
+- 결정: PostgreSQL `timestamptz` 읽기는 `Timestamp.toInstant()`로, 쓰기는 `Timestamp.from(Instant)`로 명시해 드라이버의 암시적 Java time 변환에 의존하지 않는다.
+- 근거: MockMvc·Testcontainers 통합 실행에서 PostgreSQL 드라이버가 `Instant` 직접 변환·바인딩을 거절한 실제 오류.
+- 영향: API 상태·시간 의미는 유지하고 JDBC 경계만 명시적으로 보정한다. 민감한 사진 데이터는 테스트 출력에 기록하지 않는다.
+- 검증: Docker 기반 전체 백엔드 테스트 50건, 실패 0·오류 0.
+
+## DEV-20261018-07 — 약속 수정의 날짜 원장·낙관적 잠금 검증
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-23 약속 수정 API
+- 결정: 일정이 KST 날짜를 변경하면 새 날짜 원장을 같은 트랜잭션에 기록하고, 기존 `row_version`을 기준으로 수정 경합을 거절한다. 같은 날짜 수정은 새 원장을 만들지 않는다.
+- 근거: 참가자별 예정 시작일 중복 방지와 동시 수정 시 마지막 요청의 무검증 덮어쓰기 방지.
+- 영향: 수정 API의 상태 계약은 유지하며 날짜 원장 누락을 방지한다.
+- 검증: 실제 PostgreSQL 통합 테스트에서 병렬 수정 결과가 200·409 한 건씩이고 새 KST 날짜 원장이 1건임을 확인했다.
+
+## DEV-20261018-08 — 약속 취소의 단일 종료 검증
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-23 약속 취소 API
+- 결정: 동일 약속에 대한 병렬 취소는 행 잠금과 `row_version` 조건으로 한 번만 `Closed/Cancelled` 전이를 성공시키고, 나머지는 409 충돌로 반환한다.
+- 근거: 취소 후 중복 요청이 최종 상태를 다시 덮어쓰거나 성공으로 오인되지 않아야 한다는 상태 전이 계약.
+- 검증: 실제 PostgreSQL 통합 테스트 4건에서 병렬 취소 200·409 결과와 단일 종료 행을 확인했다.
+
+## DEV-20261018-09 — 사진 판정 결과의 약속 상태 전이
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-35/37 사진 판정 결과 저장 API
+- 결정: 현재 Evaluating attempt의 `COMPLETED` 결과는 약속을 `AuthCompleted`로, `TECH_ERROR` 결과는 `Closed/TechFailed`로 전이한다. 취소·철회·이미 인증 완료 상태는 결과가 덮어쓰지 않는다.
+- 근거: 사진 인증 완료와 실제 작업 시작 자기보고를 분리하면서도 약속의 인증 결과 상태를 저장해야 하며, 기술 실패를 미인증과 분리해야 한다는 제품 정책.
+- 영향: `auth_completed_at`과 `final_outcome`만 상태 전이에 사용하고 실제 작업 시작 데이터는 변경하지 않는다.
+- 검증: Docker/Testcontainers PostgreSQL 기반 판정 결과 통합 테스트 2건 통과.
+
+## DEV-20261018-10 — 사진 제출 멀티파트·중복 요청 통합 검증
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-35 사진 제출 API
+- 결정: 실제 멀티파트 사진 제출에서 DB에는 사진 메타데이터와 auth attempt 연결만 저장하고, 동일 `clientRequestId`·동일 지문은 기존 attempt를 반환하며 지문이 다르면 409로 거절한다.
+- 근거: 원시 사진 바이트를 로그·DB에 남기지 않고 외부/비공개 저장소 경계를 유지해야 하며, 중복 제출이 새 인증 시도를 만들면 안 된다는 정책.
+- 영향: 현재 구현은 저장소 메타데이터 경계까지 담당하고 실제 object storage 업로드 worker는 후속 연동 범위로 남긴다.
+- 검증: Docker/Testcontainers PostgreSQL 기반 멀티파트 제출 통합 테스트 2건과 전체 백엔드 테스트 56건이 모두 통과했다.
+
+## DEV-20261018-11 — 화면 API 인수 문서의 구현 상태 대조
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-76 화면별 API·상태·오류·fixture 인수 문서
+- 결정: 실제 HTTP/DB 검증이 끝난 약속·사진 범위만 구현 완료로 표시하고, 공통 envelope·FE 리뷰·알림·집계·자기보고 전체 계약은 제안/미완료로 남긴다. 폐기된 외부 기준 ID는 문서에서 제거한다.
+- 근거: 현재 Controller·Flyway V1~V3·MockMvc/Testcontainers 결과와 SCRUM-76 완료 기준.
+- 영향: 문서가 현재 코드와 검증 증거를 반영하지만 SCRUM-76 자체는 FE/BE 인수와 남은 모듈 계약 전까지 완료 처리하지 않는다.
+- 검증: 전체 backend test 56건, frontend build, git diff --check를 실행했다.
+
+## DEV-20261018-01 — AGENTS 작업 기준 최신화
+
+- 날짜: 2026-10-18
+- 배경: AGENTS.md에 존재하지 않는 Notion 기준 페이지 ID와 과거 Jira 연결 오류 기록이 남아 있어 작업자가 잘못된 외부 기준과 연결을 사용할 위험이 있었다.
+- 결정: 잘못된 Notion ID를 기준 페이지로 취급하지 않고, 현재 접근 가능한 Dodu v2.5 문서 링크를 보조 참고자료로 기록한다. Jira는 dodu-mobile 사이트와 Sprint 3를 기준으로 하며 팀 역할을 PO·PD·AI·BE·FE 담당자별로 명시한다.
+- 근거: Notion 직접 조회의 object_not_found 응답, 접근 가능한 Dodu 문서 검색 결과, Jira accessible resources의 dodu-mobile 응답, 현재 저장소 구조와 Sprint 3 운영 상태.
+- 대안: 확인되지 않은 3d64 페이지를 계속 기준으로 유지하는 방법은 잘못된 차단과 문서 오인을 만들 수 있어 배제했다.
+- 영향: 이후 작업은 저장소 원문과 접근 가능한 Notion 문서, dodu-mobile Jira를 사용한다. 원격 기준 문서가 별도로 제공되면 해당 링크와 승인 상태를 다시 확인한다.
+- 검증: AGENTS.md를 UTF-8로 재작성하고 링크·Jira 사이트·담당자·검증·커밋·동기화 규칙을 확인했다. git diff --check를 실행했다.
+- 검증: AGENTS.md를 UTF-8로 재작성하고 문서·Jira·검증 규칙을 확인했다. git diff --check를 실행했다.
+
+## DEV-20261018-12 — 참가자 코드 IP 임시 차단의 DB 연결
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-70 참가자 코드 실패 누적·임시 차단 API 연결
+- 결정: 참가자 코드 실패를 IP별 PostgreSQL 행으로 저장하고, 10분 창에서 10회 실패 시 15분 차단한다. 차단 중 요청은 기존 만료시각을 연장하지 않으며, 성공한 진입은 해당 IP의 실패 행을 초기화한다. 차단 응답은 `429`, `TOO_MANY_ATTEMPTS`, `Retry-After`로 통일한다.
+- 근거: SCRUM-70 승인 기준과 `docs/security/PARTICIPANT_ACCESS_CONTRACT.md`의 IP 차단 규칙. 예외·실패 상태를 인증 미완료와 섞지 않고 사진 재시도에는 적용하지 않는다.
+- 영향: Flyway V4 `access_failure_rate_limit`와 `POST /api/access/enter`의 실제 DB 연결이 추가됐다. 원시 접근 코드와 자격정보는 저장하지 않는다.
+- 남은 작업: 신뢰 프록시의 실제 IP 전달, 공유 저장소 보존·정리 상한, 봇 검증 제공자와 공격/오차단 QA는 운영 결정 및 별도 검증으로 남긴다.
+- 검증: Docker/Testcontainers PostgreSQL 기반 rate limiter·Flyway·HTTP 429 통합 테스트 통과. 전체 백엔드 회귀 테스트는 다음 커밋 전 재실행한다.
+## DEV-20261018-13 — 사진 결과 저장의 정상 접수 증거 조건
+
+- 날짜: 2026-10-18
+- 관련 범위: SCRUM-84 판정 결과 API의 지연 결과 저장
+- 결정: 결과 callback은 요청 도착시각이 아니라 DB의 `valid_received_at`만 근거로 허용한다. 해당 시각이 `scheduled_at <= valid_received_at < scheduled_at + 30분`을 만족하고 attempt가 `Evaluating`이며 참가자가 철회되지 않은 경우에만 결과를 원자적으로 반영한다. 따라서 마감 후에도 정상 접수된 동일 attempt의 결과는 허용하고, 유효 접수 증거가 없는 결과는 409로 거절한다.
+- 근거: D04·D08·D10·D11 및 SCRUM-84 완료 기준. 알림·callback 도착 자체는 사진 접수 증거가 아니다.
+- 영향: 새 사진 제출 창은 기존처럼 닫힌 상태를 유지하며, 결과 저장 경계만 서버 기록 기반으로 강화한다.
+- 검증: Docker/Testcontainers PostgreSQL MockMvc에서 마감 후 정상 접수 결과와 `valid_received_at` 없는 결과를 각각 확인했다.
+## DEV-20261018-77 — 참가자 진입 mock 분기
+
+- 배경: 참가자 코드 입력·오류·접근 종료 mock 분기와 포커스 복귀를 통합 브랜치에 포함한다.
+- 근거: SCRUM-77 완료 기준이며 실제 인증 API는 SCRUM-24, 전체 온보딩은 SCRUM-78 범위다.
+- 검증: 통합 브랜치에서 frontend lint/build를 다시 실행한다.
+## DEV-20261018-78 — 온보딩·권한 복구 mock 분기
+
+- 범위: 서비스 소개, PWA 안내, 권한 복구 흐름을 참가자 진입 뒤 UI mock으로 통합한다.
+- 근거: SCRUM-78 완료 기준. 브라우저 권한과 실제 세션 처리는 후속 API 연동 범위다.
+- 검증: 통합 브랜치에서 frontend lint/build를 재실행한다.
+## DEV-20261018-79 — 약속 작성·관리 UI 통합
+
+- 범위: 약속 작성 단계, 확인·상세·수정·취소 상태와 날짜·시간 경계 mock을 통합한다.
+- 근거: SCRUM-79 완료 기준. 서버 저장 API와 실제 시간 판정은 SCRUM-23 연동 범위다.
+- 검증: 통합 브랜치에서 frontend lint/build와 기존 promise preview 테스트를 재실행한다.
+## DEV-20261021-01 — 병합 후 Flyway 마이그레이션 버전 충돌 해소
+
+- 배경: `dev`의 참가자 접근 지원 마이그레이션과 기존 사진 제출 마이그레이션이 모두 V2라 통합 브랜치에서 Flyway가 중단됐다.
+- 선택: 이미 존재하는 V2 참가자 접근 지원은 유지하고 사진 제출 마이그레이션 파일을 V5로 승격한다.
+- 영향: 신규 통합 DB에서 V1→V5가 순서대로 적용되며 기존 스키마 의미는 유지된다.
+- 검증: Docker 기반 `npm run verify`를 수정 후 재실행한다.
+## DEV-20261021-02 Promise/photo lifecycle time and official-end gate
+
+- Background: promise mutation and photo submission paths still used wall-clock calls or did not enforce the study's official intervention end.
+- Choice: inject the application `Clock` into `PromiseController`, and require the photo submission path to pass `InterventionLifecycleGate` before creating a new attempt.
+- Evidence: server time is the final authority; after official intervention end only already accepted work may be processed. A new photo submission is not an accepted receipt.
+- Alternatives: retain direct `Instant.now()` and enforce the end only in workers; rejected because tests and request boundaries would diverge.
+- Impact: deterministic promise boundary tests are possible, and late new submissions are rejected with `INTERVENTION_CLOSED` while delayed processing remains handled by the result path.
+- Verification: targeted promise/photo integration tests and full `npm run verify`.
+
+## DEV-20261021-03 Mono ticket closure audit
+
+- Background: the remaining mono-assigned Sprint 3 tickets mix code-completable stories with cross-role approvals and external operations.
+- Choice: transition only SCRUM-31 and SCRUM-32 after their acceptance evidence; keep tickets with missing external or cross-role criteria open and record their exact blockers in Jira and local status tracking.
+- Rationale: a commit or policy class alone is not evidence that an external worker, notification scheduler, FE handoff, provider decision, or PO approval is complete.
+- Impact: Jira status remains aligned with verifiable scope and does not hide unfinished work behind the integration branch.
+- Verification: Jira comments 10057–10061, transitions of SCRUM-31 and SCRUM-32, and the repository test run.
+## DEV-20261023-01 자기보고 응답 기간 24시간 재확인
+
+- 배경: PO가 최신 운영 문서 기준 자기보고 응답 기간을 24시간으로 재확인했고, 저장소 구현에는 과거 48시간 값이 남아 있었다.
+- 결정: 자기보고 `expiresAt`을 최초 안내 가능 시각(`availableAt`)부터 24시간 뒤로 계산한다. `availableAt`은 포함하고 `expiresAt`은 제외한다.
+- 근거: 사용자가 제공한 최신 기준 확인과 `OPEN_DECISIONS.md`의 D02·D07·D12, 수용 체크리스트의 24시간 만료 조건.
+- 영향: 기존 48시간 정책 코드는 폐기하며, 공식 종료 후 개별 자기보고 접근도 동일한 24시간 경계를 따른다. 자기보고 미응답은 다음 약속 생성을 차단하지 않는다.
+- 검증: `ValidationSurveyPolicyTests`에서 24시간 만료 시각과 만료 시각의 배타성을 확인한다.
+
+## DEV-20261023-02 약속 생성 멱등성 요청 선점 순서
+
+- 배경: 병렬 약속 생성 요청이 동일한 멱등성 키를 사용할 때 두 요청이 모두 날짜 사용 가능 여부를 먼저 통과하면, 후속 요청이 `PROMISE_DATE_ALREADY_USED`로 실패할 수 있었다.
+- 결정: 멱등성 키 원장을 날짜·활성 약속 검증보다 먼저 삽입하고, 삽입에 성공한 요청만 약속 생성 검증과 저장을 진행한다. 충돌 요청은 기존 생성 결과를 기다린 뒤 동일한 약속을 반환한다.
+- 근거: 동일 요청은 동일 결과를 반환해야 하며, 중복 요청이 상태 충돌로 오인되지 않아야 한다. DB의 유니크 제약과 트랜잭션 경계를 요청 선점에 사용한다.
+- 영향: 정상적인 동일 키 병렬 요청은 하나의 약속만 생성하고 모두 동일 결과를 받는다. 생성 요청이 검증 실패로 롤백되면 이후 요청은 원장을 다시 선점할 수 있다.
+- 검증: Docker/Testcontainers PostgreSQL 기반 `PromiseControllerIntegrationTests.concurrentSameKeyRequestsCreateOnePromise`와 전체 `npm run verify`를 실행한다.

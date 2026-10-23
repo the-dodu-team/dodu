@@ -6,6 +6,7 @@ type TodayPromise = {
   taskName: string
   startTimeLabel: string
   toolLabel: string
+  isToday?: boolean
 }
 
 type TodayPromiseCardProps = {
@@ -24,9 +25,10 @@ export default function TodayPromiseCard({
       className="today-promise-card"
       aria-labelledby="today-promise-title"
     >
-      <div className="home-card-heading">
+      {/* 이전 제목 배치 컨테이너: <div className="home-card-heading"> */}
+      <header className="home-card-heading">
         <h2 id="today-promise-title" className="today-promise-label">
-          오늘 약속
+          다가오는 약속
         </h2>
 
         {promise && (
@@ -39,13 +41,18 @@ export default function TodayPromiseCard({
             수정하기 <span aria-hidden="true">›</span>
           </button>
         )}
-      </div>
+      </header>
 
       {promise ? (
         <>
-          <h3 className="today-promise-name" title={promise.taskName}>
-            {promise.taskName}
-          </h3>
+          <div className="upcoming-promise-name-row">
+            <h3 className="today-promise-name" title={promise.taskName}>
+              {promise.taskName}
+            </h3>
+            {promise.isToday && (
+              <span className="upcoming-promise-today-tag">오늘</span>
+            )}
+          </div>
 
           <p className="today-promise-detail">
             <img src={clockIcon} alt="" width={16} height={16} />

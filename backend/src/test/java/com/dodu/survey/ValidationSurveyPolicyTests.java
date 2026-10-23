@@ -16,7 +16,7 @@ class ValidationSurveyPolicyTests {
         assertEquals(ValidationSurveyPolicy.Eligibility.AUTH_COMPLETED, policy.eligibility("AuthCompleted"));
         assertEquals(ValidationSurveyPolicy.Eligibility.AUTH_INCOMPLETE, policy.eligibility("AuthIncomplete"));
         assertEquals(ValidationSurveyPolicy.Eligibility.NOT_ELIGIBLE, policy.eligibility("Cancelled"));
-        assertEquals(AVAILABLE.plusSeconds(172800), policy.expiresAt(AVAILABLE));
+        assertEquals(AVAILABLE.plusSeconds(86400), policy.expiresAt(AVAILABLE));
     }
 
     @Test

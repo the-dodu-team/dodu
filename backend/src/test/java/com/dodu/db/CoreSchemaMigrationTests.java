@@ -41,10 +41,11 @@ class CoreSchemaMigrationTests {
 
     @Test
     void coreAndAuthTablesAreCreatedOnCleanDatabase() throws SQLException {
-        assertEquals(13, count("select count(*) from information_schema.tables where table_schema = 'public' "
+        assertEquals(16, count("select count(*) from information_schema.tables where table_schema = 'public' "
                 + "and table_name in ('study_period','policy_version','participant','promise',"
                 + "'promise_schedule_revision','promise_date_usage','auth_attempt','validation_survey','behavior_event',"
-                + "'access_credential','participant_device','participant_session','notification_subscription')"));
+                + "'access_credential','participant_device','participant_session','notification_subscription','photo_asset',"
+                + "'promise_creation_request','access_failure_rate_limit')"));
     }
 
     @Test
@@ -95,6 +96,25 @@ class CoreSchemaMigrationTests {
         String insert = attemptInsert(promise, "00000000-0000-4000-8000-0000000000e1", "Rejected");
         exec(insert);
         assertViolates("uq_auth_attempt_request", () -> exec(insert));
+    }
+
+    @Test
+    void photoMetadataCanBeLinkedToExactlyOneAttempt() throws SQLException {
+        String promise = seedPromise("E2");
+        String asset = scalar("insert into photo_asset(storage_key, content_type, byte_size, sha256_hash, received_at) "
+                + "values ('storage-e2', 'image/jpeg', 4, '0000000000000000000000000000000000000000000000000000000000000000', now()) "
+                + "returning id::text");
+        String attempt = "insert into auth_attempt(promise_id, client_request_id, request_fingerprint, tool_type, "
+                + "processing_status, request_received_at, photo_asset_id) values ('" + promise
+                + "', '00000000-0000-4000-8000-0000000000e2', 'fingerprint-e2', 'laptop', 'Evaluating', now(), '"
+                + asset + "')";
+        exec(attempt);
+        assertEquals(asset, scalar("select photo_asset_id::text from auth_attempt where promise_id = '" + promise + "'"));
+        String duplicateAssetAttempt = attempt
+                .replace("0000000000e2", "0000000000e3")
+                .replace("'fingerprint-e2'", "'fingerprint-e3'")
+                .replace("'Evaluating', now()", "'Rejected', now()");
+        assertViolates("ux_auth_attempt_photo_asset", () -> exec(duplicateAssetAttempt));
     }
 
     @Test
@@ -241,7 +261,11 @@ class CoreSchemaMigrationTests {
     }
 
     private static String scalar(String sql) throws SQLException {
-        return scalarOrNull(sql);
+        try (Connection connection = connect();
+             Statement statement = connection.createStatement();
+             var resultSet = statement.executeQuery(sql)) {
+            return resultSet.next() ? resultSet.getString(1) : null;
+        }
     }
 
     private static long count(String sql) throws SQLException {
