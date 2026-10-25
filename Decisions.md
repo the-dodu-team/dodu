@@ -659,3 +659,31 @@
 - 결정: 응답 가능 기간 내 자기보고 조회를 최초 진입으로 간주해 `Pending`을 `Prompted`로 전이하고 `prompted_at`을 최초 시각으로 저장한다. 만료·제출·건너뛰기 상태는 덮어쓰지 않는다.
 - 범위: 반복 알림으로 인한 `Reminded` 전이는 알림 스케줄러가 담당한다.
 - 검증: 자기보고 상태 정책과 전체 `npm run verify`를 실행한다.
+## DEV-20261025-05 알림 전달 원장과 서버 시간 스케줄러
+
+- 배경: 구독 등록 경계는 있었지만 T/T+10/T+20 알림을 멱등하게 생성하고 인앱 알림으로 조회할 영속화 계층이 없었다.
+- 결정: `notification_delivery` 원장에 약속 ID·스케줄 버전·알림 종류·채널·`dispatch_key`를 저장한다. `dispatch_key`와 채널의 유일 제약으로 재실행 중복을 막고, 약속 시간 변경 시 증가한 `schedule_version`으로 이전 예약을 무효화한다. 스케줄러는 주입된 서버 `Clock`으로 T/T+10/T+20을 계산한다.
+- Push 경계: 현재 구독 테이블에는 원문 Web Push endpoint·키가 없고 해시만 있다. 따라서 provider 어댑터를 분리하고 미설정 상태를 `UNCONFIGURED`로 기록한다. 실제 Push 성공으로 위장하지 않으며 원문 자격정보를 로그나 DB에 추가 저장하지 않는다.
+- 인앱: 발송된 인앱 항목은 `GET /api/participant/notifications`로 조회한다. 발송 기록과 열람 시각은 별도 필드로 유지해 발송을 열람 증거로 취급하지 않는다.
+- 검증: `NotificationSchedulePolicyTests`로 스케줄러 지연 복구 시 세 경계와 미래 경계, 스케줄 버전 및 자기보고 18:00/다음날 11:00 경계를 확인했다. `npm run verify`에서 프런트엔드 lint/build, Flyway V1~V6, 백엔드 178개 테스트, 패키징을 통과했다.
+
+## DEV-20261025-06 사진 평가 retry/backoff·복구 worker
+
+- 배경: 사진 제출은 `auth_attempt`를 `Evaluating`으로 저장했지만 외부 AI worker의 일시 실패를 내구성 있게 재시도하거나 복구할 큐가 없었다.
+- 결정: `photo_evaluation_job`을 `auth_attempt`당 하나만 생성하고 `READY/PROCESSING/SUCCEEDED/EXHAUSTED/SKIPPED` 상태와 lease를 저장한다. worker는 서버 `Clock`과 row lock/`skip locked`로 작업을 선점한다.
+- 재시도: 30초·120초의 제한된 지수 백오프를 적용하고 세 번째 시도 실패 시 attempt를 `TechFailed`로 종결한다. 이미 철회된 참가자, 유효 접수 증거가 없는 시도, 현재 상태가 아닌 시도는 결과를 덮어쓰지 않고 건너뛴다.
+- 외부 경계: 실제 AI worker 계약이 없으므로 기본 handler는 `AI_WORKER_UNCONFIGURED` 재시도 결과만 반환한다. 원시 사진 바이트는 worker 경계로 전달하지 않는다.
+- 검증: `PhotoRecoveryBackoffPolicyTests`와 Testcontainers PostgreSQL 기능 테스트에서 재시도 예약, 성공 복구, 최대 재시도 후 `TechFailed` 종결을 검증했다. `npm run verify`에서 프런트엔드 lint/build, Flyway V1~V7, 백엔드 182개 테스트, 패키징을 통과했다.
+
+## DEV-20261025-07 구현 순서와 외부 결정 분리
+
+- 배경: 현재 남은 작업에는 저장소 정책만으로 바로 검증할 수 있는 백엔드 경계와 AI·Push provider·운영 QA 계약이 필요한 작업이 섞여 있다.
+- 결정: 추가 정보 없이 가능한 작업은 `docs/dodu/IMPLEMENTATION_ROADMAP_20261025.md`의 순서대로 단위 테스트와 기능 테스트를 동반해 진행한다. AI worker 계약·사진 저장소·Push provider·운영 QA가 필요한 항목은 별도 질문과 차단 목록으로 분리하고, 계약이 없는 상태에서 완료 처리하지 않는다.
+- 영향: 공식 개입 종료 후 신규 개입성 알림 차단, 상태·소유권·동시성 경계 테스트는 우선 구현한다. 종료 전 정상 접수 사진 판정과 자기보고 24시간 응답은 별도 허용 범위를 유지한다.
+- 검증: 로드맵 문서와 다음 알림 스케줄러 기능 테스트에서 확인한다.
+
+## DEV-20261025-08 생성물 추적 방지
+
+- 배경: 로컬 PDF·이력서 작업물이 `tmp/`에 생성되었고 기존 무시 규칙이 없어 저장소 이력에 섞였다.
+- 결정: `tmp/`, 모든 workspace의 `node_modules/`, `target/`, `dist/`, JVM 로그와 OS 임시 파일을 무시한다. 이미 추적된 Dodu 소스·문서는 유지한다.
+- 검증: `git check-ignore -v`로 생성물 경로를 확인하고 `git ls-files`에 생성물이 없는지 검사한다.
