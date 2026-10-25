@@ -75,6 +75,26 @@ public class OperatorAccessRepository {
     }
 
     /**
+     * 새 접근 자격을 저장합니다. 해시만 저장하며 원문은 받지 않습니다.
+     * 최초 발급이면 {@code replacesCredentialId}는 null입니다.
+     */
+    public UUID insertCredential(
+            UUID participantId, String secretHash, Instant now, UUID replacesCredentialId) {
+        return jdbc.sql("""
+                    insert into access_credential
+                        (participant_id, secret_hash, issued_at, replaces_credential_id)
+                    values (:participantId, :secretHash, :now, :replacesId)
+                    returning id
+                    """)
+                .param("participantId", participantId)
+                .param("secretHash", secretHash)
+                .param("now", utc(now))
+                .param("replacesId", replacesCredentialId)
+                .query(UUID.class)
+                .single();
+    }
+
+    /**
      * 참가자를 철회 상태로 바꿉니다. 요청 시각은 운영자가 입력한 값이고(데이터 제외 기준), 반영 시각은
      * {@code now}입니다(감사용, 계약 §7.2). 이미 철회된 참가자면 0을 돌려줍니다.
      */
