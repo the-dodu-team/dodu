@@ -75,6 +75,7 @@ class PhotoSubmissionControllerIntegrationTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.attemptId").value(attemptId));
         assertEquals(1, jdbc.queryForObject("select count(*) from auth_attempt where promise_id = ?", Integer.class, promiseId));
         assertEquals(1, jdbc.queryForObject("select count(*) from photo_asset", Integer.class));
+        assertEquals(1, jdbc.queryForObject("select count(*) from photo_evaluation_job where promise_id = ?", Integer.class, promiseId));
     }
 
     @Test

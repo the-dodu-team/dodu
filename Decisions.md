@@ -667,3 +667,11 @@
 - Push 경계: 현재 구독 테이블에는 원문 Web Push endpoint·키가 없고 해시만 있다. 따라서 provider 어댑터를 분리하고 미설정 상태를 `UNCONFIGURED`로 기록한다. 실제 Push 성공으로 위장하지 않으며 원문 자격정보를 로그나 DB에 추가 저장하지 않는다.
 - 인앱: 발송된 인앱 항목은 `GET /api/participant/notifications`로 조회한다. 발송 기록과 열람 시각은 별도 필드로 유지해 발송을 열람 증거로 취급하지 않는다.
 - 검증: `NotificationSchedulePolicyTests`로 스케줄러 지연 복구 시 세 경계와 미래 경계, 스케줄 버전 및 자기보고 18:00/다음날 11:00 경계를 확인했다. `npm run verify`에서 프런트엔드 lint/build, Flyway V1~V6, 백엔드 178개 테스트, 패키징을 통과했다.
+
+## DEV-20261025-06 사진 평가 retry/backoff·복구 worker
+
+- 배경: 사진 제출은 `auth_attempt`를 `Evaluating`으로 저장했지만 외부 AI worker의 일시 실패를 내구성 있게 재시도하거나 복구할 큐가 없었다.
+- 결정: `photo_evaluation_job`을 `auth_attempt`당 하나만 생성하고 `READY/PROCESSING/SUCCEEDED/EXHAUSTED/SKIPPED` 상태와 lease를 저장한다. worker는 서버 `Clock`과 row lock/`skip locked`로 작업을 선점한다.
+- 재시도: 30초·120초의 제한된 지수 백오프를 적용하고 세 번째 시도 실패 시 attempt를 `TechFailed`로 종결한다. 이미 철회된 참가자, 유효 접수 증거가 없는 시도, 현재 상태가 아닌 시도는 결과를 덮어쓰지 않고 건너뛴다.
+- 외부 경계: 실제 AI worker 계약이 없으므로 기본 handler는 `AI_WORKER_UNCONFIGURED` 재시도 결과만 반환한다. 원시 사진 바이트는 worker 경계로 전달하지 않는다.
+- 검증: `PhotoRecoveryBackoffPolicyTests`와 Testcontainers PostgreSQL 기능 테스트에서 재시도 예약, 성공 복구, 최대 재시도 후 `TechFailed` 종결을 검증했다. `npm run verify`에서 프런트엔드 lint/build, Flyway V1~V7, 백엔드 182개 테스트, 패키징을 통과했다.
