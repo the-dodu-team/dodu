@@ -226,3 +226,12 @@
 - 구현 근거는 기록했지만 미완료: SCRUM-70(신뢰 프록시, 공유 저장소·다중 노드 운영, 봇 검증·QA), SCRUM-76(FE/BE 인수와 공통 응답 형식), SCRUM-83(외부 객체 저장소·AI 작업자 경계), SCRUM-84(콜백 인증과 전체 동시성 검증표), SCRUM-85(재시도·백오프 작업자와 복구 큐), SCRUM-86(알림·복구 스케줄러 연결), SCRUM-87(자기보고·알림·FE 연동).
 - 기획 또는 승인 의존으로 미완료: SCRUM-6, SCRUM-9, SCRUM-14, SCRUM-17, SCRUM-20, SCRUM-21, SCRUM-25, SCRUM-35, SCRUM-37, SCRUM-75. 다른 역할의 인수, 외부 서비스·제공자 결정 또는 더 넓은 통합 범위가 필요하므로 허위 완료 처리하지 않았다.
 - 이번 감사의 모든 Jira 변경은 확인된 `dodu-mobile` 사이트와 Sprint 3 클라우드 ID를 사용했다. 다른 담당자의 티켓은 상태를 변경하지 않았다.
+
+### SCRUM-86 / 인앱 알림 원장과 T/T+10/T+20 스케줄러 — 2026-10-25
+
+- 상태: 인앱 알림 발송 기록·조회 API와 서버 시간 기준 스케줄러 구현 완료. Push 실제 발송은 provider 계약 부재로 차단.
+- 변경: Flyway V6 `notification_delivery`, `NotificationSchedulePolicy`, `NotificationDeliveryService`, `GET /api/participant/notifications`, `PushNotificationSender` 경계를 추가했다.
+- 동작: T, T+10, T+20을 `dispatch_key`로 멱등 생성한다. 약속 `schedule_version`을 키에 포함해 약속 시간 수정 전 예약이 새 시간의 알림을 덮어쓰지 않는다. `Evaluating` 중에는 T+10/T+20을 만들지 않는다. 공식 개입 종료 이후에는 새 알림을 만들지 않는다.
+- 인앱: 발송 시각과 열람 시각을 분리해 저장하며, 알림 발송 자체를 수신·열람 증거로 사용하지 않는다.
+- Push: 현재 `notification_subscription`에는 구독 키 해시만 있고 실제 Web Push endpoint·암호화 키가 없다. 기본 어댑터는 `UNCONFIGURED`로 기록하며 성공으로 표시하지 않는다. provider 계약·운영 자격정보·worker 연결 후에만 실제 Push 완료로 갱신한다.
+- 검증: `NotificationSchedulePolicyTests` 포함 `npm run verify` 성공. 프런트엔드 lint/build 성공, Flyway V1~V6 적용, 백엔드 178개 테스트 통과, 패키징 성공.

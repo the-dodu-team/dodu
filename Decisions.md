@@ -659,3 +659,11 @@
 - 결정: 응답 가능 기간 내 자기보고 조회를 최초 진입으로 간주해 `Pending`을 `Prompted`로 전이하고 `prompted_at`을 최초 시각으로 저장한다. 만료·제출·건너뛰기 상태는 덮어쓰지 않는다.
 - 범위: 반복 알림으로 인한 `Reminded` 전이는 알림 스케줄러가 담당한다.
 - 검증: 자기보고 상태 정책과 전체 `npm run verify`를 실행한다.
+
+## DEV-20261025-05 알림 전달 원장과 서버 시간 스케줄러
+
+- 배경: 구독 등록 경계는 있었지만 T/T+10/T+20 알림을 멱등하게 생성하고 인앱 알림으로 조회할 영속화 계층이 없었다.
+- 결정: `notification_delivery` 원장에 약속 ID·스케줄 버전·알림 종류·채널·`dispatch_key`를 저장한다. `dispatch_key`와 채널의 유일 제약으로 재실행 중복을 막고, 약속 시간 변경 시 증가한 `schedule_version`으로 이전 예약을 무효화한다. 스케줄러는 주입된 서버 `Clock`으로 T/T+10/T+20을 계산한다.
+- Push 경계: 현재 구독 테이블에는 원문 Web Push endpoint·키가 없고 해시만 있다. 따라서 provider 어댑터를 분리하고 미설정 상태를 `UNCONFIGURED`로 기록한다. 실제 Push 성공으로 위장하지 않으며 원문 자격정보를 로그나 DB에 추가 저장하지 않는다.
+- 인앱: 발송된 인앱 항목은 `GET /api/participant/notifications`로 조회한다. 발송 기록과 열람 시각은 별도 필드로 유지해 발송을 열람 증거로 취급하지 않는다.
+- 검증: `NotificationSchedulePolicyTests`로 스케줄러 지연 복구 시 세 경계와 미래 경계, 스케줄 버전 및 자기보고 18:00/다음날 11:00 경계를 확인했다. `npm run verify`에서 프런트엔드 lint/build, Flyway V1~V6, 백엔드 178개 테스트, 패키징을 통과했다.
