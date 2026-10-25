@@ -1,0 +1,4 @@
+spring:
+  main:
+    web-application-type: none   # 웹 서버(포트)를 열지 않음
+    banner-mode: off
