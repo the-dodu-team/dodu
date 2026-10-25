@@ -644,3 +644,11 @@
 - 보안: 사진 원문·저장소 키·요청 지문·접근 자격정보는 응답하지 않는다. 다른 참가자의 약속은 404로 숨긴다.
 - 범위: 실제 외부 AI worker 조회와 FE 화면 연결은 후속 범위로 남긴다.
 - 검증: 백엔드 전체 테스트와 `npm run verify`를 실행한다.
+
+## DEV-20261025-03 자기보고 Skip·만료 상태 전이
+
+- 배경: 자기보고 조회·제출 API는 있었지만 `Pending`·`Prompted`·`Reminded` 상태에서 사용자가 건너뛰거나 24시간 응답 기간이 끝났을 때 상태를 저장하지 않았다.
+- 결정: 유효한 응답 기간 안의 `POST /api/promises/{promiseId}/validation-survey/skip`은 `Skipped`로 전이하고, 조회 시각이 `expiresAt` 이상이면 미완료 상태를 `Expired`로 전이한다. `Submitted`·`Skipped`·`Expired`는 덮어쓰지 않는다.
+- 근거: 자기보고 미응답은 미시작으로 취급하지 않으며, 응답 기간은 24시간이고 만료 경계는 배타적이다.
+- 범위: Push·인앱 알림과 FE 상태 표시는 별도 연동 범위다.
+- 검증: 자기보고 통합 시나리오와 전체 `npm run verify`를 실행한다.

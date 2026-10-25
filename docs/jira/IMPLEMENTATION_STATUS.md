@@ -192,6 +192,13 @@
 - 보안: 사진 원문·저장소 키·요청 지문·접근정보는 응답하지 않으며 타 참가자 약속은 404로 처리한다.
 - 검증: 백엔드 전체 테스트와 `npm run verify` 실행 결과를 추가한다.
 
+### SCRUM-87 / 자기보고 Skip·24시간 만료 상태 전이 — 2026-10-25
+
+- 상태: 서버 상태 전이 구현. Push·인앱 알림, FE 상태 표시, QA는 미완료.
+- 변경: 유효한 응답 기간 안의 `POST /api/promises/{promiseId}/validation-survey/skip`을 `Skipped`로 저장하고, 조회 시 `expiresAt` 이상이면 `Pending`·`Prompted`·`Reminded`를 `Expired`로 전이한다.
+- 보호: 제출·건너뛰기·만료 상태를 서로 덮어쓰지 않으며, 자기보고 미응답은 다음 약속 생성을 차단하지 않는다.
+- 검증: 백엔드 전체 테스트와 `npm run verify` 실행 결과를 추가한다.
+
 ## Sprint 3 통합 브랜치 — 2026-10-21
 
 - 브랜치: `integration/sprint-3-20261021`

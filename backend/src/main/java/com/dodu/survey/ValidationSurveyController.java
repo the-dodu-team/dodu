@@ -40,6 +40,13 @@ public class ValidationSurveyController {
     }
 
     private SurveyResponse find(UUID promiseId, UUID participantId) {
+        jdbc.update("""
+                update validation_survey
+                   set lifecycle_status = 'Expired'
+                 where promise_id = ?
+                   and lifecycle_status in ('Pending', 'Prompted', 'Reminded')
+                   and expires_at is not null and expires_at <= ?
+                """, promiseId, clock.instant());
         return jdbc.query("""
                 select vs.id, vs.questionnaire_version, vs.lifecycle_status, vs.eligibility_status,
                        vs.actual_started, vs.start_order, vs.start_delay_bucket, vs.no_start_reason,
@@ -58,6 +65,26 @@ public class ValidationSurveyController {
                     rs.getObject("submitted_at", Instant.class));
                 },
                 promiseId, participantId);
+    }
+
+    @PostMapping("/skip")
+    public SurveyResponse skip(@PathVariable UUID promiseId,
+                               @RequestHeader(value = "Authorization", required = false) String authorization) {
+        UUID participantId = participantFor(authorization);
+        Instant now = clock.instant();
+        int updated = jdbc.update("""
+                update validation_survey vs
+                   set lifecycle_status = 'Skipped', skipped_at = ?
+                 where vs.promise_id = ?
+                   and exists (select 1 from promise p where p.id = vs.promise_id and p.participant_id = ?)
+                   and vs.lifecycle_status in ('Pending', 'Prompted', 'Reminded')
+                   and vs.available_at is not null and vs.expires_at is not null
+                   and ? >= vs.available_at and ? < vs.expires_at
+                """, now, promiseId, participantId, now, now);
+        if (updated != 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "survey is not skippable");
+        }
+        return find(promiseId, participantId);
     }
 
     @PostMapping
