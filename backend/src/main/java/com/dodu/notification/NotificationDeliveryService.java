@@ -1,5 +1,6 @@
 package com.dodu.notification;
 
+import com.dodu.intervention.InterventionLifecycleGate;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
@@ -17,6 +18,7 @@ public class NotificationDeliveryService {
     private final Clock clock;
     private final PushNotificationSender pushSender;
     private final NotificationSchedulePolicy policy = new NotificationSchedulePolicy();
+    private final InterventionLifecycleGate lifecycleGate = new InterventionLifecycleGate();
 
     public NotificationDeliveryService(JdbcTemplate jdbc, Clock clock, PushNotificationSender pushSender) {
         this.jdbc = jdbc;
@@ -34,6 +36,7 @@ public class NotificationDeliveryService {
     public int dispatchDueNotifications(Instant now) {
         List<PromiseRow> promises = jdbc.query("""
                 select p.id, p.participant_id, p.scheduled_at, p.schedule_version
+                       , study.intervention_ends_at
                   from promise p
                   join participant part on part.id = p.participant_id
                   join study_period study on study.id = part.study_period_id
@@ -45,9 +48,13 @@ public class NotificationDeliveryService {
                 """, (rs, rowNum) -> new PromiseRow(rs.getObject("id", UUID.class),
                         rs.getObject("participant_id", UUID.class),
                         rs.getTimestamp("scheduled_at").toInstant(),
-                        rs.getInt("schedule_version")), timestamp(now), timestamp(now));
+                        rs.getInt("schedule_version"),
+                        rs.getTimestamp("intervention_ends_at") == null
+                                ? null : rs.getTimestamp("intervention_ends_at").toInstant()),
+                timestamp(now), timestamp(now));
         int created = 0;
         for (PromiseRow promise : promises) {
+            if (!isNewInterventionAllowed(now, promise.interventionEndsAt())) continue;
             boolean evaluating = jdbc.queryForObject(
                     "select exists(select 1 from auth_attempt where promise_id = ? and processing_status = 'Evaluating')",
                     Boolean.class, promise.promiseId());
@@ -96,11 +103,17 @@ public class NotificationDeliveryService {
                     survey.scheduleVersion());
             String dispatchKey = survey.promiseId() + ":" + due.scheduleVersion() + ":SURVEY_REMINDER";
             PromiseRow promise = new PromiseRow(survey.promiseId(), survey.participantId(),
-                    survey.scheduledAt(), survey.scheduleVersion());
+                    survey.scheduledAt(), survey.scheduleVersion(), null);
             created += insertInApp(promise, due, dispatchKey, now);
             created += insertPush(promise, due, dispatchKey, now);
         }
         return created;
+    }
+
+    private boolean isNewInterventionAllowed(Instant now, Instant interventionEndsAt) {
+        if (interventionEndsAt == null) return true;
+        return lifecycleGate.decide(now, interventionEndsAt, false)
+                == InterventionLifecycleGate.Decision.NEW_WORK_ALLOWED;
     }
 
     private int insertInApp(PromiseRow promise, NotificationSchedulePolicy.DueNotification due,
@@ -149,7 +162,8 @@ public class NotificationDeliveryService {
         return Timestamp.from(instant);
     }
 
-    private record PromiseRow(UUID promiseId, UUID participantId, Instant scheduledAt, int scheduleVersion) { }
+    private record PromiseRow(UUID promiseId, UUID participantId, Instant scheduledAt, int scheduleVersion,
+                              Instant interventionEndsAt) { }
     private record SurveyRow(UUID promiseId, UUID participantId, Instant scheduledAt,
                              int scheduleVersion, Instant expiresAt) { }
 }
