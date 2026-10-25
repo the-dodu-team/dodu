@@ -2,6 +2,18 @@
 
 이 파일은 구현 완료 범위와 Jira 추적 상태를 함께 기록한다. 구현이 완료된 항목은 관련 티켓의 완료 조건과 검증 결과를 남긴다. 원격 Jira 상태를 변경할 수 없는 경우에는 완료로 표시하지 않고 사유를 기록한다.
 
+## 2026-10-25 현재 Sprint 3 상태 및 dev 반영
+
+- 통합 브랜치: `integration/sprint-3-20261021`
+- `dev` 반영: `6806254`까지 fast-forward 완료, 원격 `origin/dev` push 완료.
+- 강민(mono) 완료: SCRUM-23, SCRUM-31, SCRUM-32.
+- 강민(mono) 부분 구현·미완료: SCRUM-70, SCRUM-76, SCRUM-83, SCRUM-84, SCRUM-85, SCRUM-86, SCRUM-87. 외부 저장소·AI worker·알림 발송/스케줄러·FE 연결·QA 조건은 완료로 표시하지 않는다.
+- 강민(mono) 미착수 또는 결정·인수 필요: SCRUM-6, SCRUM-9, SCRUM-14, SCRUM-17, SCRUM-20, SCRUM-21, SCRUM-25, SCRUM-35, SCRUM-37, SCRUM-75. 각 티켓의 기간은 2026-10-25~2026-11-01로 설정했다.
+- 문은서: SCRUM-22는 완료, SCRUM-15·27·28·30·34·36·40·42는 미완료.
+- Elle Yoo: SCRUM-13·16·77·78·79·80·81·82는 완료, SCRUM-11·24·26·39·69는 미완료.
+- 김경제: SCRUM-71·72는 완료, SCRUM-88은 검토 중.
+- 검증: Docker 재기동 후 `npm run verify` 통과. 백엔드 174개 테스트, 실패 0·오류 0, Flyway V1~V5, 프런트엔드 lint/build, 백엔드 패키징, `git diff --check`.
+
 ## 2026-10-18
 
 ### SCRUM-23 / 약속 생성·수정·취소 API
