@@ -5,7 +5,7 @@
 ## 2026-10-25 현재 Sprint 3 상태 및 dev 반영
 
 - 통합 브랜치: `integration/sprint-3-20261021`
-- `dev` 반영: `6806254`까지 fast-forward 완료, 원격 `origin/dev` push 완료.
+- `dev` 반영: 최신 통합 검증 커밋까지 fast-forward 완료, 원격 `origin/dev` push 완료.
 - 강민(mono) 완료: SCRUM-23, SCRUM-31, SCRUM-32.
 - 강민(mono) 부분 구현·미완료: SCRUM-70, SCRUM-76, SCRUM-83, SCRUM-84, SCRUM-85, SCRUM-86, SCRUM-87. 외부 저장소·AI worker·알림 발송/스케줄러·FE 연결·QA 조건은 완료로 표시하지 않는다.
 - 강민(mono) 미착수 또는 결정·인수 필요: SCRUM-6, SCRUM-9, SCRUM-14, SCRUM-17, SCRUM-20, SCRUM-21, SCRUM-25, SCRUM-35, SCRUM-37, SCRUM-75. 각 티켓의 기간은 2026-10-25~2026-11-01로 설정했다.
@@ -190,14 +190,14 @@
 - 상태: 참가자 소유권 검증을 포함한 이력 조회 API 구현. FE 연결과 외부 AI worker 조회는 미완료.
 - 변경: `GET /api/promises/{promiseId}/auth-attempts`에서 시도별 처리 상태, 판정 결과, 오류 구분, 모델 버전, 접수·유효·판정 시각을 반환한다.
 - 보안: 사진 원문·저장소 키·요청 지문·접근정보는 응답하지 않으며 타 참가자 약속은 404로 처리한다.
-- 검증: 백엔드 전체 테스트와 `npm run verify` 실행 결과를 추가한다.
+- 검증 완료: Docker/Testcontainers PostgreSQL 기반 전체 `npm run verify` 통과(백엔드 174개 테스트, 실패 0·오류 0, Flyway V1~V5, 프런트엔드 lint/build, 백엔드 패키징).
 
 ### SCRUM-87 / 자기보고 Skip·24시간 만료 상태 전이 — 2026-10-25
 
 - 상태: 서버 상태 전이 구현. Push·인앱 알림, FE 상태 표시, QA는 미완료.
 - 변경: 유효한 응답 기간 안의 `POST /api/promises/{promiseId}/validation-survey/skip`을 `Skipped`로 저장하고, 조회 시 `expiresAt` 이상이면 `Pending`·`Prompted`·`Reminded`를 `Expired`로 전이한다.
 - 보호: 제출·건너뛰기·만료 상태를 서로 덮어쓰지 않으며, 자기보고 미응답은 다음 약속 생성을 차단하지 않는다.
-- 검증: 백엔드 전체 테스트와 `npm run verify` 실행 결과를 추가한다.
+- 검증 완료: Docker/Testcontainers PostgreSQL 기반 전체 `npm run verify` 통과(백엔드 174개 테스트, 실패 0·오류 0, Flyway V1~V5, 프런트엔드 lint/build, 백엔드 패키징).
 
 ## Sprint 3 통합 브랜치 — 2026-10-21
 
