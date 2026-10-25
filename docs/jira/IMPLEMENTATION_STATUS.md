@@ -243,7 +243,7 @@
 - 동작: 작업당 최대 3회 실행, 30초/120초 백오프, lease·row lock·`skip locked`로 중복 worker 실행을 보호한다. 성공 시 `AuthCompleted`, 거절 시 attempt만 `Rejected`, 최대 실패 시 promise `TechFailed`로 전이한다.
 - 보호: 철회 참가자, 유효 접수 시간이 없는 attempt, 이미 Evaluating이 아닌 attempt는 결과를 덮어쓰지 않는다. 지연된 정상 접수 attempt는 공식 종료 후에도 처리 대상이 될 수 있다.
 - 외부 차단: 기본 handler는 `AI_WORKER_UNCONFIGURED`를 재시도 가능한 오류로 기록한다. 실제 AI worker endpoint·인증·결과 계약이 확정되기 전에는 SCRUM-85를 완료 처리하지 않는다.
-- 검증: `PhotoRecoveryBackoffPolicyTests`, `PhotoEvaluationRecoveryWorkerIntegrationTests` 추가. `npm run verify` 성공 — 프런트엔드 lint/build, Flyway V1~V7, 백엔드 182개 테스트(실패 0·오류 0), 패키징 성공.
+- 검증: `PhotoRecoveryBackoffPolicyTests`, `PhotoEvaluationRecoveryWorkerIntegrationTests` 추가. `npm run verify` 성공 — 프런트엔드 lint/build, Flyway V1~V7, 백엔드 189개 테스트(실패 0·오류 0), 패키징 성공.
 
 ### 구현 순서·논의 질문 분리 — 2026-10-25
 
@@ -263,5 +263,5 @@
 - 상태: 부분 구현 검증. AI 응답의 `laptop`·`book`·`other` 매핑, HTTP 오류별 retry/기술 실패 경계, 사진 저장소 reader 경계를 추가했다.
 - 변경: `AiPhotoEvaluationRecoveryHandler`, `AiPhotoEvaluationResponseMapper`, `PhotoObjectReader`를 추가하고 복구 worker가 사진 메타데이터를 adapter에 전달하도록 연결했다. 사진 제출은 JPEG/JPG/PNG만 허용한다.
 - 보안: 로컬 AI 테스트 폴더와 인증 비밀값 파일을 Git에서 제외하고 `npm run security:scan`을 `npm run verify`에 포함했다. 비밀값 자체는 저장소·로그·문서에 기록하지 않는다.
-- 검증: AI 응답 매핑 3개 단위 테스트와 Docker/Testcontainers 복구 worker 2개 기능 테스트가 통과했다.
+- 검증: AI 응답 매핑 3개 단위 테스트, 로컬 HTTP server를 이용한 실제 multipart 호출 2개 기능 테스트, Docker/Testcontainers 복구 worker 2개 기능 테스트가 통과했다.
 - 남은 범위: 실제 외부 사진 저장소 provider 구현, 운영 endpoint smoke test, AI 서버 운영 QA. provider와 저장소가 확정되기 전에는 SCRUM-85를 완료 처리하지 않는다.

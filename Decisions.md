@@ -696,3 +696,4 @@
 - 보안: AI 인증 비밀값과 로컬 모델 테스트 폴더는 Git 추적 대상에서 제외하고, 비밀 파일명·개인키 형식·할당된 비밀값 패턴을 `security:scan`에서 차단한다. 소스 코드의 정상적인 `key` 필드명은 차단하지 않는다.
 - 영향: 실제 provider가 확정되기 전에도 adapter·worker·응답 매핑·재시도 테스트를 검증할 수 있으며, 비밀값 없이 애플리케이션이 안전한 미설정 상태로 시작한다.
 - 검증: `npm run security:scan`, AI 응답 매핑 단위 테스트, Docker/Testcontainers 기반 복구 worker 테스트를 실행한다.
+- 추가 검증: 외부 키나 사진 원본을 노출하지 않는 로컬 HTTP server 기반 multipart 호출 테스트를 둔다. 실제 운영 endpoint 호출은 별도 smoke test로 분리한다.

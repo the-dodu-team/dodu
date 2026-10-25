@@ -25,12 +25,21 @@ public final class AiPhotoEvaluationRecoveryHandler implements PhotoEvaluationRe
 
     public AiPhotoEvaluationRecoveryHandler(ObjectMapper objectMapper,
                                             ObjectProvider<PhotoObjectReader> photoObjectReaders) {
+        String configuredEndpoint = System.getenv().getOrDefault("DODU_AI_ENDPOINT", "");
         this.client = HttpClient.newBuilder().connectTimeout(REQUEST_TIMEOUT).build();
         this.responseMapper = new AiPhotoEvaluationResponseMapper(objectMapper);
         this.photoObjectReader = photoObjectReaders.getIfAvailable();
-        String configuredEndpoint = System.getenv().getOrDefault("DODU_AI_ENDPOINT", "");
         this.endpoint = configuredEndpoint.isBlank() ? null : URI.create(configuredEndpoint);
         this.apiKey = System.getenv().getOrDefault("DODU_AI_API_KEY", "");
+    }
+
+    AiPhotoEvaluationRecoveryHandler(ObjectMapper objectMapper, PhotoObjectReader photoObjectReader,
+                                     URI endpoint, String apiKey, HttpClient client) {
+        this.client = client;
+        this.responseMapper = new AiPhotoEvaluationResponseMapper(objectMapper);
+        this.photoObjectReader = photoObjectReader;
+        this.endpoint = endpoint;
+        this.apiKey = apiKey;
     }
 
     @Override
