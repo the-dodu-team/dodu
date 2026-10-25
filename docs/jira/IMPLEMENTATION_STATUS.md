@@ -185,6 +185,13 @@
 - 보안: 원문 구독 키는 저장·로그·응답에 포함하지 않는다. 세션 교체 시 기존 활성 구독은 기존 참가자 인증 흐름에서 비활성화된다.
 - 검증 완료: Docker/Testcontainers PostgreSQL에서 전체 `npm run verify` 통과(백엔드 174개 테스트, 실패 0·오류 0, Flyway V1~V5, 프런트엔드 lint/build, 백엔드 패키징). 첫 실행은 Docker Desktop 중단으로 실패했으며 Docker 재기동 후 재실행했다.
 
+### SCRUM-83/87 / 사진 인증 이력 조회 API — 2026-10-25
+
+- 상태: 참가자 소유권 검증을 포함한 이력 조회 API 구현. FE 연결과 외부 AI worker 조회는 미완료.
+- 변경: `GET /api/promises/{promiseId}/auth-attempts`에서 시도별 처리 상태, 판정 결과, 오류 구분, 모델 버전, 접수·유효·판정 시각을 반환한다.
+- 보안: 사진 원문·저장소 키·요청 지문·접근정보는 응답하지 않으며 타 참가자 약속은 404로 처리한다.
+- 검증: 백엔드 전체 테스트와 `npm run verify` 실행 결과를 추가한다.
+
 ## Sprint 3 통합 브랜치 — 2026-10-21
 
 - 브랜치: `integration/sprint-3-20261021`
