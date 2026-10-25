@@ -6,7 +6,8 @@ import java.util.UUID;
 public interface PhotoEvaluationRecoveryHandler {
     RecoveryResult recover(RecoveryJob job);
 
-    record RecoveryJob(UUID jobId, UUID attemptId, UUID promiseId, int attemptCount) { }
+    record RecoveryJob(UUID jobId, UUID attemptId, UUID promiseId, int attemptCount,
+                       String storageKey, String contentType) { }
 
     record RecoveryResult(Outcome outcome, String errorCode, String modelVersion) {
         public static RecoveryResult retryable(String errorCode) {
@@ -19,6 +20,10 @@ public interface PhotoEvaluationRecoveryHandler {
 
         public static RecoveryResult rejected(String errorCode, String modelVersion) {
             return new RecoveryResult(Outcome.REJECTED, errorCode, modelVersion);
+        }
+
+        public static RecoveryResult technicalFailure(String errorCode) {
+            return new RecoveryResult(Outcome.TECHNICAL_FAILURE, errorCode, null);
         }
     }
 

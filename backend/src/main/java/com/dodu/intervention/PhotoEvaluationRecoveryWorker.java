@@ -34,16 +34,20 @@ public class PhotoEvaluationRecoveryWorker {
     @Transactional
     public int processDueJobs(Instant now) {
         List<JobRow> jobs = jdbc.query("""
-                select id, auth_attempt_id, promise_id, attempt_count
-                  from photo_evaluation_job
-                 where (lifecycle_status = 'READY' and next_attempt_at <= ?)
-                    or (lifecycle_status = 'PROCESSING' and lease_until <= ?)
-                 order by next_attempt_at, created_at
-                 for update skip locked
+                select j.id, j.auth_attempt_id, j.promise_id, j.attempt_count,
+                       a.storage_key, a.content_type
+                  from photo_evaluation_job j
+                  left join auth_attempt attempt on attempt.id = j.auth_attempt_id
+                  left join photo_asset a on a.id = attempt.photo_asset_id
+                 where (j.lifecycle_status = 'READY' and j.next_attempt_at <= ?)
+                    or (j.lifecycle_status = 'PROCESSING' and j.lease_until <= ?)
+                 order by j.next_attempt_at, j.created_at
+                 for update of j skip locked
                  limit 10
                 """, (rs, rowNum) -> new JobRow(rs.getObject("id", UUID.class),
                         rs.getObject("auth_attempt_id", UUID.class), rs.getObject("promise_id", UUID.class),
-                        rs.getInt("attempt_count")), timestamp(now), timestamp(now));
+                        rs.getInt("attempt_count"), rs.getString("storage_key"),
+                        rs.getString("content_type")), timestamp(now), timestamp(now));
         int processed = 0;
         for (JobRow job : jobs) {
             int attemptCount = job.attemptCount() + 1;
@@ -61,7 +65,8 @@ public class PhotoEvaluationRecoveryWorker {
             PhotoEvaluationRecoveryHandler.RecoveryResult result;
             try {
                 result = handler.recover(new PhotoEvaluationRecoveryHandler.RecoveryJob(
-                        job.jobId(), job.attemptId(), job.promiseId(), attemptCount));
+                        job.jobId(), job.attemptId(), job.promiseId(), attemptCount,
+                        job.storageKey(), job.contentType()));
             } catch (RuntimeException ignored) {
                 result = PhotoEvaluationRecoveryHandler.RecoveryResult.retryable("HANDLER_EXCEPTION");
             }
@@ -164,5 +169,6 @@ public class PhotoEvaluationRecoveryWorker {
 
     private static Timestamp timestamp(Instant instant) { return Timestamp.from(instant); }
 
-    private record JobRow(UUID jobId, UUID attemptId, UUID promiseId, int attemptCount) { }
+    private record JobRow(UUID jobId, UUID attemptId, UUID promiseId, int attemptCount,
+                          String storageKey, String contentType) { }
 }
