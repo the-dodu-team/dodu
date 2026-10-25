@@ -199,6 +199,11 @@
 - 보호: 제출·건너뛰기·만료 상태를 서로 덮어쓰지 않으며, 자기보고 미응답은 다음 약속 생성을 차단하지 않는다.
 - 검증 완료: Docker/Testcontainers PostgreSQL 기반 전체 `npm run verify` 통과(백엔드 174개 테스트, 실패 0·오류 0, Flyway V1~V5, 프런트엔드 lint/build, 백엔드 패키징).
 
+### SCRUM-87 / 자기보고 최초 진입 Prompted 전이 — 2026-10-25
+
+- 상태: 응답 가능 기간의 최초 조회 시 `Pending`을 `Prompted`로 전이하도록 구현.
+- 보호: `prompted_at`은 최초 시각을 유지하고 `Submitted`·`Skipped`·`Expired` 상태는 변경하지 않는다. 반복 알림 `Reminded` 전이는 별도 스케줄러 범위다.
+
 ## Sprint 3 통합 브랜치 — 2026-10-21
 
 - 브랜치: `integration/sprint-3-20261021`

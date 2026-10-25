@@ -40,13 +40,21 @@ public class ValidationSurveyController {
     }
 
     private SurveyResponse find(UUID promiseId, UUID participantId) {
+        Instant now = clock.instant();
+        jdbc.update("""
+                update validation_survey
+                   set lifecycle_status = 'Prompted', prompted_at = coalesce(prompted_at, ?)
+                 where promise_id = ? and lifecycle_status = 'Pending'
+                   and available_at is not null and expires_at is not null
+                   and ? >= available_at and ? < expires_at
+                """, now, promiseId, now, now);
         jdbc.update("""
                 update validation_survey
                    set lifecycle_status = 'Expired'
                  where promise_id = ?
                    and lifecycle_status in ('Pending', 'Prompted', 'Reminded')
                    and expires_at is not null and expires_at <= ?
-                """, promiseId, clock.instant());
+                """, promiseId, now);
         return jdbc.query("""
                 select vs.id, vs.questionnaire_version, vs.lifecycle_status, vs.eligibility_status,
                        vs.actual_started, vs.start_order, vs.start_delay_bucket, vs.no_start_reason,
