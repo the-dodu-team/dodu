@@ -57,6 +57,9 @@ public class PhotoSubmissionController {
         if (photo == null || photo.isEmpty()) {
             throw error(HttpStatus.BAD_REQUEST, "PHOTO_REQUIRED");
         }
+        if (!isSupportedPhotoType(photo.getContentType())) {
+            throw error(HttpStatus.BAD_REQUEST, "PHOTO_TYPE_UNSUPPORTED");
+        }
         if (toolType == null || toolType.isBlank() || toolType.length() > 32) {
             throw error(HttpStatus.BAD_REQUEST, "TOOL_TYPE_INVALID");
         }
@@ -176,6 +179,12 @@ public class PhotoSubmissionController {
     }
 
     private static Timestamp timestamp(Instant instant) { return Timestamp.from(instant); }
+
+    private static boolean isSupportedPhotoType(String contentType) {
+        return "image/jpeg".equalsIgnoreCase(contentType)
+                || "image/jpg".equalsIgnoreCase(contentType)
+                || "image/png".equalsIgnoreCase(contentType);
+    }
 
     private static String sha256(byte[] content) {
         try {

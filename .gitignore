@@ -23,3 +23,20 @@ node_modules/
 *.key
 *.p12
 *.pfx
+/ai_model_for_dodu/
+
+# Secret material: keep protocol field names in source, but never track values/files.
+**/API_KEY*
+**/API-KEY*
+**/*apikey*
+**/*api_key*
+**/*private_key*
+**/*access_token*
+**/*secret*
+**/*password*
+**/*credentials*.txt
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+!scripts/check-secrets.mjs

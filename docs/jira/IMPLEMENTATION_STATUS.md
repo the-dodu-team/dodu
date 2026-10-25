@@ -257,3 +257,11 @@
 - 변경: `NotificationDeliveryService`가 스터디의 `intervention_ends_at`과 `InterventionLifecycleGate`를 사용해 공식 종료 이후 T/T+10/T+20 신규 알림을 생성하지 않도록 했다. 종료 전 정상 접수된 사진 복구와 자기보고 리마인드 경로는 이 게이트로 차단하지 않는다.
 - 검증: `NotificationDeliveryServiceIntegrationTests`에서 종료 후 알림 0건, 종료 전 지연된 알림 3건 생성, `NotificationSchedulePolicyTests`를 확인한다.
 - 남은 범위: 실제 Push endpoint·암호화 키·provider 계약, 운영 발송·수신 QA, 자기보고 리마인드의 종료 후 운영 기준 합의.
+
+### SCRUM-85 / AI 호출 adapter와 비밀값 보호 — 2026-10-25
+
+- 상태: 부분 구현 검증. AI 응답의 `laptop`·`book`·`other` 매핑, HTTP 오류별 retry/기술 실패 경계, 사진 저장소 reader 경계를 추가했다.
+- 변경: `AiPhotoEvaluationRecoveryHandler`, `AiPhotoEvaluationResponseMapper`, `PhotoObjectReader`를 추가하고 복구 worker가 사진 메타데이터를 adapter에 전달하도록 연결했다. 사진 제출은 JPEG/JPG/PNG만 허용한다.
+- 보안: 로컬 AI 테스트 폴더와 인증 비밀값 파일을 Git에서 제외하고 `npm run security:scan`을 `npm run verify`에 포함했다. 비밀값 자체는 저장소·로그·문서에 기록하지 않는다.
+- 검증: AI 응답 매핑 3개 단위 테스트와 Docker/Testcontainers 복구 worker 2개 기능 테스트가 통과했다.
+- 남은 범위: 실제 외부 사진 저장소 provider 구현, 운영 endpoint smoke test, AI 서버 운영 QA. provider와 저장소가 확정되기 전에는 SCRUM-85를 완료 처리하지 않는다.

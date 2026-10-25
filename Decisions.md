@@ -688,3 +688,11 @@
 - 배경: 로컬 PDF·이력서 작업물이 `tmp/`에 생성되었고 기존 무시 규칙이 없어 저장소 이력에 섞였다.
 - 결정: `tmp/`, 모든 workspace의 `node_modules/`, `target/`, `dist/`, JVM 로그와 OS 임시 파일을 무시한다. 이미 추적된 Dodu 소스·문서는 유지한다.
 - 검증: `git check-ignore -v`로 생성물 경로를 확인하고 `git ls-files`에 생성물이 없는지 검사한다.
+
+## DEV-20261025-09 AI 연동 경계와 비밀값 보호
+
+- 배경: AI 담당자가 사진 1장씩 `POST /predict/batch`로 호출하고 `laptop`·`book`·`other`만 반환하는 운영 계약을 제공했다. 사진 원본은 DB가 아닌 외부 비공개 저장소에 보관한다.
+- 결정: 백엔드는 AI 응답을 `laptop`·`book`은 완료, `other`는 거절, 접속·timeout·5xx는 재시도 가능한 기술 오류로 매핑한다. 외부 저장소 provider가 정해지기 전까지 `PhotoObjectReader`를 경계로 둔다.
+- 보안: AI 인증 비밀값과 로컬 모델 테스트 폴더는 Git 추적 대상에서 제외하고, 비밀 파일명·개인키 형식·할당된 비밀값 패턴을 `security:scan`에서 차단한다. 소스 코드의 정상적인 `key` 필드명은 차단하지 않는다.
+- 영향: 실제 provider가 확정되기 전에도 adapter·worker·응답 매핑·재시도 테스트를 검증할 수 있으며, 비밀값 없이 애플리케이션이 안전한 미설정 상태로 시작한다.
+- 검증: `npm run security:scan`, AI 응답 매핑 단위 테스트, Docker/Testcontainers 기반 복구 worker 테스트를 실행한다.
