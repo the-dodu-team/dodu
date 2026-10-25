@@ -108,6 +108,7 @@ public class PhotoSubmissionController {
             if (!existing.requestFingerprint().equals(fingerprint)) {
                 throw error(HttpStatus.CONFLICT, "PHOTO_REQUEST_KEY_REUSED");
             }
+            ensureRecoveryJob(existing.id(), promiseId, now);
             return new PhotoAttemptResponse(existing.id(), promiseId, existing.processingStatus(),
                     existing.requestReceivedAt());
         }
@@ -138,7 +139,18 @@ public class PhotoSubmissionController {
         if (insertedCount == 0) {
             jdbc.update("delete from photo_asset where id = ?", assetId);
         }
+        ensureRecoveryJob(inserted.id(), promiseId, now);
         return new PhotoAttemptResponse(inserted.id(), promiseId, inserted.processingStatus(), inserted.requestReceivedAt());
+    }
+
+    private void ensureRecoveryJob(UUID attemptId, UUID promiseId, Instant now) {
+        jdbc.update("""
+                insert into photo_evaluation_job(auth_attempt_id, promise_id, lifecycle_status, next_attempt_at)
+                select id, promise_id, 'READY', ?
+                  from auth_attempt
+                 where id = ? and promise_id = ? and processing_status = 'Evaluating'
+                on conflict (auth_attempt_id) do nothing
+                """, timestamp(now), attemptId, promiseId);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

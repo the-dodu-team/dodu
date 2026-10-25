@@ -226,3 +226,34 @@
 - 구현 근거는 기록했지만 미완료: SCRUM-70(신뢰 프록시, 공유 저장소·다중 노드 운영, 봇 검증·QA), SCRUM-76(FE/BE 인수와 공통 응답 형식), SCRUM-83(외부 객체 저장소·AI 작업자 경계), SCRUM-84(콜백 인증과 전체 동시성 검증표), SCRUM-85(재시도·백오프 작업자와 복구 큐), SCRUM-86(알림·복구 스케줄러 연결), SCRUM-87(자기보고·알림·FE 연동).
 - 기획 또는 승인 의존으로 미완료: SCRUM-6, SCRUM-9, SCRUM-14, SCRUM-17, SCRUM-20, SCRUM-21, SCRUM-25, SCRUM-35, SCRUM-37, SCRUM-75. 다른 역할의 인수, 외부 서비스·제공자 결정 또는 더 넓은 통합 범위가 필요하므로 허위 완료 처리하지 않았다.
 - 이번 감사의 모든 Jira 변경은 확인된 `dodu-mobile` 사이트와 Sprint 3 클라우드 ID를 사용했다. 다른 담당자의 티켓은 상태를 변경하지 않았다.
+
+### SCRUM-86 / 인앱 알림 원장과 T/T+10/T+20 스케줄러 — 2026-10-25
+
+- 상태: 인앱 알림 발송 기록·조회 API와 서버 시간 기준 스케줄러 구현 완료. Push 실제 발송은 provider 계약 부재로 차단.
+- 변경: Flyway V6 `notification_delivery`, `NotificationSchedulePolicy`, `NotificationDeliveryService`, `GET /api/participant/notifications`, `PushNotificationSender` 경계를 추가했다.
+- 동작: T, T+10, T+20을 `dispatch_key`로 멱등 생성한다. 약속 `schedule_version`을 키에 포함해 약속 시간 수정 전 예약이 새 시간의 알림을 덮어쓰지 않는다. `Evaluating` 중에는 T+10/T+20을 만들지 않는다. 공식 개입 종료 이후에는 새 알림을 만들지 않는다.
+- 인앱: 발송 시각과 열람 시각을 분리해 저장하며, 알림 발송 자체를 수신·열람 증거로 사용하지 않는다.
+- Push: 현재 `notification_subscription`에는 구독 키 해시만 있고 실제 Web Push endpoint·암호화 키가 없다. 기본 어댑터는 `UNCONFIGURED`로 기록하며 성공으로 표시하지 않는다. provider 계약·운영 자격정보·worker 연결 후에만 실제 Push 완료로 갱신한다.
+- 검증: `NotificationSchedulePolicyTests` 포함 `npm run verify` 성공. 프런트엔드 lint/build 성공, Flyway V1~V6 적용, 백엔드 178개 테스트 통과, 패키징 성공.
+
+### SCRUM-85 / 사진 평가 retry/backoff·복구 worker — 2026-10-25
+
+- 상태: DB 기반 평가 작업 큐, 백오프 재시도, worker 상태 전이와 단위·기능 테스트를 구현했다. 실제 AI worker 연결은 provider 계약 부재로 남아 있다.
+- 변경: Flyway V7 `photo_evaluation_job`, `PhotoRecoveryBackoffPolicy`, `PhotoEvaluationRecoveryWorker`, `PhotoEvaluationRecoveryHandler`를 추가하고 사진 제출 시 내구성 작업을 생성한다.
+- 동작: 작업당 최대 3회 실행, 30초/120초 백오프, lease·row lock·`skip locked`로 중복 worker 실행을 보호한다. 성공 시 `AuthCompleted`, 거절 시 attempt만 `Rejected`, 최대 실패 시 promise `TechFailed`로 전이한다.
+- 보호: 철회 참가자, 유효 접수 시간이 없는 attempt, 이미 Evaluating이 아닌 attempt는 결과를 덮어쓰지 않는다. 지연된 정상 접수 attempt는 공식 종료 후에도 처리 대상이 될 수 있다.
+- 외부 차단: 기본 handler는 `AI_WORKER_UNCONFIGURED`를 재시도 가능한 오류로 기록한다. 실제 AI worker endpoint·인증·결과 계약이 확정되기 전에는 SCRUM-85를 완료 처리하지 않는다.
+- 검증: `PhotoRecoveryBackoffPolicyTests`, `PhotoEvaluationRecoveryWorkerIntegrationTests` 추가. `npm run verify` 성공 — 프런트엔드 lint/build, Flyway V1~V7, 백엔드 182개 테스트(실패 0·오류 0), 패키징 성공.
+
+### 구현 순서·논의 질문 분리 — 2026-10-25
+
+- `docs/dodu/IMPLEMENTATION_ROADMAP_20261025.md`에 추가 정보 없이 진행 가능한 순서, AI 담당자 질문, 팀 논의 질문을 분리해 기록했다.
+- AI worker endpoint·인증·결과 계약, 사진 저장소, Push provider, 운영 QA는 외부 결정 의존으로 별도 차단 목록에 유지한다.
+- 다음 즉시 구현 범위는 공식 개입 종료 이후 신규 개입성 알림 차단과 그 기능 테스트이며, 종료 전 정상 접수 사진 판정과 자기보고 24시간 응답은 계속 허용한다.
+
+### SCRUM-86 / 공식 개입 종료 후 알림 스케줄러 게이트 — 2026-10-25
+
+- 상태: 구현 및 기능 테스트 진행 완료. Push provider 연동과 운영 QA는 미완료.
+- 변경: `NotificationDeliveryService`가 스터디의 `intervention_ends_at`과 `InterventionLifecycleGate`를 사용해 공식 종료 이후 T/T+10/T+20 신규 알림을 생성하지 않도록 했다. 종료 전 정상 접수된 사진 복구와 자기보고 리마인드 경로는 이 게이트로 차단하지 않는다.
+- 검증: `NotificationDeliveryServiceIntegrationTests`에서 종료 후 알림 0건, 종료 전 지연된 알림 3건 생성, `NotificationSchedulePolicyTests`를 확인한다.
+- 남은 범위: 실제 Push endpoint·암호화 키·provider 계약, 운영 발송·수신 QA, 자기보고 리마인드의 종료 후 운영 기준 합의.
