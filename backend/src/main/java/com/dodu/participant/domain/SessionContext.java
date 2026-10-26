@@ -4,13 +4,16 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * 세션 토큰 하나로 조회한 참가자·세션과 연구 기간의 접근 종료 시각, 그리고 접근 판정 규칙(계약 §3.3, §6).
+ * 세션 토큰 하나로 조회한 참가자·세션과 접근 종료 시각, 그리고 접근 판정 규칙(계약 §3.3, §6).
  *
- * <p>판정은 DB 없이 이 값만으로 하므로 규칙을 단위 테스트로 확인할 수 있습니다. 접근 종료 시각은 연구 기간의
- * 값이라(운영자가 한 번 정하면 소속 참가자 전원에 같이 적용) 참가자·세션 객체에 복사하지 않고 여기서만 듭니다.
+ * <p>판정은 DB 없이 이 값만으로 하므로 규칙을 단위 테스트로 확인할 수 있습니다. 접근 종료 시각은
+ * 조회하는 쪽(repository)이 정해서 넘깁니다. 정책 v2.5.2에서는 공식 개입 종료 이후 참가자별로
+ * 마지막 자기보고 알림 + 24시간이 되며(SCRUM-63 연동 전까지는 연구 기간의 값), 어느 쪽이든
+ * 판정 규칙은 같으므로 참가자·세션 객체에 복사하지 않고 여기서만 듭니다.
  *
- * @param accessEndsAt 연구 기간의 접근 종료 시각. 설정 전이면 null
+ * @param accessEndsAt 접근 종료 시각. 정해지기 전이면 null
  */
+
 public record SessionContext(Participant participant, ParticipantSession session, Instant accessEndsAt) {
 
     public SessionContext {

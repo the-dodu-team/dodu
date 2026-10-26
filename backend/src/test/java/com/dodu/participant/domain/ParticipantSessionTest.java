@@ -1,12 +1,10 @@
 package com.dodu.participant.domain;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /** 세션 상태 판정 검증. DB 없이 값만으로 확인합니다. */
 class ParticipantSessionTest {
@@ -26,6 +24,14 @@ class ParticipantSessionTest {
         assertFalse(session(true, null, NOW, NOW).isReplaced());
         // 활성 세션에 종료 사유가 남아 있어도 교체된 세션으로 보지 않습니다.
         assertFalse(session(true, REPLACED, NOW, NOW).isReplaced());
+    }
+
+    @Test
+    void onlyReplacementReasonIsTreatedAsReplaced() {
+        for (SessionRevokeReason reason : SessionRevokeReason.values()) {
+            boolean expected = reason == SessionRevokeReason.SESSION_REPLACED;
+            assertEquals(expected, session(false, reason.dbValue(), NOW, NOW).isReplaced(), reason.name());
+        }
     }
 
     @Test

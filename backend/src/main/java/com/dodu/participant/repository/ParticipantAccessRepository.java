@@ -49,20 +49,37 @@ public class ParticipantAccessRepository {
      * 같은 참가자의 입장·철회·재발급 처리가 서로 겹치지 않게 직렬화하기 위해서입니다.
      */
     public Optional<CredentialLookup> findCredentialForUpdate(String secretHash) {
+        // 1) 잠그기 전에 어느 참가자의 코드인지만 찾습니다.
+        Optional<UUID> participantId = jdbc.sql("""
+                    select participant_id from access_credential where secret_hash = :hash
+                    """)
+                .param("hash", secretHash)
+                .query(UUID.class)
+                .optional();
+        if (participantId.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // 2) 참가자 행을 잠급니다. 다른 트랜잭션이 잠그고 있으면 끝날 때까지 기다립니다.
+        jdbc.sql("select id from participant where id = :id for update")
+                .param("id", participantId.get())
+                .query(UUID.class)
+                .optional();
+
+        // 3) 잠근 뒤에 다시 읽습니다. 기다리는 동안 재발급·철회가 커밋됐어도 최신 값이 보입니다.
         return jdbc.sql("""
-                        select p.id as participant_id,
-                               c.revoked_at as credential_revoked_at,
-                               c.expires_at as credential_expires_at,
-                               p.withdrawn_at,
-                               p.access_disabled_at,
-                               p.onboarding_completed_at,
-                               s.access_ends_at
-                        from access_credential c
-                        join participant p on p.id = c.participant_id
-                        join study_period s on s.id = p.study_period_id
-                        where c.secret_hash = :hash
-                        for update of p
-                        """)
+                    select p.id as participant_id,
+                           c.revoked_at as credential_revoked_at,
+                           c.expires_at as credential_expires_at,
+                           p.withdrawn_at,
+                           p.access_disabled_at,
+                           p.onboarding_completed_at,
+                           s.access_ends_at
+                    from access_credential c
+                    join participant p on p.id = c.participant_id
+                    join study_period s on s.id = p.study_period_id
+                    where c.secret_hash = :hash
+                    """)
                 .param("hash", secretHash)
                 .query((rs, rowNum) -> new CredentialLookup(
                         rs.getObject("participant_id", UUID.class),

@@ -8,7 +8,11 @@ package com.dodu.participant.domain;
  */
 public enum SessionRevokeReason {
     /** 다른 기기에서 입장해 기존 세션이 종료됨. */
-    SESSION_REPLACED;
+    SESSION_REPLACED,
+    /** 접근 코드가 폐기·재발급돼 세션이 종료됨(계약 §5). */
+    CREDENTIAL_REVOKED,
+    /** 철회·접근 중단으로 세션이 종료됨(계약 §7). */
+    ACCESS_REVOKED;
 
     /** DB에 저장되는 문자열 값. */
     public String dbValue() {

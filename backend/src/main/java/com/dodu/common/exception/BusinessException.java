@@ -3,7 +3,7 @@ package com.dodu.common.exception;
 import java.util.Objects;
 
 /**
- * 예상 가능한 업무 오류. {@link com.dodu.common.api.GlobalExceptionHandler}가 공통 오류 응답으로 바꿉니다.
+ * 예상 가능한 업무 오류. {@link com.dodu.common.exception.GlobalExceptionHandler}가 공통 오류 응답으로 바꿉니다.
  * 메시지에는 사용자에게 보여도 안전한 문구만 넣습니다(코드·토큰·내부 정보 금지).
  */
 public class BusinessException extends RuntimeException {
