@@ -76,7 +76,7 @@ java -jar dodu-backend-<버전>.jar --spring.profiles.active=operator <명령> <
 - 요청 시각은 현재보다 늦을 수 없습니다(`WITHDRAWAL_REQUESTED_AT_INVALID`). 시간대가 없거나 형식이 틀리면 사용법 오류가 납니다.
 - 반영 시각은 명령을 실행한 시각으로 자동 기록됩니다.
 - **되돌릴 수 없습니다.** 철회된 참가자에게는 발급과 재발급이 모두 거부됩니다(`PARTICIPANT_WITHDRAWN`). 실행 전에 참가자 ID와 요청 시각을 한 번 더 확인하세요.
-활성 약속을 `Withdrawn`으로 종료하는 일과 예약된 알림·자기보고를 무효화하는 일은 아직 이 명령에 포함되어 있지 않습니다(§6).
+- 활성 약속을 `Withdrawn`으로 종료하는 일과 예약된 알림·자기보고를 무효화하는 일은 아직 이 명령에 포함되어 있지 않습니다(§7).
 
 ## 4. 종료 코드와 결과 해석
 
@@ -106,7 +106,12 @@ java -jar dodu-backend-<버전>.jar --spring.profiles.active=operator <명령> <
 
 ## 6. 감사 로그 확인
 
-모든 성공과 거부가 `operator_audit_log`에 기록됩니다.
+작업 결과는 다음 규칙으로 기록됩니다.
+
+- **성공**한 작업은 `operator_audit_log`에 기록됩니다.
+- **업무 규칙으로 거부된** 명령은 화면에 `거부됨 [코드]`로 출력됩니다. `--operator` 값이 있으면 감사 로그에도 `REJECTED`로 남기지만, 이 기록이 실패하면 서버 로그에 경고만 남고 명령의 거부 결과는 그대로입니다.
+- `--operator`가 비어 있으면 감사 행도 경고도 남지 않습니다(감사 로그의 운영자 이름이 필수 값이기 때문입니다).
+- 예기치 못한 실패(`FAILED`)는 감사 로그에 기록하지 않고 서버 로그에만 남습니다.
 
 ```sql
 select action_type, result, operator_ref, detail, occurred_at
