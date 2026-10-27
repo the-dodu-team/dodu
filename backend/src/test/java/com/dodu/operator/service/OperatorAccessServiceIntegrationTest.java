@@ -216,6 +216,8 @@ class OperatorAccessServiceIntegrationTest {
         assertEquals(1, count("select count(*) from participant where id = '" + participantId
                 + "' and withdrawn_at is not null and access_disabled_at is not null "
                 + "and withdrawal_requested_at is not null and withdrawal_requested_at < withdrawn_at"));
+        assertEquals(1, count("select count(*) from participant where id = '" + participantId
+                + "' and lifecycle_status = 'Withdrawn'"));
         assertEquals(0, count("select count(*) from access_credential where revoked_at is null"));
         assertEquals(1, count("select count(*) from participant_session "
                 + "where lifecycle_status = 'Ended' and revoke_reason = 'ACCESS_REVOKED'"));
