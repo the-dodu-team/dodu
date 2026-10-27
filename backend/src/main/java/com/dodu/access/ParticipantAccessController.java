@@ -2,6 +2,8 @@ package com.dodu.access;
 
 import java.time.Instant;
 import java.util.UUID;
+
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
+@Tag(name = "참가자 입장(기존")
 @RequestMapping("/api/access")
 public class ParticipantAccessController {
     private final JdbcTemplate jdbc;

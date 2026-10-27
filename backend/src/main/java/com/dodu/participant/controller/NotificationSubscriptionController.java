@@ -8,6 +8,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.sql.Timestamp;
 import java.util.UUID;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /** 세션에 종속된 알림 구독의 등록·해지를 담당한다. 실제 Push 발송은 별도 worker 범위다. */
 @RestController
+@Tag(name = "알림 구독")
 @RequestMapping("/api/participant/notification-subscription")
 public class NotificationSubscriptionController {
     private static final int MAX_SUBSCRIPTION_KEY_LENGTH = 4096;
@@ -35,6 +39,7 @@ public class NotificationSubscriptionController {
                 "DODU_CREDENTIAL_PEPPER", "local-development-only"));
     }
 
+    @Operation(summary = "알림 구독 등록")
     @PutMapping
     @Transactional
     public ApiResponse<SubscriptionResponse> subscribe(SessionContext context,
@@ -73,6 +78,7 @@ public class NotificationSubscriptionController {
         return ApiResponse.success(new SubscriptionResponse("Active", now), ApiTime.now(clock));
     }
 
+    @Operation(summary = "알림 구독 해제")
     @DeleteMapping
     @Transactional
     public ApiResponse<SubscriptionResponse> unsubscribe(SessionContext context) {

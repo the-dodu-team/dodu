@@ -4,6 +4,9 @@ import com.dodu.participant.service.ParticipantAuthService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /** 참가자 본인의 사진 인증 시도 이력만 조회한다. 사진 원문과 접근정보는 응답하지 않는다. */
 @RestController
+@Tag(name = "사진 인증")
 @RequestMapping("/api/promises/{promiseId}/auth-attempts")
 public class PhotoAttemptHistoryController {
     private final JdbcTemplate jdbc;
@@ -25,6 +29,7 @@ public class PhotoAttemptHistoryController {
         this.authService = authService;
     }
 
+    @Operation(summary = "사진 제출 이력 조회")
     @GetMapping
     public List<AttemptHistoryResponse> list(@PathVariable UUID promiseId,
                                              @RequestHeader(value = "Authorization", required = false) String authorization) {
