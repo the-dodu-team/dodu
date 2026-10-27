@@ -5,6 +5,9 @@ import java.time.Instant;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+import com.dodu.participant.service.ParticipantAuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,27 +27,27 @@ import org.springframework.web.server.ResponseStatusException;
 import com.dodu.access.AccessCredentialHasher;
 
 @RestController
+@Tag(name = "사진 인증")
 @RequestMapping("/api/promises/{promiseId}/photo-attempts")
 public class PhotoSubmissionController {
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final InterventionWindowPolicy windowPolicy;
     private final InterventionLifecycleGate lifecycleGate = new InterventionLifecycleGate();
-    private final AccessCredentialHasher hasher;
-
+    private final ParticipantAuthService authService;
     @Autowired
-    public PhotoSubmissionController(JdbcTemplate jdbc) {
-        this(jdbc, Clock.systemUTC());
+    public PhotoSubmissionController(JdbcTemplate jdbc, ParticipantAuthService authService) {
+        this(jdbc, authService, Clock.systemUTC());
     }
 
-    PhotoSubmissionController(JdbcTemplate jdbc, Clock clock) {
+    PhotoSubmissionController(JdbcTemplate jdbc, ParticipantAuthService authService, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.windowPolicy = new InterventionWindowPolicy(clock);
-        this.hasher = new AccessCredentialHasher(System.getenv().getOrDefault(
-                "DODU_CREDENTIAL_PEPPER", "local-development-only"));
+        this.authService = authService;
     }
 
+    @Operation(summary = "사진 제출")
     @PostMapping(consumes = "multipart/form-data")
     @Transactional
     public PhotoAttemptResponse submit(
@@ -162,16 +165,7 @@ public class PhotoSubmissionController {
     }
 
     private UUID participantFromBearer(String authorization) {
-        if (authorization == null || !authorization.startsWith("Bearer ") || authorization.length() <= 7) {
-            throw error(HttpStatus.UNAUTHORIZED, "ACCESS_REQUIRED");
-        }
-        String tokenHash = hasher.hash(authorization.substring(7).trim());
-        UUID id = jdbc.query("""
-                select participant_id from participant_session
-                 where session_token_hash = ? and lifecycle_status = 'Active' and expires_at > now()
-                """, rs -> rs.next() ? rs.getObject("participant_id", UUID.class) : null, tokenHash);
-        if (id == null) throw error(HttpStatus.UNAUTHORIZED, "SESSION_REPLACED");
-        return id;
+        return authService.authenticate(authorization).participant().id();
     }
 
     private static ResponseStatusException error(HttpStatus status, String code) {
