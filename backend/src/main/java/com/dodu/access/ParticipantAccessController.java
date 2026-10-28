@@ -3,6 +3,7 @@ package com.dodu.access;
 import java.time.Instant;
 import java.util.UUID;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@Tag(name = "참가자 입장(기존")
+@Tag(name = "참가자 입장(기존)")
 @RequestMapping("/api/access")
 public class ParticipantAccessController {
     private final JdbcTemplate jdbc;
@@ -33,6 +34,7 @@ public class ParticipantAccessController {
                 "DODU_CREDENTIAL_PEPPER", "local-development-only"));
     }
 
+    @Operation(summary = "참가자 입장", deprecated = true)
     @PostMapping("/enter")
     @Transactional
     public ResponseEntity<AccessResponse> enter(@RequestBody AccessRequest request, HttpServletRequest httpRequest) {
