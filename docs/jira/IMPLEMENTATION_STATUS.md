@@ -257,6 +257,7 @@
 - 변경: `NotificationDeliveryService`가 스터디의 `intervention_ends_at`과 `InterventionLifecycleGate`를 사용해 공식 종료 이후 T/T+10/T+20 신규 알림을 생성하지 않도록 했다. 종료 전 정상 접수된 사진 복구와 자기보고 리마인드 경로는 이 게이트로 차단하지 않는다.
 - 검증: `NotificationDeliveryServiceIntegrationTests`에서 종료 후 알림 0건, 종료 전 지연된 알림 3건 생성, 스케줄러 재실행 후 중복 0건, `NotificationSchedulePolicyTests`를 확인한다.
 - 남은 범위: 실제 Push endpoint·암호화 키·provider 계약, 운영 발송·수신 QA, 자기보고 리마인드의 종료 후 운영 기준 합의.
+- Jira 동기화: `SCRUM-86`에 검증 결과 코멘트를 남기려 했으나 현재 Atlassian 연결이 cloud ID 권한 거부를 반환했다. 티켓 완료 처리는 하지 않았으며, 연결 권한이 정상화되면 커밋 `59c4b30`과 검증 결과를 다시 반영해야 한다.
 
 ### SCRUM-85 / AI 호출 adapter와 비밀값 보호 — 2026-10-25
 

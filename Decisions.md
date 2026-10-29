@@ -704,3 +704,4 @@
 - 결정: 기존 `dispatch_key`·채널 유일 제약을 그대로 사용하고, 동일 시각에 스케줄러를 재실행해도 T/T+10/T+20 알림 기록이 3건을 넘지 않는 조건을 통합 테스트로 검증한다.
 - 영향: 스케줄러 재시작·중복 tick에서 인앱 알림과 Push 예약이 중복 생성되지 않으며, 공식 개입 종료 게이트의 범위는 변경하지 않는다.
 - 검증: `NotificationDeliveryServiceIntegrationTests.rerunningSchedulerDoesNotDuplicateNotificationDeliveries` 및 전체 `npm run verify`로 확인한다.
+- Jira 동기화 차단: 현재 연결된 Jira cloud ID가 명시적 사용자 권한을 거부해 `SCRUM-86` 코멘트 반영을 완료하지 못했다. 로컬 상태 문서에 커밋·검증 결과·남은 동기화 작업을 기록하고 티켓 완료 처리는 보류한다.
