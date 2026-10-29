@@ -60,6 +60,16 @@ class NotificationDeliveryServiceIntegrationTests {
     }
 
     @Test
+    void cancelledPromiseDoesNotReceiveInterventionNotifications() {
+        Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(2 * 60 * 60));
+        jdbc.update("update promise set lifecycle_status = 'Closed', final_outcome = 'Cancelled' where id = ?",
+                fixture.promiseId());
+
+        assertEquals(0, service.dispatchDueNotifications(SCHEDULED_AT.plusSeconds(20 * 60)));
+        assertEquals(0, deliveries(fixture.promiseId()));
+    }
+
+    @Test
     void surveyReminderRemainsAvailableAfterOfficialInterventionEnd() {
         Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(30 * 60));
         Instant reminderAt = SCHEDULED_AT.plusSeconds(17 * 60 * 60);
@@ -76,6 +86,25 @@ class NotificationDeliveryServiceIntegrationTests {
                 "select count(*) from notification_delivery where promise_id = ? and notification_type = 'SURVEY_REMINDER' and channel = 'IN_APP'",
                 Integer.class, fixture.promiseId()));
         assertEquals("Reminded", jdbc.queryForObject(
+                "select lifecycle_status from validation_survey where promise_id = ?", String.class, fixture.promiseId()));
+    }
+
+    @Test
+    void expiredSurveyDoesNotReceiveReminder() {
+        Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(2 * 60 * 60));
+        Instant expiredAt = SCHEDULED_AT.plusSeconds(60 * 60);
+        jdbc.update("update promise set lifecycle_status = 'AuthCompleted' where id = ?", fixture.promiseId());
+        jdbc.update("""
+                insert into validation_survey(promise_id, questionnaire_version, lifecycle_status,
+                                              eligibility_status, available_at, expires_at)
+                values (?, 'v2.5.2', 'Pending', 'Eligible', ?, ?)
+                """, fixture.promiseId(), Timestamp.from(SCHEDULED_AT.minusSeconds(60)), Timestamp.from(expiredAt));
+
+        assertEquals(0, service.dispatchDueNotifications(expiredAt));
+        assertEquals(0, jdbc.queryForObject(
+                "select count(*) from notification_delivery where promise_id = ? and notification_type = 'SURVEY_REMINDER'",
+                Integer.class, fixture.promiseId()));
+        assertEquals("Pending", jdbc.queryForObject(
                 "select lifecycle_status from validation_survey where promise_id = ?", String.class, fixture.promiseId()));
     }
 

@@ -291,3 +291,5 @@
 - 검증: 철회된 참가자에게 T/T+10/T+20 개입 알림을 생성하지 않으며, 공식 개입 종료 후에도 마지막 자기보고 리마인더는 만료 전이면 생성되고 설문 상태가 `Reminded`로 전이된다.
 - 테스트: `NotificationDeliveryServiceIntegrationTests.withdrawnParticipantDoesNotReceiveInterventionNotifications`, `NotificationDeliveryServiceIntegrationTests.surveyReminderRemainsAvailableAfterOfficialInterventionEnd`.
 - 남은 범위: 실제 Push provider 발송·재시도와 운영 수신 QA, Swagger 실제 응답 코드 기록은 별도다.
+
+- 추가 검증: 취소된 약속은 개입 알림을 받지 않으며, 자기보고 만료 시각에는 리마인더를 생성하지 않는다.

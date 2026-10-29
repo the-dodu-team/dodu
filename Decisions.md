@@ -736,3 +736,11 @@
 - 근거: 알림 발송은 인증·자기보고 완료의 증거가 아니며, 공식 종료 후 자기보고 응답 가능 기간은 최초 리마인더부터 24시간이다.
 - 영향: 철회된 참가자에게 T/T+10/T+20 알림을 만들지 않으며, 종료 후에도 마지막 자기보고 리마인더만 허용한다.
 - 검증: `NotificationDeliveryServiceIntegrationTests.withdrawnParticipantDoesNotReceiveInterventionNotifications` 및 `surveyReminderRemainsAvailableAfterOfficialInterventionEnd` 통합 테스트.
+
+## DEV-20261029-06 취소·만료 상태의 알림 차단
+
+- 배경: 취소된 약속과 응답 기간이 만료된 자기보고에는 새로운 알림이 생성되면 안 된다.
+- 결정: 종료·취소된 약속은 개입 알림 대상에서 제외하고, 자기보고 리마인더는 `expiresAt` 이상 시각에 생성하지 않는다.
+- 근거: 취소는 인증 미완료와 분리된 최종 상태이며, 자기보고 응답 가능 시간은 최초 리마인더 이후 24시간으로 제한된다.
+- 영향: 스케줄러 재실행이나 늦은 실행에도 취소·만료 상태가 알림을 새로 만들지 않는다.
+- 검증: `cancelledPromiseDoesNotReceiveInterventionNotifications` 및 `expiredSurveyDoesNotReceiveReminder` 통합 테스트.
