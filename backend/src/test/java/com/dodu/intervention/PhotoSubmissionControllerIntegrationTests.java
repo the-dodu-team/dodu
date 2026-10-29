@@ -95,6 +95,34 @@ class PhotoSubmissionControllerIntegrationTests {
     }
 
     @Test
+    void submissionBeforeScheduledStartIsRejected() throws Exception {
+        Instant scheduledAt = Instant.now().plusSeconds(60);
+        jdbc.update("update promise set scheduled_at = ?, scheduled_date_kst = ? where id = ?",
+                Timestamp.from(scheduledAt), scheduledAt.atZone(ZoneId.of("Asia/Seoul")).toLocalDate(), promiseId);
+
+        mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "sample.jpg", "image/jpeg", new byte[] {1, 2, 3}))
+                        .param("clientRequestId", UUID.randomUUID().toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PHOTO_WINDOW_CLOSED"));
+    }
+
+    @Test
+    void submissionAtOrAfterTPlusThirtyIsRejected() throws Exception {
+        Instant scheduledAt = Instant.now().minusSeconds(31 * 60);
+        jdbc.update("update promise set scheduled_at = ?, scheduled_date_kst = ? where id = ?",
+                Timestamp.from(scheduledAt), scheduledAt.atZone(ZoneId.of("Asia/Seoul")).toLocalDate(), promiseId);
+
+        mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "sample.jpg", "image/jpeg", new byte[] {1, 2, 3}))
+                        .param("clientRequestId", UUID.randomUUID().toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PHOTO_WINDOW_CLOSED"));
+    }
+
+    @Test
     void samePhotoIsAllowedForSamePromiseButBlockedOnAnotherScheduledDay() throws Exception {
         UUID firstRequestId = UUID.randomUUID();
         byte[] photoBytes = new byte[] {1, 2, 3};
