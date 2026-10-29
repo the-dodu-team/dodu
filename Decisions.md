@@ -705,3 +705,10 @@
 - 영향: 스케줄러 재시작·중복 tick에서 인앱 알림과 Push 예약이 중복 생성되지 않으며, 공식 개입 종료 게이트의 범위는 변경하지 않는다.
 - 검증: `NotificationDeliveryServiceIntegrationTests.rerunningSchedulerDoesNotDuplicateNotificationDeliveries` 및 전체 `npm run verify`로 확인한다.
 - Jira 동기화 차단: 현재 연결된 Jira cloud ID가 명시적 사용자 권한을 거부해 `SCRUM-86` 코멘트 반영을 완료하지 못했다. 로컬 상태 문서에 커밋·검증 결과·남은 동기화 작업을 기록하고 티켓 완료 처리는 보류한다.
+
+## DEV-20261029-02 날짜 간 사진 재사용 차단
+
+- 배경: PO가 같은 약속에서 시스템 오류 후 동일 사진 재시도는 허용하되, 다른 날짜의 약속에서 과거 사진을 재사용하는 것은 허위 인증 위험 때문에 차단하기로 확정했다.
+- 결정: 제출 사진의 SHA-256 해시를 참가자와 약속 예정일 기준으로 조회해, 다른 `scheduled_date_kst`의 기존 사진과 일치하면 `PHOTO_ALREADY_USED_ON_ANOTHER_DAY` 409를 반환한다. 같은 약속의 재시도는 기존 멱등성 규칙과 함께 허용한다.
+- 영향: 사진 원본은 저장하거나 로그에 남기지 않고, 기존 메타데이터 해시만 사용한다. 다른 날짜 재사용 차단은 인증 결과나 사진 횟수 제한과 분리한다.
+- 검증: `PhotoSubmissionControllerIntegrationTests.samePhotoIsAllowedForSamePromiseButBlockedOnAnotherScheduledDay` 및 전체 `npm run verify`로 확인한다.

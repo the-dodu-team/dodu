@@ -266,3 +266,10 @@
 - 보안: 로컬 AI 테스트 폴더와 인증 비밀값 파일을 Git에서 제외하고 `npm run security:scan`을 `npm run verify`에 포함했다. 비밀값 자체는 저장소·로그·문서에 기록하지 않는다.
 - 검증: AI 응답 매핑 3개 단위 테스트, 로컬 HTTP server를 이용한 실제 multipart 호출 2개 기능 테스트, Docker/Testcontainers 복구 worker 2개 기능 테스트가 통과했다.
 - 남은 범위: 실제 외부 사진 저장소 provider 구현, 운영 endpoint smoke test, AI 서버 운영 QA. provider와 저장소가 확정되기 전에는 SCRUM-85를 완료 처리하지 않는다.
+
+### 사진 재사용 정책 보강 — 2026-10-29
+
+- 상태: 같은 약속 내 재시도 허용과 다른 날짜 사진 재사용 차단을 구현·검증했다.
+- 변경: 사진 메타데이터의 SHA-256 해시와 참가자·약속 예정일을 비교해 다른 날짜에 이미 사용된 사진이면 `PHOTO_ALREADY_USED_ON_ANOTHER_DAY` 409를 반환한다.
+- 검증: 같은 약속의 기존 멱등 재요청은 계속 허용하고, 다른 날짜 약속의 동일 바이트 사진은 PostgreSQL/Testcontainers 기능 테스트로 차단한다.
+- 남은 범위: 외부 사진 저장소 provider 연결과 실제 운영 삭제·보관 실행은 별도 차단 범위다.

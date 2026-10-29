@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
 
@@ -91,6 +92,55 @@ class PhotoSubmissionControllerIntegrationTests {
                         .param("clientRequestId", requestId.toString()).param("toolType", "laptop")
                         .header("Authorization", authorization))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void samePhotoIsAllowedForSamePromiseButBlockedOnAnotherScheduledDay() throws Exception {
+        UUID firstRequestId = UUID.randomUUID();
+        byte[] photoBytes = new byte[] {1, 2, 3};
+        mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "sample.jpg", "image/jpeg", photoBytes))
+                        .param("clientRequestId", firstRequestId.toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+        jdbc.update("update auth_attempt set processing_status = 'TechFailed' where promise_id = ?", promiseId);
+
+        mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "sample.jpg", "image/jpeg", photoBytes))
+                        .param("clientRequestId", UUID.randomUUID().toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        UUID priorDayPromiseId = UUID.randomUUID();
+        UUID participantId = jdbc.queryForObject("select participant_id from promise where id = ?", UUID.class, promiseId);
+        UUID policyId = jdbc.queryForObject("select policy_version_id from promise where id = ?", UUID.class, promiseId);
+        Instant scheduledAt = Instant.now().minusSeconds(24 * 60 * 60 + 300);
+        LocalDate priorDate = LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1);
+        jdbc.update("""
+                insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst,
+                                    tool_type, creation_type, lifecycle_status)
+                values (?, ?, ?, 'prior-day photo task', ?, ?, 'laptop', 'NORMAL', 'Scheduled')
+                """, priorDayPromiseId, participantId, policyId, Timestamp.from(scheduledAt), priorDate);
+        String photoHash = java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest.getInstance("SHA-256").digest(photoBytes));
+        UUID assetId = UUID.randomUUID();
+        jdbc.update("""
+                insert into photo_asset(id, storage_key, content_type, byte_size, sha256_hash, received_at)
+                values (?, ?, 'image/jpeg', ?, ?, ?)
+                """, assetId, UUID.randomUUID(), photoBytes.length, photoHash, Timestamp.from(scheduledAt));
+        jdbc.update("""
+                insert into auth_attempt(id, promise_id, client_request_id, request_fingerprint, tool_type,
+                                         processing_status, request_received_at, valid_received_at, photo_asset_id)
+                values (?, ?, ?, 'prior-day-fingerprint', 'laptop', 'Evaluating', ?, ?, ?)
+                """, UUID.randomUUID(), priorDayPromiseId, UUID.randomUUID(), Timestamp.from(scheduledAt),
+                Timestamp.from(scheduledAt), assetId);
+
+        mockMvc.perform(multipart("/api/promises/" + promiseId + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "sample.jpg", "image/jpeg", photoBytes))
+                        .param("clientRequestId", UUID.randomUUID().toString()).param("toolType", "laptop")
+                        .header("Authorization", authorization))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PHOTO_ALREADY_USED_ON_ANOTHER_DAY"));
     }
 
     @TestConfiguration(proxyBeanMethods = false)
