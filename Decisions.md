@@ -728,3 +728,11 @@
 - 근거: 기본 성공 응답만으로 실패·경계·동시성·철회 후 보호 조건을 충족했다고 판단할 수 없다.
 - 영향: 관련 Jira 티켓은 기본 경로 확인 범위만 업데이트하고 완료 처리하지 않는다.
 - 검증: 공유된 Swagger 결과와 정책 체크리스트를 대조해 `docs/jira/IMPLEMENTATION_STATUS.md`에 확인·대기 범위를 기록한다.
+
+## DEV-20261029-05 철회 알림 차단과 종료 후 자기보고 리마인더
+
+- 배경: 철회 이후에는 개입 알림을 중지해야 하지만, PO 결정에 따라 공식 개입 종료 후 마지막 자기보고 리마인더는 허용해야 한다.
+- 결정: 철회 참가자는 개입 알림 대상에서 제외하고, 자기보고가 유효한 `AuthCompleted`/`AuthIncomplete` 약속은 리마인더 만료 전까지 공식 종료 게이트와 분리해 처리한다.
+- 근거: 알림 발송은 인증·자기보고 완료의 증거가 아니며, 공식 종료 후 자기보고 응답 가능 기간은 최초 리마인더부터 24시간이다.
+- 영향: 철회된 참가자에게 T/T+10/T+20 알림을 만들지 않으며, 종료 후에도 마지막 자기보고 리마인더만 허용한다.
+- 검증: `NotificationDeliveryServiceIntegrationTests.withdrawnParticipantDoesNotReceiveInterventionNotifications` 및 `surveyReminderRemainsAvailableAfterOfficialInterventionEnd` 통합 테스트.

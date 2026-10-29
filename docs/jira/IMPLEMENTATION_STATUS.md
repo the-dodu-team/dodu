@@ -284,3 +284,10 @@
   - 알림 조회 API: 200과 빈 배열을 확인함. 약속 생성 직후라 스케줄러 발송 데이터가 없는 상태다.
 - 자동 테스트와 별도인 수동 검증 대기 범위: 인증·세션 실패/철회, 약속 시간 경계·멱등성·동시성, 수정·취소·재생성, 사진 인증 경계와 중복 제출, 철회 후 비동기 결과, T/T+10/T+20 및 자기보고 알림, 공통 오류 응답과 서버 시간·KST 경계.
 - 해석: 이번 결과는 기본 성공 경로의 수동 확인이며, 정책 전체 수용조건 또는 Jira 완료 근거로 확대하지 않는다. 체크리스트의 각 항목은 실제 응답 코드와 함께 순차적으로 채워야 한다.
+
+### 알림 철회·자기보고 경계 통합 검증 — 2026-10-29
+
+- 상태: 통합 테스트 보강 완료.
+- 검증: 철회된 참가자에게 T/T+10/T+20 개입 알림을 생성하지 않으며, 공식 개입 종료 후에도 마지막 자기보고 리마인더는 만료 전이면 생성되고 설문 상태가 `Reminded`로 전이된다.
+- 테스트: `NotificationDeliveryServiceIntegrationTests.withdrawnParticipantDoesNotReceiveInterventionNotifications`, `NotificationDeliveryServiceIntegrationTests.surveyReminderRemainsAvailableAfterOfficialInterventionEnd`.
+- 남은 범위: 실제 Push provider 발송·재시도와 운영 수신 QA, Swagger 실제 응답 코드 기록은 별도다.

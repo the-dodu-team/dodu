@@ -50,6 +50,35 @@ class NotificationDeliveryServiceIntegrationTests {
         assertEquals(3, deliveries(fixture.promiseId()));
     }
 
+    @Test
+    void withdrawnParticipantDoesNotReceiveInterventionNotifications() {
+        Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(2 * 60 * 60));
+        jdbc.update("update participant set lifecycle_status = 'Withdrawn' where id = ?", fixture.participantId());
+
+        assertEquals(0, service.dispatchDueNotifications(SCHEDULED_AT.plusSeconds(20 * 60)));
+        assertEquals(0, deliveries(fixture.promiseId()));
+    }
+
+    @Test
+    void surveyReminderRemainsAvailableAfterOfficialInterventionEnd() {
+        Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(30 * 60));
+        Instant reminderAt = SCHEDULED_AT.plusSeconds(17 * 60 * 60);
+        jdbc.update("update promise set lifecycle_status = 'AuthCompleted' where id = ?", fixture.promiseId());
+        jdbc.update("""
+                insert into validation_survey(promise_id, questionnaire_version, lifecycle_status,
+                                              eligibility_status, available_at, expires_at)
+                values (?, 'v2.5.2', 'Pending', 'Eligible', ?, ?)
+                """, fixture.promiseId(), Timestamp.from(SCHEDULED_AT.minusSeconds(60)),
+                Timestamp.from(reminderAt.plusSeconds(24 * 60 * 60)));
+
+        assertEquals(1, service.dispatchDueNotifications(reminderAt));
+        assertEquals(1, jdbc.queryForObject(
+                "select count(*) from notification_delivery where promise_id = ? and notification_type = 'SURVEY_REMINDER' and channel = 'IN_APP'",
+                Integer.class, fixture.promiseId()));
+        assertEquals("Reminded", jdbc.queryForObject(
+                "select lifecycle_status from validation_survey where promise_id = ?", String.class, fixture.promiseId()));
+    }
+
     private Fixture fixture(Instant interventionEndsAt) {
         String suffix = UUID.randomUUID().toString();
         UUID studyId = UUID.randomUUID();
@@ -66,7 +95,7 @@ class NotificationDeliveryServiceIntegrationTests {
                 promiseId, participantId, policyId, Timestamp.from(SCHEDULED_AT),
                 SCHEDULED_AT.atZone(ZoneId.of("Asia/Seoul")).toLocalDate(),
                 Timestamp.from(SCHEDULED_AT.plusSeconds(3 * 60 * 60)));
-        return new Fixture(promiseId);
+        return new Fixture(promiseId, participantId);
     }
 
     private int deliveries(UUID promiseId) {
@@ -74,7 +103,7 @@ class NotificationDeliveryServiceIntegrationTests {
                 Integer.class, promiseId);
     }
 
-    private record Fixture(UUID promiseId) { }
+    private record Fixture(UUID promiseId, UUID participantId) { }
 
     @TestConfiguration(proxyBeanMethods = false)
     static class ContainerConfiguration {
