@@ -697,3 +697,10 @@
 - 영향: 실제 provider가 확정되기 전에도 adapter·worker·응답 매핑·재시도 테스트를 검증할 수 있으며, 비밀값 없이 애플리케이션이 안전한 미설정 상태로 시작한다.
 - 검증: `npm run security:scan`, AI 응답 매핑 단위 테스트, Docker/Testcontainers 기반 복구 worker 테스트를 실행한다.
 - 추가 검증: 외부 키나 사진 원본을 노출하지 않는 로컬 HTTP server 기반 multipart 호출 테스트를 둔다. 실제 운영 endpoint 호출은 별도 smoke test로 분리한다.
+
+## DEV-20261029-01 알림 스케줄러 재실행 멱등성 검증
+
+- 배경: 알림 스케줄러는 프로세스 재시작이나 일시적인 지연 후 같은 시각을 다시 처리할 수 있으므로, 종료 전 알림 생성의 재실행 결과를 기능 테스트로 고정할 필요가 있다.
+- 결정: 기존 `dispatch_key`·채널 유일 제약을 그대로 사용하고, 동일 시각에 스케줄러를 재실행해도 T/T+10/T+20 알림 기록이 3건을 넘지 않는 조건을 통합 테스트로 검증한다.
+- 영향: 스케줄러 재시작·중복 tick에서 인앱 알림과 Push 예약이 중복 생성되지 않으며, 공식 개입 종료 게이트의 범위는 변경하지 않는다.
+- 검증: `NotificationDeliveryServiceIntegrationTests.rerunningSchedulerDoesNotDuplicateNotificationDeliveries` 및 전체 `npm run verify`로 확인한다.

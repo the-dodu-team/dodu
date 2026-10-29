@@ -40,6 +40,16 @@ class NotificationDeliveryServiceIntegrationTests {
         assertEquals(3, deliveries(fixture.promiseId()));
     }
 
+    @Test
+    void rerunningSchedulerDoesNotDuplicateNotificationDeliveries() {
+        Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(2 * 60 * 60));
+        Instant dispatchAt = SCHEDULED_AT.plusSeconds(20 * 60);
+
+        assertEquals(3, service.dispatchDueNotifications(dispatchAt));
+        assertEquals(0, service.dispatchDueNotifications(dispatchAt.plusSeconds(30)));
+        assertEquals(3, deliveries(fixture.promiseId()));
+    }
+
     private Fixture fixture(Instant interventionEndsAt) {
         String suffix = UUID.randomUUID().toString();
         UUID studyId = UUID.randomUUID();
