@@ -300,3 +300,10 @@
 - 검증: 약속 수정은 1회 초과 시 `PROMISE_RESCHEDULE_LIMIT_REACHED`, 시작 이후 취소는 `PROMISE_NOT_MODIFIABLE`로 거절한다. 사진은 예정 시작 전과 `T+30` 이후에 `PHOTO_WINDOW_CLOSED`로 거절한다.
 - 테스트: `PromiseControllerIntegrationTests.secondRescheduleIsRejectedAfterTheSingleAllowedChange`, `PromiseControllerIntegrationTests.cancellationAfterScheduledStartIsRejected`, `PhotoSubmissionControllerIntegrationTests.submissionBeforeScheduledStartIsRejected`, `PhotoSubmissionControllerIntegrationTests.submissionAtOrAfterTPlusThirtyIsRejected`.
 - 남은 범위: Swagger 실제 응답 코드 기록과 외부 사진 저장소·AI worker 연동은 별도다.
+
+### 알림 조회 상태 필터 통합 검증 — 2026-10-30
+
+- 상태: 통합 테스트 보강 완료.
+- 검증: 참가자 알림 조회 API는 현재 참가자 소유의 `IN_APP`이면서 `SENT`인 알림만 반환하고, `FAILED`·`SCHEDULED` Push/인앱 원장은 반환하지 않는다.
+- 테스트: `NotificationControllerIntegrationTests.listsOnlySentInAppNotificationsForTheCurrentParticipant`.
+- 남은 범위: 실제 Push 발송·재시도와 읽음 처리 API는 별도 운영 연동 범위다.
