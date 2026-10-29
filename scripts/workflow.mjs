@@ -77,11 +77,12 @@ try {
     await maven(task)
   } else if (task === 'build' || task === 'verify') {
     javaEnvironment()
-    if (task === 'verify') await npm(['run', 'security:scan'])
-    if (task === 'verify') await npm(['run', 'test:promise-preview', '--workspace', 'frontend', '--if-present'])
-    if (task === 'verify') await npm(['run', 'lint', '--workspace', 'frontend'])
+    await npm(['run', 'security:scan'])
+    await npm(['run', 'test:home', '--workspace', 'frontend'])
+    await npm(['run', 'test:photo', '--workspace', 'frontend'])
+    await npm(['run', 'lint', '--workspace', 'frontend'])
     await npm(['run', 'build', '--workspace', 'frontend'])
-    await maven(task)
+    await maven('verify')
     console.log('Bundled application: backend/target/dodu-backend-0.0.1-SNAPSHOT.jar')
   } else if (task === 'start') {
     const env = javaEnvironment()

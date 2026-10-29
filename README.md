@@ -86,12 +86,13 @@ React 변경은 Vite의 화면 갱신을 사용합니다. Java 변경 후에는 
 | `npm run dev` | 백엔드·프런트엔드 동시 실행 |
 | `npm run dev:backend` | 백엔드만 실행 |
 | `npm run dev:frontend` | 프런트엔드만 실행 |
-| `npm run verify` | lint → TypeScript/React 빌드 → Maven clean verify |
-| `npm run build` | TypeScript/React 빌드 → Maven clean package 및 Java 테스트 |
+| `npm run verify` | 비밀값 검사 → 프런트엔드 기능 테스트·lint·TypeScript/React 빌드 → Maven clean verify |
+| `npm run build` | `npm run verify`와 동일한 전체 검증 후 통합 JAR 생성 |
 | `npm start` | 이미 빌드한 통합 JAR 실행 |
 
-검증·빌드는 한 단계가 실패하면 이후 단계로 진행하지 않습니다.
-`npm run build`에는 lint가 포함되지 않으므로 변경 검증에는 `npm run verify`를 사용합니다.
+검증·빌드는 한 단계가 실패하면 이후 단계로 진행하지 않습니다. 이제 `npm run build`만 실행해도
+비밀값 검사, 프런트엔드 기능 테스트와 lint, 프런트엔드 빌드, Docker/Testcontainers 기반 Java 테스트,
+마이그레이션 검증, 통합 JAR 생성을 한 번에 확인할 수 있습니다.
 자동 CI는 아직 구성하지 않았습니다.
 
 ## 단일 JAR 실행

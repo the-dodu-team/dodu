@@ -712,3 +712,11 @@
 - 결정: 제출 사진의 SHA-256 해시를 참가자와 약속 예정일 기준으로 조회해, 다른 `scheduled_date_kst`의 기존 사진과 일치하면 `PHOTO_ALREADY_USED_ON_ANOTHER_DAY` 409를 반환한다. 같은 약속의 재시도는 기존 멱등성 규칙과 함께 허용한다.
 - 영향: 사진 원본은 저장하거나 로그에 남기지 않고, 기존 메타데이터 해시만 사용한다. 다른 날짜 재사용 차단은 인증 결과나 사진 횟수 제한과 분리한다.
 - 검증: `PhotoSubmissionControllerIntegrationTests.samePhotoIsAllowedForSamePromiseButBlockedOnAnotherScheduledDay` 및 전체 `npm run verify`로 확인한다.
+
+## DEV-20261029-03 `npm run build` 전체 검증 일원화
+
+- 배경: 기존 `npm run build`는 프런트엔드 빌드와 Maven package만 실행해 비밀값 검사·프런트 기능 테스트·lint·전체 통합 테스트를 별도로 실행해야 했다.
+- 결정: `npm run build`와 `npm run verify`가 동일하게 비밀값 검사, 홈·사진 프런트 기능 테스트, lint, 프런트 빌드, Maven clean verify를 실행하도록 통합한다.
+- 근거: 개발자가 단일 명령으로 배포 산출물과 자동화 가능한 검증 결과를 함께 확인해야 하며, 실행하지 않은 테스트를 빌드 성공으로 오인하지 않게 한다.
+- 영향: `npm run build` 실행 시간이 늘고 Docker Desktop이 필요하지만, build 성공이 전체 자동 검증 성공을 의미하게 된다.
+- 검증: 변경 후 `npm run build`를 실행해 전체 단계와 통합 JAR 생성을 확인한다.
