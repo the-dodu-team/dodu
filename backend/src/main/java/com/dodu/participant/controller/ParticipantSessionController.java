@@ -7,6 +7,9 @@ import com.dodu.participant.dto.EnterResponse;
 import com.dodu.participant.service.ParticipantEntryService;
 import com.dodu.participant.service.ParticipantEntryService.EnterResult;
 import java.time.Clock;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** 참가자 입장·세션 API. HTTP 입력과 응답 형식만 다루고 업무 규칙은 service에 둡니다. */
 @RestController
 @RequestMapping("/api/participant")
+@Tag(name = "참가자 입장")
 public class ParticipantSessionController {
 
     private final ParticipantEntryService entryService;
@@ -25,6 +29,7 @@ public class ParticipantSessionController {
         this.clock = clock;
     }
 
+    @Operation(summary = "접근 코드로 입장하고 세션 토큰 받기")
     @PostMapping("/sessions")
     public ApiResponse<EnterResponse> enter(@RequestBody EnterRequest request) {
         EnterResult result = entryService.enter(request.code(), request.deviceKey());

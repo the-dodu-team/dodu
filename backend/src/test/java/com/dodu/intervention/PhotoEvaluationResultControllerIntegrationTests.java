@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
@@ -11,7 +12,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import com.dodu.access.AccessCredentialHasher;
+import com.dodu.participant.domain.SecretHasher;
+import com.dodu.participant.domain.SessionToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +32,14 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest
 @Import(PhotoEvaluationResultControllerIntegrationTests.ContainerConfiguration.class)
 class PhotoEvaluationResultControllerIntegrationTests {
-    @Autowired private WebApplicationContext context;
-    @Autowired private JdbcTemplate jdbc;
+    @Autowired
+    private WebApplicationContext context;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    @Autowired
+    private SecretHasher secretHasher;
 
     private MockMvc mockMvc;
     private String authorization;
@@ -42,8 +50,8 @@ class PhotoEvaluationResultControllerIntegrationTests {
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         String suffix = UUID.randomUUID().toString();
-        String token = "result-token-" + suffix;
-        String tokenHash = new AccessCredentialHasher("local-development-only").hash(token);
+        String token = SessionToken.generate(new SecureRandom());
+        String tokenHash = secretHasher.hash(token);
         UUID studyId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         UUID deviceId = UUID.randomUUID();

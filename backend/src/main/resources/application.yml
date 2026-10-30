@@ -13,3 +13,10 @@ spring:
 dodu:
   access:
     code-pepper: ${DODU_ACCESS_CODE_PEPPER:}
+
+# API 문서(swagger). 기본은 꺼져 있고, 개발 환경에서만 DODU_SWAGGER_ENABLED=true 로 켭니다.
+springdoc:
+  api-docs:
+    enabled: ${DODU_SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${DODU_SWAGGER_ENABLED:false}

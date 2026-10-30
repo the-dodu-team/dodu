@@ -5,6 +5,10 @@ import java.time.Clock;
 import java.time.ZoneId;
 import java.sql.Timestamp;
 import java.util.UUID;
+
+import com.dodu.participant.service.ParticipantAuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,23 +21,24 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import com.dodu.access.AccessCredentialHasher;
 
 @RestController
+@Tag(name = "약속")
 @RequestMapping("/api/promises")
 public class PromiseController {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final PromiseRequestValidator validator = new PromiseRequestValidator();
-    private final AccessCredentialHasher hasher = new AccessCredentialHasher(
-            System.getenv().getOrDefault("DODU_CREDENTIAL_PEPPER", "local-development-only"));
+    private final ParticipantAuthService authService;
 
-    public PromiseController(JdbcTemplate jdbc, Clock clock) {
+    public PromiseController(JdbcTemplate jdbc, Clock clock,  ParticipantAuthService authService) {
         this.jdbc = jdbc;
         this.clock = clock;
+        this.authService = authService;
     }
 
+    @Operation(summary = "약속 생성")
     @PostMapping
     @Transactional
     public PromiseResponse create(@RequestHeader("Authorization") String authorization,
@@ -125,6 +130,7 @@ public class PromiseController {
                 promiseId, participantId);
     }
 
+    @Operation(summary = "진행 중인 약속 조회")
     @GetMapping("/active")
     public PromiseResponse active(@RequestHeader("Authorization") String authorization) {
         UUID participantId = participantFromBearer(authorization);
@@ -132,6 +138,7 @@ public class PromiseController {
                 rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")), rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")), rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version")) : null, participantId);
     }
 
+    @Operation(summary = "약속 시각 변경")
     @PatchMapping("/{promiseId}/schedule")
     @Transactional
     public PromiseResponse reschedule(@RequestHeader("Authorization") String authorization,
@@ -166,6 +173,7 @@ public class PromiseController {
         return new PromiseResponse(promiseId, current.taskTitle(), current.toolType(), valid.scheduledAt(), request.expectedVersion() + 1);
     }
 
+    @Operation(summary = "약속 취소")
     @PostMapping("/{promiseId}/cancel")
     @Transactional
     public PromiseResponse cancel(@RequestHeader("Authorization") String authorization,
@@ -182,18 +190,13 @@ public class PromiseController {
         return new PromiseResponse(promiseId, current.taskTitle(), current.toolType(), current.scheduledAt(), request.expectedVersion() + 1);
     }
 
-    private UUID participantFromBearer(String authorization) {
-        if (authorization == null || !authorization.startsWith("Bearer ") || authorization.length() <= 7) throw error(HttpStatus.UNAUTHORIZED, "ACCESS_REQUIRED");
-        String tokenHash = hasher.hash(authorization.substring(7).trim());
-        UUID id = jdbc.query("select participant_id from participant_session where session_token_hash = ? and lifecycle_status = 'Active' and expires_at > now()",
-                rs -> rs.next() ? UUID.fromString(rs.getString(1)) : null, tokenHash);
-        if (id == null) throw error(HttpStatus.UNAUTHORIZED, "SESSION_REPLACED");
-        return id;
-    }
-
     private static ResponseStatusException error(HttpStatus status, String code) { return new ResponseStatusException(status, code); }
 
     private static Timestamp timestamp(Instant instant) { return Timestamp.from(instant); }
+
+    private UUID participantFromBearer(String authorization) {
+        return authService.authenticate(authorization).participant().id();
+    }
 
     public record PromiseRequest(String taskTitle, PromiseRequestValidator.ToolType toolType, String scheduledAt) { }
     public record RescheduleRequest(String scheduledAt, long expectedVersion) { }
