@@ -108,6 +108,43 @@ class NotificationDeliveryServiceIntegrationTests {
                 "select lifecycle_status from validation_survey where promise_id = ?", String.class, fixture.promiseId()));
     }
 
+    @Test
+    void withdrawnParticipantPushIsSuppressedNotSent() {
+        Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(2 * 60 * 60));
+        jdbc.update("update participant set lifecycle_status = 'Withdrawn' where id = ?", fixture.participantId());
+        jdbc.update("""
+            insert into notification_delivery
+                (participant_id, promise_id, schedule_version, notification_type, channel,
+                 dispatch_key, lifecycle_status, scheduled_at)
+            values (?, ?, 1, 'START', 'PUSH', 'test-key-1', 'SCHEDULED', ?)
+            """, fixture.participantId(), fixture.promiseId(), Timestamp.from(SCHEDULED_AT));
+
+        service.dispatchDueNotifications(SCHEDULED_AT.plusSeconds(60));
+
+        assertEquals("SUPPRESSED", jdbc.queryForObject(
+                "select lifecycle_status from notification_delivery where dispatch_key = 'test-key-1'", String.class));
+    }
+
+    @Test
+    void cancelledPromisePushIsSuppressedWithReason() {
+        Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(2 * 60 * 60));
+        jdbc.update("update promise set lifecycle_status = 'Closed', final_outcome = 'Cancelled' where id = ?",
+                fixture.promiseId());
+        jdbc.update("""
+            insert into notification_delivery
+                (participant_id, promise_id, schedule_version, notification_type, channel,
+                 dispatch_key, lifecycle_status, scheduled_at)
+            values (?, ?, 1, 'START', 'PUSH', 'test-key-2', 'SCHEDULED', ?)
+            """, fixture.participantId(), fixture.promiseId(), Timestamp.from(SCHEDULED_AT));
+
+        service.dispatchDueNotifications(SCHEDULED_AT.plusSeconds(60));
+
+        assertEquals("SUPPRESSED", jdbc.queryForObject(
+                "select lifecycle_status from notification_delivery where dispatch_key = 'test-key-2'", String.class));
+        assertEquals("PROMISE_NOT_ACTIVE", jdbc.queryForObject(
+                "select failure_code from notification_delivery where dispatch_key = 'test-key-2'", String.class));
+    }
+
     private Fixture fixture(Instant interventionEndsAt) {
         String suffix = UUID.randomUUID().toString();
         UUID studyId = UUID.randomUUID();
