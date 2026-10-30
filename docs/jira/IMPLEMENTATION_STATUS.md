@@ -307,3 +307,34 @@
 - 검증: 참가자 알림 조회 API는 현재 참가자 소유의 `IN_APP`이면서 `SENT`인 알림만 반환하고, `FAILED`·`SCHEDULED` Push/인앱 원장은 반환하지 않는다.
 - 테스트: `NotificationControllerIntegrationTests.listsOnlySentInAppNotificationsForTheCurrentParticipant`.
 - 남은 범위: 실제 Push 발송·재시도와 읽음 처리 API는 별도 운영 연동 범위다.
+
+### SCRUM-86 / 인앱 알림 읽음 처리 — 2026-10-30
+
+- 상태: 구현 및 통합 검증 완료. `PUT /api/participant/notifications/{notificationId}/read`가 현재 참가자의 `IN_APP`·`SENT` 알림만 읽음 처리한다.
+- 보호: 타 참가자·실패·예약 상태 알림은 `404 RESOURCE_NOT_FOUND`로 처리하며, 같은 알림을 반복 읽어도 최초 `read_at`을 보존한다.
+- 검증: `NotificationControllerIntegrationTests`에서 정상 읽음, 반복 요청 멱등성, FAILED 알림 차단을 PostgreSQL/Testcontainers로 확인했다.
+- 남은 범위: 실제 Push provider 발송·재시도와 운영 수신 QA.
+
+### SCRUM-84 / 사진 판정 동시성 보호 통합 검증 — 2026-10-30
+
+- 상태: 현재 attempt의 단일 terminal 전이를 통합 검증했다.
+- 검증: 동시에 `COMPLETED`·`REJECTED` 결과를 제출해 한 요청만 200으로 반영되고 다른 요청은 409로 거절되며, `decided_at`과 terminal 상태가 한 번만 저장되는 것을 PostgreSQL/Testcontainers에서 확인한다.
+- 남은 범위: 외부 AI callback 서명·운영 worker와 철회 동시성의 실제 provider 시나리오.
+
+### SCRUM-87 / 이력·자기보고 소유권 및 민감정보 비노출 검증 — 2026-10-30
+
+- 상태: 통합 검증 보강 완료.
+- 검증: 사진 인증 이력과 자기보고 조회가 소유 참가자에게만 반환되고, 타 참가자 약속은 404로 숨겨지며, 사진 원문·저장소 키·요청 지문·설문 원문 필드가 응답에 포함되지 않는 것을 확인했다.
+- 남은 범위: FE 화면 연결과 운영 Push/인앱 QA.
+
+### SCRUM-23 / 활성 약속 중복 생성 실패 경로 — 2026-10-30
+
+- 상태: 멱등성·동시성 실패 경로 통합 검증 보강 완료.
+- 검증: 다른 멱등성 키로 두 번째 활성 약속을 생성하면 `PROMISE_ACTIVE_EXISTS` 409가 반환되는 것을 확인했다.
+- 남은 범위: 공통 envelope 전환은 FE/BE 계약 합의가 필요한 별도 작업이다.
+
+### SCRUM-76 / 공통 응답·화면 인수 문서 보강 — 2026-10-30
+
+- 상태: 구현 대조 문서 보강 완료.
+- 갱신: 공통 응답 계약에 실제 적용 범위와 기존 DTO 호환 경계를 기록하고, 화면 API 인수 지도에 알림 목록·읽음 처리 계약과 404 소유권 규칙을 추가했다.
+- 남은 범위: FE/BE가 모든 업무 API를 envelope로 전환할지에 대한 최종 합의와 실제 화면 인수 승인.

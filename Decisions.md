@@ -760,3 +760,20 @@
 - 근거: 알림 발송은 수신·열람의 증거가 아니며, 실패·예약 원장은 운영 내부 상태로 분리해야 한다.
 - 영향: 실패·예약 Push와 미발송 인앱 원장은 조회 API에서 노출되지 않는다.
 - 검증: `NotificationControllerIntegrationTests.listsOnlySentInAppNotificationsForTheCurrentParticipant` 통합 테스트.
+## DEV-20261030-02 인앱 알림 읽음 처리 경계
+
+- 배경: 알림 조회는 발송 완료된 인앱 알림만 반환하지만 읽음 상태를 갱신하는 API가 없었다.
+- 선택: 현재 참가자 소유의 `IN_APP`·`SENT` 원장만 읽음 처리하고, 최초 읽음 시각은 `coalesce`로 보존한다.
+- 근거: 알림 발송은 수신·열람 증거가 아니며, 참가자 소유권과 상태를 서버에서 검증해야 한다.
+- 대안: FAILED/SCHEDULED 원장을 읽음 처리 대상으로 허용하지 않는다.
+- 영향: 클라이언트가 읽음 상태를 명시적으로 동기화할 수 있고, 타 참가자·미발송 원장 노출을 막는다.
+- 검증: `NotificationControllerIntegrationTests`, `npm run build`.
+
+## DEV-20261030-03 Sprint 3 잔여 범위 통합 검증
+
+- 배경: SCRUM-23·84·87의 정책 경계는 구현되어 있었지만, 활성 중복 생성·동시 판정 결과·이력/자기보고 소유권과 민감정보 비노출을 기능 테스트로 고정할 필요가 있었다.
+- 선택: PostgreSQL/Testcontainers 기반 HTTP 통합 테스트를 추가하고, 공통 응답 문서는 실제 적용 envelope와 기존 DTO 호환 경계를 분리해 기록한다.
+- 근거: 서버 시간·소유권·현재 attempt·멱등성은 클라이언트가 아니라 서버와 DB에서 검증해야 하며, 원문 사진·저장소 키·요청 지문·설문 원문은 응답하지 않아야 한다.
+- 대안: 문서만 갱신하거나 단위 테스트만 추가하는 방식은 DB 제약·인증 경계·동시 요청 결과를 증명하지 못하므로 선택하지 않는다.
+- 영향: SCRUM-23·84·87의 자동 검증 근거가 강화되고, SCRUM-76 문서는 현재 API의 envelope 적용 범위를 과장하지 않는다.
+- 검증: `PromiseControllerIntegrationTests`, `PhotoEvaluationResultControllerIntegrationTests`, `PhotoAttemptHistoryControllerIntegrationTests`, `ValidationSurveyControllerIntegrationTests`, 전체 `npm run build`.
