@@ -21,6 +21,9 @@ import java.util.UUID;
 @Repository
 public class OperatorAccessRepository {
 
+    /** 철회된 참가자의 {@code participant.lifecycle_status}. 알림 발송·사진 평가 결과 저장 쪽이 이 값으로 철회자를 거릅니다. */
+    public static final String WITHDRAWN_STATUS = "Withdrawn";
+
     /** 잠금을 건 참가자 행. */
     public record ParticipantRow(UUID id, Instant withdrawnAt, Instant accessDisabledAt) {
     }
@@ -101,12 +104,14 @@ public class OperatorAccessRepository {
     public int markWithdrawn(UUID participantId, Instant requestedAt, Instant now) {
         return jdbc.sql("""
                         update participant
-                        set withdrawal_requested_at = :requestedAt,
+                        set lifecycle_status = :withdrawn,
+                            withdrawal_requested_at = :requestedAt,
                             withdrawn_at = :now,
                             access_disabled_at = :now,
                             updated_at = :now
                         where id = :id and withdrawn_at is null
                         """)
+                .param("withdrawn", WITHDRAWN_STATUS)
                 .param("requestedAt", utc(requestedAt))
                 .param("now", utc(now))
                 .param("id", participantId)

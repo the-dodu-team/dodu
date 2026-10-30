@@ -5,13 +5,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
 
-import com.dodu.access.AccessCredentialHasher;
+import com.dodu.participant.domain.SecretHasher;
+import com.dodu.participant.domain.SessionToken;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +22,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
@@ -31,8 +32,14 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest
 @Import(PhotoSubmissionControllerIntegrationTests.ContainerConfiguration.class)
 class PhotoSubmissionControllerIntegrationTests {
-    @Autowired private WebApplicationContext context;
-    @Autowired private JdbcTemplate jdbc;
+    @Autowired
+    private WebApplicationContext context;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    @Autowired
+    private SecretHasher secretHasher;
 
     private MockMvc mockMvc;
     private String authorization;
@@ -42,8 +49,8 @@ class PhotoSubmissionControllerIntegrationTests {
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         String suffix = UUID.randomUUID().toString();
-        String token = "photo-token-" + suffix;
-        String tokenHash = new AccessCredentialHasher("local-development-only").hash(token);
+        String token = SessionToken.generate(new SecureRandom());
+        String tokenHash = secretHasher.hash(token);
         UUID studyId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         UUID deviceId = UUID.randomUUID();
