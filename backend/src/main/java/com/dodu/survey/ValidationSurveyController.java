@@ -50,14 +50,14 @@ public class ValidationSurveyController {
                  where promise_id = ? and lifecycle_status = 'Pending'
                    and available_at is not null and expires_at is not null
                    and ? >= available_at and ? < expires_at
-                """, now, promiseId, now, now);
+                """, java.sql.Timestamp.from(now), promiseId, java.sql.Timestamp.from(now), java.sql.Timestamp.from(now));
         jdbc.update("""
                 update validation_survey
                    set lifecycle_status = 'Expired'
                  where promise_id = ?
                    and lifecycle_status in ('Pending', 'Prompted', 'Reminded')
                    and expires_at is not null and expires_at <= ?
-                """, promiseId, now);
+                """, promiseId, java.sql.Timestamp.from(now));
         return jdbc.query("""
                 select vs.id, vs.questionnaire_version, vs.lifecycle_status, vs.eligibility_status,
                        vs.actual_started, vs.start_order, vs.start_delay_bucket, vs.no_start_reason,
@@ -72,8 +72,9 @@ public class ValidationSurveyController {
                     rs.getString("lifecycle_status"), rs.getString("eligibility_status"),
                     (Boolean) rs.getObject("actual_started"), rs.getString("start_order"),
                     rs.getString("start_delay_bucket"), rs.getString("no_start_reason"),
-                    rs.getObject("available_at", Instant.class), rs.getObject("expires_at", Instant.class),
-                    rs.getObject("submitted_at", Instant.class));
+                    rs.getTimestamp("available_at") == null ? null : rs.getTimestamp("available_at").toInstant(),
+                    rs.getTimestamp("expires_at") == null ? null : rs.getTimestamp("expires_at").toInstant(),
+                    rs.getTimestamp("submitted_at") == null ? null : rs.getTimestamp("submitted_at").toInstant());
                 },
                 promiseId, participantId);
     }

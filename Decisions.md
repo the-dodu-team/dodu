@@ -697,3 +697,83 @@
 - 영향: 실제 provider가 확정되기 전에도 adapter·worker·응답 매핑·재시도 테스트를 검증할 수 있으며, 비밀값 없이 애플리케이션이 안전한 미설정 상태로 시작한다.
 - 검증: `npm run security:scan`, AI 응답 매핑 단위 테스트, Docker/Testcontainers 기반 복구 worker 테스트를 실행한다.
 - 추가 검증: 외부 키나 사진 원본을 노출하지 않는 로컬 HTTP server 기반 multipart 호출 테스트를 둔다. 실제 운영 endpoint 호출은 별도 smoke test로 분리한다.
+
+## DEV-20261029-01 알림 스케줄러 재실행 멱등성 검증
+
+- 배경: 알림 스케줄러는 프로세스 재시작이나 일시적인 지연 후 같은 시각을 다시 처리할 수 있으므로, 종료 전 알림 생성의 재실행 결과를 기능 테스트로 고정할 필요가 있다.
+- 결정: 기존 `dispatch_key`·채널 유일 제약을 그대로 사용하고, 동일 시각에 스케줄러를 재실행해도 T/T+10/T+20 알림 기록이 3건을 넘지 않는 조건을 통합 테스트로 검증한다.
+- 영향: 스케줄러 재시작·중복 tick에서 인앱 알림과 Push 예약이 중복 생성되지 않으며, 공식 개입 종료 게이트의 범위는 변경하지 않는다.
+- 검증: `NotificationDeliveryServiceIntegrationTests.rerunningSchedulerDoesNotDuplicateNotificationDeliveries` 및 전체 `npm run verify`로 확인한다.
+- Jira 동기화 차단: 현재 연결된 Jira cloud ID가 명시적 사용자 권한을 거부해 `SCRUM-86` 코멘트 반영을 완료하지 못했다. 로컬 상태 문서에 커밋·검증 결과·남은 동기화 작업을 기록하고 티켓 완료 처리는 보류한다.
+
+## DEV-20261029-02 날짜 간 사진 재사용 차단
+
+- 배경: PO가 같은 약속에서 시스템 오류 후 동일 사진 재시도는 허용하되, 다른 날짜의 약속에서 과거 사진을 재사용하는 것은 허위 인증 위험 때문에 차단하기로 확정했다.
+- 결정: 제출 사진의 SHA-256 해시를 참가자와 약속 예정일 기준으로 조회해, 다른 `scheduled_date_kst`의 기존 사진과 일치하면 `PHOTO_ALREADY_USED_ON_ANOTHER_DAY` 409를 반환한다. 같은 약속의 재시도는 기존 멱등성 규칙과 함께 허용한다.
+- 영향: 사진 원본은 저장하거나 로그에 남기지 않고, 기존 메타데이터 해시만 사용한다. 다른 날짜 재사용 차단은 인증 결과나 사진 횟수 제한과 분리한다.
+- 검증: `PhotoSubmissionControllerIntegrationTests.samePhotoIsAllowedForSamePromiseButBlockedOnAnotherScheduledDay` 및 전체 `npm run verify`로 확인한다.
+
+## DEV-20261029-03 `npm run build` 전체 검증 일원화
+
+- 배경: 기존 `npm run build`는 프런트엔드 빌드와 Maven package만 실행해 비밀값 검사·프런트 기능 테스트·lint·전체 통합 테스트를 별도로 실행해야 했다.
+- 결정: `npm run build`와 `npm run verify`가 동일하게 비밀값 검사, 홈·사진 프런트 기능 테스트, lint, 프런트 빌드, Maven clean verify를 실행하도록 통합한다.
+- 근거: 개발자가 단일 명령으로 배포 산출물과 자동화 가능한 검증 결과를 함께 확인해야 하며, 실행하지 않은 테스트를 빌드 성공으로 오인하지 않게 한다.
+- 영향: `npm run build` 실행 시간이 늘고 Docker Desktop이 필요하지만, build 성공이 전체 자동 검증 성공을 의미하게 된다.
+- 검증: 변경 후 `npm run build`를 실행해 전체 단계와 통합 JAR 생성을 확인한다.
+
+## DEV-20261029-04 Swagger 수동 검증 증거의 범위
+
+- 배경: BE 담당자가 Swagger에서 참가자 입장, 약속 생성, 진행 중 약속 조회, 알림 조회의 기본 성공 경로를 확인하고 정책 검증 체크리스트를 공유했다.
+- 결정: 해당 결과는 수동 기본 경로 증거로 기록하고, 정책 경계·철회·사진·스케줄러·오류 응답 항목은 실제 응답 코드가 채워질 때까지 미검증으로 유지한다. 약속 생성의 200 응답은 현재 동작으로 기록하며 201 Created 변경은 별도 후속 작업으로 둔다.
+- 근거: 기본 성공 응답만으로 실패·경계·동시성·철회 후 보호 조건을 충족했다고 판단할 수 없다.
+- 영향: 관련 Jira 티켓은 기본 경로 확인 범위만 업데이트하고 완료 처리하지 않는다.
+- 검증: 공유된 Swagger 결과와 정책 체크리스트를 대조해 `docs/jira/IMPLEMENTATION_STATUS.md`에 확인·대기 범위를 기록한다.
+
+## DEV-20261029-05 철회 알림 차단과 종료 후 자기보고 리마인더
+
+- 배경: 철회 이후에는 개입 알림을 중지해야 하지만, PO 결정에 따라 공식 개입 종료 후 마지막 자기보고 리마인더는 허용해야 한다.
+- 결정: 철회 참가자는 개입 알림 대상에서 제외하고, 자기보고가 유효한 `AuthCompleted`/`AuthIncomplete` 약속은 리마인더 만료 전까지 공식 종료 게이트와 분리해 처리한다.
+- 근거: 알림 발송은 인증·자기보고 완료의 증거가 아니며, 공식 종료 후 자기보고 응답 가능 기간은 최초 리마인더부터 24시간이다.
+- 영향: 철회된 참가자에게 T/T+10/T+20 알림을 만들지 않으며, 종료 후에도 마지막 자기보고 리마인더만 허용한다.
+- 검증: `NotificationDeliveryServiceIntegrationTests.withdrawnParticipantDoesNotReceiveInterventionNotifications` 및 `surveyReminderRemainsAvailableAfterOfficialInterventionEnd` 통합 테스트.
+
+## DEV-20261029-06 취소·만료 상태의 알림 차단
+
+- 배경: 취소된 약속과 응답 기간이 만료된 자기보고에는 새로운 알림이 생성되면 안 된다.
+- 결정: 종료·취소된 약속은 개입 알림 대상에서 제외하고, 자기보고 리마인더는 `expiresAt` 이상 시각에 생성하지 않는다.
+- 근거: 취소는 인증 미완료와 분리된 최종 상태이며, 자기보고 응답 가능 시간은 최초 리마인더 이후 24시간으로 제한된다.
+- 영향: 스케줄러 재실행이나 늦은 실행에도 취소·만료 상태가 알림을 새로 만들지 않는다.
+- 검증: `cancelledPromiseDoesNotReceiveInterventionNotifications` 및 `expiredSurveyDoesNotReceiveReminder` 통합 테스트.
+
+## DEV-20261029-07 약속·사진 시간 경계 통합 검증
+
+- 배경: 정책의 약속 수정·취소 가능 시간과 사진 접수 창은 서버 시간 경계에서 보호되어야 한다.
+- 결정: 약속은 1회만 수정할 수 있고 시작 이후 취소할 수 없으며, 사진은 예정 시작 전과 T+30 이후에 접수하지 않는다.
+- 근거: 서버 시간을 기준으로 약속 상태와 사진 접수 창을 판정하고, 경계 위반은 상태 충돌로 분리한다.
+- 영향: 프런트엔드 시계나 중복 요청이 정책 경계를 우회할 수 없으며, 테스트에서 실제 오류 코드를 확인한다.
+- 검증: 약속 수정·취소 및 사진 제출 경계 통합 테스트 4건과 전체 빌드 검증.
+
+## DEV-20261030-01 알림 조회 공개 상태 필터
+
+- 배경: 알림 조회 API가 발송 완료되지 않은 예약·실패 원장을 참가자에게 노출하면 발송과 수신 증거가 혼동될 수 있다.
+- 결정: 참가자 알림 조회는 참가자 소유 범위, `IN_APP` 채널, `SENT` 상태를 모두 만족하는 원장만 반환한다.
+- 근거: 알림 발송은 수신·열람의 증거가 아니며, 실패·예약 원장은 운영 내부 상태로 분리해야 한다.
+- 영향: 실패·예약 Push와 미발송 인앱 원장은 조회 API에서 노출되지 않는다.
+- 검증: `NotificationControllerIntegrationTests.listsOnlySentInAppNotificationsForTheCurrentParticipant` 통합 테스트.
+## DEV-20261030-02 인앱 알림 읽음 처리 경계
+
+- 배경: 알림 조회는 발송 완료된 인앱 알림만 반환하지만 읽음 상태를 갱신하는 API가 없었다.
+- 선택: 현재 참가자 소유의 `IN_APP`·`SENT` 원장만 읽음 처리하고, 최초 읽음 시각은 `coalesce`로 보존한다.
+- 근거: 알림 발송은 수신·열람 증거가 아니며, 참가자 소유권과 상태를 서버에서 검증해야 한다.
+- 대안: FAILED/SCHEDULED 원장을 읽음 처리 대상으로 허용하지 않는다.
+- 영향: 클라이언트가 읽음 상태를 명시적으로 동기화할 수 있고, 타 참가자·미발송 원장 노출을 막는다.
+- 검증: `NotificationControllerIntegrationTests`, `npm run build`.
+
+## DEV-20261030-03 Sprint 3 잔여 범위 통합 검증
+
+- 배경: SCRUM-23·84·87의 정책 경계는 구현되어 있었지만, 활성 중복 생성·동시 판정 결과·이력/자기보고 소유권과 민감정보 비노출을 기능 테스트로 고정할 필요가 있었다.
+- 선택: PostgreSQL/Testcontainers 기반 HTTP 통합 테스트를 추가하고, 공통 응답 문서는 실제 적용 envelope와 기존 DTO 호환 경계를 분리해 기록한다.
+- 근거: 서버 시간·소유권·현재 attempt·멱등성은 클라이언트가 아니라 서버와 DB에서 검증해야 하며, 원문 사진·저장소 키·요청 지문·설문 원문은 응답하지 않아야 한다.
+- 대안: 문서만 갱신하거나 단위 테스트만 추가하는 방식은 DB 제약·인증 경계·동시 요청 결과를 증명하지 못하므로 선택하지 않는다.
+- 영향: SCRUM-23·84·87의 자동 검증 근거가 강화되고, SCRUM-76 문서는 현재 API의 envelope 적용 범위를 과장하지 않는다.
+- 검증: `PromiseControllerIntegrationTests`, `PhotoEvaluationResultControllerIntegrationTests`, `PhotoAttemptHistoryControllerIntegrationTests`, `ValidationSurveyControllerIntegrationTests`, 전체 `npm run build`.

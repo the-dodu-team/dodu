@@ -2,6 +2,7 @@ package com.dodu.intervention;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.sql.Timestamp;
 import java.util.UUID;
 
@@ -69,13 +70,14 @@ public class PhotoSubmissionController {
 
         Instant now = clock.instant();
         PromiseRow promise = jdbc.query("""
-                select p.scheduled_at, p.lifecycle_status, s.intervention_ends_at
+                select p.scheduled_at, p.scheduled_date_kst, p.lifecycle_status, s.intervention_ends_at
                   from promise p
                   join participant participant on participant.id = p.participant_id
                   join study_period s on s.id = participant.study_period_id
                  where p.id = ? and p.participant_id = ?
                 """, rs -> rs.next()
-                        ? new PromiseRow(rs.getTimestamp("scheduled_at").toInstant(), rs.getString("lifecycle_status"),
+                        ? new PromiseRow(rs.getTimestamp("scheduled_at").toInstant(), rs.getObject("scheduled_date_kst", LocalDate.class),
+                                rs.getString("lifecycle_status"),
                                 rs.getTimestamp("intervention_ends_at") == null ? null : rs.getTimestamp("intervention_ends_at").toInstant())
                         : null, promiseId, participantId);
         if (promise == null) {
@@ -101,6 +103,21 @@ public class PhotoSubmissionController {
         }
         String contentType = photo.getContentType() == null ? "application/octet-stream" : photo.getContentType();
         String fingerprint = PhotoSubmissionFingerprint.sha256(content, contentType, toolType);
+        String photoHash = sha256(content);
+        boolean usedOnAnotherDay = jdbc.queryForObject("""
+                select exists(
+                    select 1
+                      from auth_attempt a
+                      join photo_asset asset on asset.id = a.photo_asset_id
+                      join promise prior_promise on prior_promise.id = a.promise_id
+                     where prior_promise.participant_id = ?
+                       and prior_promise.scheduled_date_kst <> ?
+                       and asset.sha256_hash = ?
+                )
+                """, Boolean.class, participantId, promise.scheduledDateKst(), photoHash);
+        if (usedOnAnotherDay) {
+            throw error(HttpStatus.CONFLICT, "PHOTO_ALREADY_USED_ON_ANOTHER_DAY");
+        }
 
         ExistingAttempt existing = jdbc.query("""
                 select id, request_fingerprint, processing_status, request_received_at
@@ -123,7 +140,7 @@ public class PhotoSubmissionController {
         jdbc.update("""
                 insert into photo_asset(id, storage_key, content_type, byte_size, sha256_hash, received_at)
                 values (?, ?, ?, ?, ?, ?)
-                """, assetId, UUID.randomUUID(), contentType, content.length, sha256(content), timestamp(now));
+                """, assetId, UUID.randomUUID(), contentType, content.length, photoHash, timestamp(now));
         int insertedCount = jdbc.update("""
                 insert into auth_attempt(id, promise_id, client_request_id, request_fingerprint, tool_type,
                                          processing_status, request_received_at, valid_received_at, photo_asset_id)
@@ -190,6 +207,6 @@ public class PhotoSubmissionController {
 
     public record PhotoAttemptResponse(UUID attemptId, UUID promiseId, String processingStatus, Instant receivedAt) { }
     public record ErrorResponse(String code) { }
-    private record PromiseRow(Instant scheduledAt, String lifecycleStatus, Instant interventionEndsAt) { }
+    private record PromiseRow(Instant scheduledAt, LocalDate scheduledDateKst, String lifecycleStatus, Instant interventionEndsAt) { }
     private record ExistingAttempt(UUID id, String requestFingerprint, String processingStatus, Instant requestReceivedAt) { }
 }

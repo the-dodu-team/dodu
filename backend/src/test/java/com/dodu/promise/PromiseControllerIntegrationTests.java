@@ -115,6 +115,21 @@ class PromiseControllerIntegrationTests {
     }
 
     @Test
+    void differentKeyCannotCreateSecondActivePromise() throws Exception {
+        String body = "{\"taskTitle\":\"active task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
+                + scheduledAt + "\"}";
+        createWithKey(body, "create-active-1");
+
+        mockMvc.perform(post("/api/promises")
+                        .header("Authorization", authorization)
+                        .header("Idempotency-Key", "create-active-2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PROMISE_ACTIVE_EXISTS"));
+    }
+
+    @Test
     void concurrentSameKeyRequestsCreateOnePromise() throws Exception {
         String body = "{\"taskTitle\":\"concurrent task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
                 + scheduledAt + "\"}";
@@ -155,7 +170,12 @@ class PromiseControllerIntegrationTests {
             }
             assertTrue((firstStatus == 200 && secondStatus == 409) || (firstStatus == 409 && secondStatus == 200));
             var nextDate = OffsetDateTime.parse(nextScheduledAt).toInstant().atZone(ZoneId.of("Asia/Seoul")).toLocalDate();
-            assertEquals(1, jdbc.queryForObject("select count(*) from promise_date_usage where scheduled_date_kst = ?", Integer.class, nextDate));
+            assertEquals(1, jdbc.queryForObject("""
+                    select count(*)
+                      from promise_date_usage
+                     where participant_id = (select participant_id from promise where id = ?)
+                       and scheduled_date_kst = ?
+                    """, Integer.class, UUID.fromString(promiseId), nextDate));
         } finally {
             executor.shutdownNow();
         }
@@ -178,6 +198,47 @@ class PromiseControllerIntegrationTests {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void secondRescheduleIsRejectedAfterTheSingleAllowedChange() throws Exception {
+        String body = "{\"taskTitle\":\"single reschedule task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
+                + scheduledAt + "\"}";
+        String promiseId = extractPromiseId(createWithKey(body, "create-single-reschedule-1"));
+        String firstScheduledAt = OffsetDateTime.now(ZoneOffset.UTC).plusHours(26).withNano(0).toString();
+        String secondScheduledAt = OffsetDateTime.now(ZoneOffset.UTC).plusHours(27).withNano(0).toString();
+
+        mockMvc.perform(patch("/api/promises/" + promiseId + "/schedule")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledAt\":\"" + firstScheduledAt + "\",\"expectedVersion\":0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(1));
+
+        mockMvc.perform(patch("/api/promises/" + promiseId + "/schedule")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledAt\":\"" + secondScheduledAt + "\",\"expectedVersion\":1}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PROMISE_RESCHEDULE_LIMIT_REACHED"));
+    }
+
+    @Test
+    void cancellationAfterScheduledStartIsRejected() throws Exception {
+        String body = "{\"taskTitle\":\"started cancel task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
+                + scheduledAt + "\"}";
+        String promiseId = extractPromiseId(createWithKey(body, "create-started-cancel-1"));
+        jdbc.update("update promise set scheduled_at = ?, scheduled_date_kst = ? where id = ?",
+                timestamp(Instant.now().minusSeconds(60)),
+                Instant.now().minusSeconds(60).atZone(ZoneId.of("Asia/Seoul")).toLocalDate(),
+                UUID.fromString(promiseId));
+
+        mockMvc.perform(post("/api/promises/" + promiseId + "/cancel")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expectedVersion\":0}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PROMISE_NOT_MODIFIABLE"));
     }
 
     private String createWithKey(String body, String key) throws Exception {

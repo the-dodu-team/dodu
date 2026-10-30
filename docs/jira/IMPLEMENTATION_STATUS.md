@@ -255,8 +255,9 @@
 
 - 상태: 구현 및 기능 테스트 진행 완료. Push provider 연동과 운영 QA는 미완료.
 - 변경: `NotificationDeliveryService`가 스터디의 `intervention_ends_at`과 `InterventionLifecycleGate`를 사용해 공식 종료 이후 T/T+10/T+20 신규 알림을 생성하지 않도록 했다. 종료 전 정상 접수된 사진 복구와 자기보고 리마인드 경로는 이 게이트로 차단하지 않는다.
-- 검증: `NotificationDeliveryServiceIntegrationTests`에서 종료 후 알림 0건, 종료 전 지연된 알림 3건 생성, `NotificationSchedulePolicyTests`를 확인한다.
+- 검증: `NotificationDeliveryServiceIntegrationTests`에서 종료 후 알림 0건, 종료 전 지연된 알림 3건 생성, 스케줄러 재실행 후 중복 0건, `NotificationSchedulePolicyTests`를 확인한다.
 - 남은 범위: 실제 Push endpoint·암호화 키·provider 계약, 운영 발송·수신 QA, 자기보고 리마인드의 종료 후 운영 기준 합의.
+- Jira 동기화: `SCRUM-86`에 검증 결과 코멘트를 남기려 했으나 현재 Atlassian 연결이 cloud ID 권한 거부를 반환했다. 티켓 완료 처리는 하지 않았으며, 연결 권한이 정상화되면 커밋 `59c4b30`과 검증 결과를 다시 반영해야 한다.
 
 ### SCRUM-85 / AI 호출 adapter와 비밀값 보호 — 2026-10-25
 
@@ -265,3 +266,75 @@
 - 보안: 로컬 AI 테스트 폴더와 인증 비밀값 파일을 Git에서 제외하고 `npm run security:scan`을 `npm run verify`에 포함했다. 비밀값 자체는 저장소·로그·문서에 기록하지 않는다.
 - 검증: AI 응답 매핑 3개 단위 테스트, 로컬 HTTP server를 이용한 실제 multipart 호출 2개 기능 테스트, Docker/Testcontainers 복구 worker 2개 기능 테스트가 통과했다.
 - 남은 범위: 실제 외부 사진 저장소 provider 구현, 운영 endpoint smoke test, AI 서버 운영 QA. provider와 저장소가 확정되기 전에는 SCRUM-85를 완료 처리하지 않는다.
+
+### 사진 재사용 정책 보강 — 2026-10-29
+
+- 상태: 같은 약속 내 재시도 허용과 다른 날짜 사진 재사용 차단을 구현·검증했다.
+- 변경: 사진 메타데이터의 SHA-256 해시와 참가자·약속 예정일을 비교해 다른 날짜에 이미 사용된 사진이면 `PHOTO_ALREADY_USED_ON_ANOTHER_DAY` 409를 반환한다.
+- 검증: 같은 약속의 기존 멱등 재요청은 계속 허용하고, 다른 날짜 약속의 동일 바이트 사진은 PostgreSQL/Testcontainers 기능 테스트로 차단한다.
+- 남은 범위: 외부 사진 저장소 provider 연결과 실제 운영 삭제·보관 실행은 별도 차단 범위다.
+
+### BE Swagger 수동 검증 결과 — 2026-10-29
+
+- 출처: BE 담당자가 공유한 Swagger API 테스트 결과와 백엔드 정책 검증 체크리스트.
+- 확인된 기본 성공 경로:
+  - 참가자 입장 API: CLI로 발급한 접근 코드로 세션 토큰이 발급됨.
+  - 약속 생성 API: 토큰과 `Idempotency-Key`를 사용한 요청이 정상 생성됨. 현재 응답은 200이며, 201 Created로의 변경은 후속 리팩터링이다.
+  - 진행 중 약속 조회 API: 같은 참가자 세션으로 생성된 약속이 조회됨.
+  - 알림 조회 API: 200과 빈 배열을 확인함. 약속 생성 직후라 스케줄러 발송 데이터가 없는 상태다.
+- 자동 테스트와 별도인 수동 검증 대기 범위: 인증·세션 실패/철회, 약속 시간 경계·멱등성·동시성, 수정·취소·재생성, 사진 인증 경계와 중복 제출, 철회 후 비동기 결과, T/T+10/T+20 및 자기보고 알림, 공통 오류 응답과 서버 시간·KST 경계.
+- 해석: 이번 결과는 기본 성공 경로의 수동 확인이며, 정책 전체 수용조건 또는 Jira 완료 근거로 확대하지 않는다. 체크리스트의 각 항목은 실제 응답 코드와 함께 순차적으로 채워야 한다.
+
+### 알림 철회·자기보고 경계 통합 검증 — 2026-10-29
+
+- 상태: 통합 테스트 보강 완료.
+- 검증: 철회된 참가자에게 T/T+10/T+20 개입 알림을 생성하지 않으며, 공식 개입 종료 후에도 마지막 자기보고 리마인더는 만료 전이면 생성되고 설문 상태가 `Reminded`로 전이된다.
+- 테스트: `NotificationDeliveryServiceIntegrationTests.withdrawnParticipantDoesNotReceiveInterventionNotifications`, `NotificationDeliveryServiceIntegrationTests.surveyReminderRemainsAvailableAfterOfficialInterventionEnd`.
+- 남은 범위: 실제 Push provider 발송·재시도와 운영 수신 QA, Swagger 실제 응답 코드 기록은 별도다.
+
+- 추가 검증: 취소된 약속은 개입 알림을 받지 않으며, 자기보고 만료 시각에는 리마인더를 생성하지 않는다.
+
+### 약속·사진 시간 경계 통합 검증 — 2026-10-29
+
+- 상태: 통합 테스트 보강 완료.
+- 검증: 약속 수정은 1회 초과 시 `PROMISE_RESCHEDULE_LIMIT_REACHED`, 시작 이후 취소는 `PROMISE_NOT_MODIFIABLE`로 거절한다. 사진은 예정 시작 전과 `T+30` 이후에 `PHOTO_WINDOW_CLOSED`로 거절한다.
+- 테스트: `PromiseControllerIntegrationTests.secondRescheduleIsRejectedAfterTheSingleAllowedChange`, `PromiseControllerIntegrationTests.cancellationAfterScheduledStartIsRejected`, `PhotoSubmissionControllerIntegrationTests.submissionBeforeScheduledStartIsRejected`, `PhotoSubmissionControllerIntegrationTests.submissionAtOrAfterTPlusThirtyIsRejected`.
+- 남은 범위: Swagger 실제 응답 코드 기록과 외부 사진 저장소·AI worker 연동은 별도다.
+
+### 알림 조회 상태 필터 통합 검증 — 2026-10-30
+
+- 상태: 통합 테스트 보강 완료.
+- 검증: 참가자 알림 조회 API는 현재 참가자 소유의 `IN_APP`이면서 `SENT`인 알림만 반환하고, `FAILED`·`SCHEDULED` Push/인앱 원장은 반환하지 않는다.
+- 테스트: `NotificationControllerIntegrationTests.listsOnlySentInAppNotificationsForTheCurrentParticipant`.
+- 남은 범위: 실제 Push 발송·재시도와 읽음 처리 API는 별도 운영 연동 범위다.
+
+### SCRUM-86 / 인앱 알림 읽음 처리 — 2026-10-30
+
+- 상태: 구현 및 통합 검증 완료. `PUT /api/participant/notifications/{notificationId}/read`가 현재 참가자의 `IN_APP`·`SENT` 알림만 읽음 처리한다.
+- 보호: 타 참가자·실패·예약 상태 알림은 `404 RESOURCE_NOT_FOUND`로 처리하며, 같은 알림을 반복 읽어도 최초 `read_at`을 보존한다.
+- 검증: `NotificationControllerIntegrationTests`에서 정상 읽음, 반복 요청 멱등성, FAILED 알림 차단을 PostgreSQL/Testcontainers로 확인했다.
+- 남은 범위: 실제 Push provider 발송·재시도와 운영 수신 QA.
+
+### SCRUM-84 / 사진 판정 동시성 보호 통합 검증 — 2026-10-30
+
+- 상태: 현재 attempt의 단일 terminal 전이를 통합 검증했다.
+- 검증: 동시에 `COMPLETED`·`REJECTED` 결과를 제출해 한 요청만 200으로 반영되고 다른 요청은 409로 거절되며, `decided_at`과 terminal 상태가 한 번만 저장되는 것을 PostgreSQL/Testcontainers에서 확인한다.
+- 남은 범위: 외부 AI callback 서명·운영 worker와 철회 동시성의 실제 provider 시나리오.
+
+### SCRUM-87 / 이력·자기보고 소유권 및 민감정보 비노출 검증 — 2026-10-30
+
+- 상태: 통합 검증 보강 완료.
+- 검증: 사진 인증 이력과 자기보고 조회가 소유 참가자에게만 반환되고, 타 참가자 약속은 404로 숨겨지며, 사진 원문·저장소 키·요청 지문·설문 원문 필드가 응답에 포함되지 않는 것을 확인했다.
+- 남은 범위: FE 화면 연결과 운영 Push/인앱 QA.
+
+### SCRUM-23 / 활성 약속 중복 생성 실패 경로 — 2026-10-30
+
+- 상태: 멱등성·동시성 실패 경로 통합 검증 보강 완료.
+- 검증: 다른 멱등성 키로 두 번째 활성 약속을 생성하면 `PROMISE_ACTIVE_EXISTS` 409가 반환되는 것을 확인했다.
+- 남은 범위: 공통 envelope 전환은 FE/BE 계약 합의가 필요한 별도 작업이다.
+
+### SCRUM-76 / 공통 응답·화면 인수 문서 보강 — 2026-10-30
+
+- 상태: 구현 대조 문서 보강 완료.
+- 갱신: 공통 응답 계약에 실제 적용 범위와 기존 DTO 호환 경계를 기록하고, 화면 API 인수 지도에 알림 목록·읽음 처리 계약과 404 소유권 규칙을 추가했다.
+- 남은 범위: FE/BE가 모든 업무 API를 envelope로 전환할지에 대한 최종 합의와 실제 화면 인수 승인.

@@ -8,6 +8,9 @@ import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.dodu.participant.domain.SecretHasher;
 import com.dodu.participant.domain.SessionToken;
@@ -96,6 +99,36 @@ class PhotoEvaluationResultControllerIntegrationTests {
                         .content("{\"result\":\"COMPLETED\"}"))
                 .andExpect(status().isConflict());
         assertEquals("Evaluating", jdbc.queryForObject("select processing_status from auth_attempt where id = ?", String.class, attemptId));
+    }
+
+    @Test
+    void concurrentResultsAllowOnlyOneTerminalTransition() throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> completed = executor.submit(() -> resultStatus("{\"result\":\"COMPLETED\"}"));
+            Future<Integer> rejected = executor.submit(() -> resultStatus("{\"result\":\"REJECTED\",\"rejectionReason\":\"OTHER\"}"));
+
+            int first = completed.get();
+            int second = rejected.get();
+            assertEquals(200, first + second - 409);
+            assertEquals(409, (first == 409 ? first : second));
+            assertEquals(1, jdbc.queryForObject(
+                    "select count(*) from auth_attempt where id = ? and processing_status in ('Completed', 'Rejected')",
+                    Integer.class, attemptId));
+            assertEquals(1, jdbc.queryForObject(
+                    "select count(*) from auth_attempt where id = ? and decided_at is not null",
+                    Integer.class, attemptId));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private int resultStatus(String body) throws Exception {
+        return mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andReturn().getResponse().getStatus();
     }
 
     @TestConfiguration(proxyBeanMethods = false)
