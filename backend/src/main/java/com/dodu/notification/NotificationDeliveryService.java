@@ -85,7 +85,7 @@ public class NotificationDeliveryService {
 
     private int sendPendingPushes(Instant now) {
         List<PushRow> pending = jdbc.query("""
-            select id, participant_id, promise_id, notification_type, attempt_count
+            select id, participant_id, promise_id, notification_type, schedule_version, attempt_count
               from notification_delivery
              where channel = 'PUSH'
                and (lifecycle_status = 'SCHEDULED'
@@ -96,9 +96,20 @@ public class NotificationDeliveryService {
             """, (rs, rowNum) -> new PushRow(rs.getObject("id", UUID.class),
                 rs.getObject("participant_id", UUID.class), rs.getObject("promise_id", UUID.class),
                 NotificationSchedulePolicy.NotificationType.valueOf(rs.getString("notification_type")),
-                rs.getInt("attempt_count")), timestamp(now));
+                rs.getInt("schedule_version"), rs.getInt("attempt_count")), timestamp(now));
+
         int retried = 0;
+
         for (PushRow push : pending) {
+            String reason = suppressionReason(push, now);
+            if (reason != null) {
+                jdbc.update("""
+                        update notification_delivery
+                           set lifecycle_status = 'SUPPRESSED', failure_code = ?, next_attempt_at = null
+                         where id = ? and lifecycle_status in ('SCHEDULED', 'FAILED')
+                        """, reason, push.id());
+                continue;
+            }
             // 트랜잭션 밖에서 외부 호출
             PushNotificationSender.PushSendResult result = pushSender.send(
                     push.participantId(), push.promiseId(), push.type());
@@ -195,6 +206,45 @@ public class NotificationDeliveryService {
                 dispatchKey, timestamp(due.scheduledAt()), promise.participantId());
     }
 
+    /** 보내면 안 되는 이유를 반환하고, 보내도 되면 null. */
+    private String suppressionReason(PushRow push, Instant now) {
+        DeliveryState s = jdbc.queryForObject("""
+                select part.lifecycle_status as participant_status,
+                       p.lifecycle_status as promise_status, p.schedule_version,
+                       p.auth_window_ends_at,
+                       vs.lifecycle_status as survey_status, vs.expires_at as survey_expires_at
+                  from promise p
+                  join participant part on part.id = p.participant_id
+                  left join validation_survey vs on vs.promise_id = p.id
+                 where p.id = ?
+                """, (rs, rowNum) -> new DeliveryState(
+                        rs.getString("participant_status"), rs.getString("promise_status"),
+                        rs.getInt("schedule_version"),
+                        rs.getTimestamp("auth_window_ends_at") == null
+                                ? null : rs.getTimestamp("auth_window_ends_at").toInstant(),
+                        rs.getString("survey_status"),
+                        rs.getTimestamp("survey_expires_at") == null
+                                ? null : rs.getTimestamp("survey_expires_at").toInstant()),
+                push.promiseId());
+        if ("Withdrawn".equals(s.participantStatus())) return "PARTICIPANT_WITHDRAWN";
+
+        if (push.type() == NotificationSchedulePolicy.NotificationType.SURVEY_REMINDER) {
+            if (s.surveyExpiresAt() == null || !now.isBefore(s.surveyExpiresAt())) return "SURVEY_EXPIRED";
+            if (!"Reminded".equals(s.surveyStatus())) return "SURVEY_NOT_PENDING";
+            return null;
+        }
+        if (s.scheduleVersion() != push.scheduleVersion()) return "SCHEDULE_CHANGED";
+        if (!List.of("Scheduled", "AuthAvailable").contains(s.promiseStatus())) return "PROMISE_NOT_ACTIVE";
+        if (s.authWindowEndsAt() == null || !now.isBefore(s.authWindowEndsAt())) return "AUTH_WINDOW_ENDED";
+        if (push.type() != NotificationSchedulePolicy.NotificationType.START
+                && Boolean.TRUE.equals(jdbc.queryForObject(
+                "select exists(select 1 from auth_attempt where promise_id = ? and processing_status = 'Evaluating')",
+                Boolean.class, push.promiseId()))) {
+            return "EVALUATING";
+        }
+        return null;
+    }
+
     private static Timestamp timestamp(Instant instant) {
         return Timestamp.from(instant);
     }
@@ -204,5 +254,9 @@ public class NotificationDeliveryService {
     private record SurveyRow(UUID promiseId, UUID participantId, Instant scheduledAt,
                              int scheduleVersion, Instant expiresAt) { }
     private record PushRow(UUID id, UUID participantId, UUID promiseId,
-                           NotificationSchedulePolicy.NotificationType type, int attemptCount) { }
+                           NotificationSchedulePolicy.NotificationType type,
+                           int scheduleVersion, int attemptCount) { }
+
+    private record DeliveryState(String participantStatus, String promiseStatus, int scheduleVersion,
+                                 Instant authWindowEndsAt, String surveyStatus, Instant surveyExpiresAt) { }
 }
