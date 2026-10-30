@@ -109,6 +109,21 @@ class PromiseControllerIntegrationTests {
     }
 
     @Test
+    void differentKeyCannotCreateSecondActivePromise() throws Exception {
+        String body = "{\"taskTitle\":\"active task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
+                + scheduledAt + "\"}";
+        createWithKey(body, "create-active-1");
+
+        mockMvc.perform(post("/api/promises")
+                        .header("Authorization", authorization)
+                        .header("Idempotency-Key", "create-active-2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("PROMISE_ACTIVE_EXISTS"));
+    }
+
+    @Test
     void concurrentSameKeyRequestsCreateOnePromise() throws Exception {
         String body = "{\"taskTitle\":\"concurrent task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
                 + scheduledAt + "\"}";
