@@ -52,9 +52,9 @@ public class PhotoAttemptHistoryController {
                 rs.getString("rejection_reason"),
                 rs.getString("technical_error_type"),
                 rs.getString("model_version"),
-                rs.getObject("request_received_at", Instant.class),
-                rs.getObject("valid_received_at", Instant.class),
-                rs.getObject("decided_at", Instant.class)), promiseId);
+                rs.getTimestamp("request_received_at").toInstant(),
+                rs.getTimestamp("valid_received_at") == null ? null : rs.getTimestamp("valid_received_at").toInstant(),
+                rs.getTimestamp("decided_at") == null ? null : rs.getTimestamp("decided_at").toInstant()), promiseId);
     }
 
     public record AttemptHistoryResponse(UUID attemptId, String toolType, String processingStatus,
