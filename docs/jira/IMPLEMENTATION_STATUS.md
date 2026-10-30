@@ -315,6 +315,13 @@
 - 검증: `NotificationControllerIntegrationTests`에서 정상 읽음, 반복 요청 멱등성, FAILED 알림 차단을 PostgreSQL/Testcontainers로 확인했다.
 - 남은 범위: 실제 Push provider 발송·재시도와 운영 수신 QA.
 
+### SCRUM-86 / Push 애플리케이션 재시도 백오프 — 2026-10-30
+
+- 상태: provider와 분리된 애플리케이션 재시도 구조 구현.
+- 변경: Flyway V8에 Push `attempt_count`·`next_attempt_at`을 추가하고, 일시 실패만 30초·2분·10분 백오프로 최대 3회 재시도한다. `UNCONFIGURED`는 성공으로 표시하지 않고 재시도하지 않는다.
+- 검증: `PushRetryPolicyTests`에서 백오프 경계와 최대 시도 제한을 확인했다.
+- 남은 범위: 실제 FCM/Web Push provider 자격정보·endpoint 연결과 운영 발송·수신 QA.
+
 ### SCRUM-84 / 사진 판정 동시성 보호 통합 검증 — 2026-10-30
 
 - 상태: 현재 attempt의 단일 terminal 전이를 통합 검증했다.

@@ -18,6 +18,7 @@ public class NotificationDeliveryService {
     private final Clock clock;
     private final PushNotificationSender pushSender;
     private final NotificationSchedulePolicy policy = new NotificationSchedulePolicy();
+    private final PushRetryPolicy pushRetryPolicy = new PushRetryPolicy();
     private final InterventionLifecycleGate lifecycleGate = new InterventionLifecycleGate();
 
     public NotificationDeliveryService(JdbcTemplate jdbc, Clock clock, PushNotificationSender pushSender) {
@@ -34,6 +35,7 @@ public class NotificationDeliveryService {
 
     @Transactional
     public int dispatchDueNotifications(Instant now) {
+        int retried = retryFailedPushNotifications(now);
         List<PromiseRow> promises = jdbc.query("""
                 select p.id, p.participant_id, p.scheduled_at, p.schedule_version
                        , study.intervention_ends_at
@@ -68,7 +70,41 @@ public class NotificationDeliveryService {
                 created += insertPush(promise, due, dispatchKey, now);
             }
         }
-        return created + dispatchSurveyReminders(now);
+        return retried + created + dispatchSurveyReminders(now);
+    }
+
+    private int retryFailedPushNotifications(Instant now) {
+        List<PushRow> due = jdbc.query("""
+                select id, participant_id, promise_id, notification_type, attempt_count
+                  from notification_delivery
+                 where channel = 'PUSH' and lifecycle_status = 'FAILED'
+                   and next_attempt_at is not null and next_attempt_at <= ?
+                 order by next_attempt_at, created_at
+                 for update skip locked limit 10
+                """, (rs, rowNum) -> new PushRow(rs.getObject("id", UUID.class),
+                rs.getObject("participant_id", UUID.class), rs.getObject("promise_id", UUID.class),
+                NotificationSchedulePolicy.NotificationType.valueOf(rs.getString("notification_type")),
+                rs.getInt("attempt_count")), timestamp(now));
+        int retried = 0;
+        for (PushRow push : due) {
+            PushNotificationSender.PushSendResult result = pushSender.send(
+                    push.participantId(), push.promiseId(), push.type());
+            int nextAttemptCount = push.attemptCount() + 1;
+            Instant nextAttemptAt = result.status() == PushNotificationSender.Status.FAILED
+                    ? pushRetryPolicy.nextAttemptAt(now, nextAttemptCount) : null;
+            String status = result.status() == PushNotificationSender.Status.SENT ? "SENT" : "FAILED";
+            jdbc.update("""
+                    update notification_delivery
+                       set lifecycle_status = ?, provider_message_id = ?, sent_at = ?, failure_code = ?,
+                           attempt_count = ?, next_attempt_at = ?
+                     where id = ? and lifecycle_status = 'FAILED'
+                    """, status, result.providerMessageId(),
+                    result.status() == PushNotificationSender.Status.SENT ? timestamp(now) : null,
+                    result.failureCode(), nextAttemptCount,
+                    nextAttemptAt == null ? null : timestamp(nextAttemptAt), push.id());
+            retried++;
+        }
+        return retried;
     }
 
     private int dispatchSurveyReminders(Instant now) {
@@ -150,11 +186,14 @@ public class NotificationDeliveryService {
         };
         jdbc.update("""
                 update notification_delivery
-                   set lifecycle_status = ?, provider_message_id = ?, sent_at = ?, failure_code = ?
+                   set lifecycle_status = ?, provider_message_id = ?, sent_at = ?, failure_code = ?,
+                       attempt_count = 1, next_attempt_at = ?
                  where dispatch_key = ? and channel = 'PUSH'
                 """, status, result.providerMessageId(),
                 result.status() == PushNotificationSender.Status.SENT ? timestamp(now) : null,
-                result.failureCode(), dispatchKey);
+                result.failureCode(), result.status() == PushNotificationSender.Status.FAILED
+                        && pushRetryPolicy.nextAttemptAt(now, 1) != null
+                        ? timestamp(pushRetryPolicy.nextAttemptAt(now, 1)) : null, dispatchKey);
         return 1;
     }
 
@@ -166,4 +205,6 @@ public class NotificationDeliveryService {
                               Instant interventionEndsAt) { }
     private record SurveyRow(UUID promiseId, UUID participantId, Instant scheduledAt,
                              int scheduleVersion, Instant expiresAt) { }
+    private record PushRow(UUID id, UUID participantId, UUID promiseId,
+                           NotificationSchedulePolicy.NotificationType type, int attemptCount) { }
 }

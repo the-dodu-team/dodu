@@ -777,3 +777,12 @@
 - 대안: 문서만 갱신하거나 단위 테스트만 추가하는 방식은 DB 제약·인증 경계·동시 요청 결과를 증명하지 못하므로 선택하지 않는다.
 - 영향: SCRUM-23·84·87의 자동 검증 근거가 강화되고, SCRUM-76 문서는 현재 API의 envelope 적용 범위를 과장하지 않는다.
 - 검증: `PromiseControllerIntegrationTests`, `PhotoEvaluationResultControllerIntegrationTests`, `PhotoAttemptHistoryControllerIntegrationTests`, `ValidationSurveyControllerIntegrationTests`, 전체 `npm run build`.
+
+## DEV-20261030-04 Push 실패 재시도 책임과 백오프
+
+- 배경: Push provider가 일시적으로 실패해도 애플리케이션이 재시도하지 않으면 알림이 영구 실패한다.
+- 선택: provider에 도착한 뒤의 요청 실패 재시도는 애플리케이션이 담당하고, 기기 전달·토큰 만료 처리는 provider 결과를 따른다. 30초·2분·10분, 최대 3회로 제한한다.
+- 근거: 은서 담당자의 합의대로 일시 오류만 재시도하고 영구 오류는 구독 비활성화 대상이다. 현재 provider가 미설정이면 성공으로 기록하지 않는다.
+- 대안: 무제한 재시도, provider에만 책임 위임, `UNCONFIGURED`를 일시 실패로 위장하는 방식은 선택하지 않는다.
+- 영향: 운영 provider 연결 전에도 DB에 재시도 상태를 안전하게 보존하고, 중복 worker 실행은 row lock으로 보호한다.
+- 검증: `PushRetryPolicyTests`, Flyway V8 검증, 전체 `npm run build`.
