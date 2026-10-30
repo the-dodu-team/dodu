@@ -786,3 +786,12 @@
 - 대안: 무제한 재시도, provider에만 책임 위임, `UNCONFIGURED`를 일시 실패로 위장하는 방식은 선택하지 않는다.
 - 영향: 운영 provider 연결 전에도 DB에 재시도 상태를 안전하게 보존하고, 중복 worker 실행은 row lock으로 보호한다.
 - 검증: `PushRetryPolicyTests`, Flyway V8 검증, 전체 `npm run build`.
+
+## DEV-20261030-05 FE API client와 오류 분기
+
+- 배경: FE mock 화면과 백엔드 계약 사이에 실제 API를 호출할 공통 진입점이 없었다.
+- 선택: 인증 토큰을 받는 typed client 하나에서 알림·인증 이력·자기보고 요청을 만들고, 성공 envelope와 오류 envelope를 검증한다.
+- 근거: FE는 메시지 문구가 아니라 `error.code`로 상태를 분기해야 하며, 토큰·사진·설문 원문은 로그와 URL에 남기지 않아야 한다.
+- 대안: 화면별 fetch 중복, 오류 메시지 문자열 분기, 토큰을 query string에 넣는 방식은 선택하지 않는다.
+- 영향: 후속 화면 연결은 공통 client를 사용하며, 현재 mock 동작은 별도 유지한다.
+- 검증: frontend TypeScript build·lint와 전체 `npm run build`.

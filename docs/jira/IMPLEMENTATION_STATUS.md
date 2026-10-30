@@ -322,6 +322,12 @@
 - 검증: `PushRetryPolicyTests`에서 백오프 경계와 최대 시도 제한을 확인했다.
 - 남은 범위: 실제 FCM/Web Push provider 자격정보·endpoint 연결과 운영 발송·수신 QA.
 
+### SCRUM-87·76 / FE API client 기반 — 2026-10-30
+
+- 상태: FE 연결 기반 구현 완료. `frontend/src/api/doduApi.ts`에 알림·인증 이력·자기보고 typed client와 공통 성공/오류 envelope 처리를 추가했다.
+- 보호: 토큰은 `Authorization` 헤더에만 전달하고, 오류 분기는 안전한 오류 코드로 처리한다.
+- 남은 범위: 기존 mock 화면을 실제 세션·약속 데이터에 연결하는 화면 전환, 운영 FE 환경변수와 사용자 QA.
+
 ### SCRUM-84 / 사진 판정 동시성 보호 통합 검증 — 2026-10-30
 
 - 상태: 현재 attempt의 단일 terminal 전이를 통합 검증했다.
