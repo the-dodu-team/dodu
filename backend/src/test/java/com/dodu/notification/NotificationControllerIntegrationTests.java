@@ -1,6 +1,7 @@
 package com.dodu.notification;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -32,12 +33,13 @@ class NotificationControllerIntegrationTests {
     private MockMvc mockMvc;
     private String authorization;
     private UUID promiseId;
+    private UUID notificationId;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         String suffix = UUID.randomUUID().toString();
-        String token = "N".repeat(43);
+        String token = "N".repeat(11) + suffix.replace("-", "");
         String tokenHash = new SecretHasher("test-only-pepper-0123456789abcdef0123456789abcdef".getBytes()).hash(token);
         UUID studyId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
@@ -45,6 +47,7 @@ class NotificationControllerIntegrationTests {
         UUID sessionId = UUID.randomUUID();
         UUID policyId = UUID.randomUUID();
         promiseId = UUID.randomUUID();
+        notificationId = UUID.randomUUID();
         Instant now = Instant.now();
 
         jdbc.update("insert into study_period(id, code, access_ends_at, intervention_ends_at) values (?, ?, ?, ?)",
@@ -68,14 +71,14 @@ class NotificationControllerIntegrationTests {
         authorization = "Bearer " + token;
 
         jdbc.update("""
-                insert into notification_delivery(participant_id, promise_id, schedule_version, notification_type,
+                insert into notification_delivery(id, participant_id, promise_id, schedule_version, notification_type,
                                                   channel, dispatch_key, lifecycle_status, scheduled_at, sent_at)
-                values (?, ?, 0, 'START', 'IN_APP', ?, 'SENT', ?, ?),
-                       (?, ?, 0, 'T_PLUS_10', 'IN_APP', ?, 'FAILED', ?, null),
-                       (?, ?, 0, 'T_PLUS_20', 'IN_APP', ?, 'SCHEDULED', ?, null)
-                """, participantId, promiseId, "sent-" + suffix, Timestamp.from(scheduledAt), Timestamp.from(now),
-                participantId, promiseId, "failed-" + suffix, Timestamp.from(now),
-                participantId, promiseId, "scheduled-" + suffix, Timestamp.from(now));
+                values (?, ?, ?, 0, 'START', 'IN_APP', ?, 'SENT', ?, ?),
+                       (?, ?, ?, 0, 'T_PLUS_10', 'IN_APP', ?, 'FAILED', ?, null),
+                       (?, ?, ?, 0, 'T_PLUS_20', 'IN_APP', ?, 'SCHEDULED', ?, null)
+                """, notificationId, participantId, promiseId, "sent-" + suffix, Timestamp.from(scheduledAt), Timestamp.from(now),
+                UUID.randomUUID(), participantId, promiseId, "failed-" + suffix, Timestamp.from(now),
+                UUID.randomUUID(), participantId, promiseId, "scheduled-" + suffix, Timestamp.from(now));
     }
 
     @Test
@@ -87,6 +90,31 @@ class NotificationControllerIntegrationTests {
                 .andExpect(jsonPath("$.data[0].notificationType").value("START"))
                 .andExpect(jsonPath("$.data[0].sentAt").exists())
                 .andExpect(jsonPath("$.serverTime").exists());
+    }
+
+    @Test
+    void marksOnlyOwnedSentInAppNotificationAsReadAndIsIdempotent() throws Exception {
+        mockMvc.perform(put("/api/participant/notifications/" + notificationId + "/read")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.data.notificationId").value(notificationId.toString()))
+                .andExpect(jsonPath("$.data.readAt").exists());
+
+        String firstReadAt = jdbc.queryForObject("select read_at::text from notification_delivery where id = ?", String.class, notificationId);
+        mockMvc.perform(put("/api/participant/notifications/" + notificationId + "/read")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(firstReadAt,
+                jdbc.queryForObject("select read_at::text from notification_delivery where id = ?", String.class, notificationId));
+    }
+
+    @Test
+    void doesNotExposeFailedOrScheduledNotificationAsReadable() throws Exception {
+        UUID failedId = jdbc.queryForObject("select id from notification_delivery where lifecycle_status = 'FAILED'", UUID.class);
+        mockMvc.perform(put("/api/participant/notifications/" + failedId + "/read")
+                        .header("Authorization", authorization))
+                .andExpect(status().isNotFound());
     }
 
     @TestConfiguration(proxyBeanMethods = false)
