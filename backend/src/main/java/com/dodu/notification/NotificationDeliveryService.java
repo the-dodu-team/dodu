@@ -116,11 +116,13 @@ public class NotificationDeliveryService {
             int attemptCount = push.attemptCount() + 1;
             Instant nextAttemptAt = result.status() == PushNotificationSender.Status.FAILED
                     ? pushRetryPolicy.nextAttemptAt(now, attemptCount) : null;
+
             String status = switch (result.status()) {
                 case SENT -> "SENT";
-                case FAILED -> "FAILED";
+                case FAILED, UNDELIVERABLE -> "FAILED";
                 case UNCONFIGURED -> "UNCONFIGURED";
             };
+
             jdbc.update("""
                 update notification_delivery
                    set lifecycle_status = ?, provider_message_id = ?, sent_at = ?, failure_code = ?,
