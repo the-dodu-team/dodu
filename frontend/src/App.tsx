@@ -357,7 +357,7 @@ function HomePrototype({
       recreationUsedDatesRef.current.has(date) ||
       cancelledCount >= 2
     ) {
-      return `${formatDateLabel(date)}에는 이미 약속을 한 번 다시 만들었어요. 다른 날을 선택해 주세요.`
+      return `${formatDateLabel(date)}에는 이미 약속을 한 번 다시 만들었어요. 다른 날짜를 선택해 주세요.`
     }
 
     return ''

@@ -42,7 +42,8 @@ function SummaryCard({ session, result }: { session: PhotoSession; result: boole
     <h2>{result ? '대상 약속' : '인증할 약속'}</h2>
     <div className="photo-summary-name"><h3>{promise.taskName}</h3>{today && <span>오늘</span>}</div>
     <p><img src={clockIcon} width={16} height={16} alt="" /><span>시작 시간</span>
-      <strong>{today ? '오늘' : `${Number(month)}월 ${Number(day)}일`} {formatStartTime(promise.startTime)}</strong></p>
+      {/* 기존 시작 날짜는 오늘 또는 한글 월·일로 표시했다. */}
+      <strong>{`${Number(month)}/${Number(day)}`} {formatStartTime(promise.startTime)}</strong></p>
     <p><img src={cameraGrayIcon} width={16} height={16} alt="" /><span>인증 도구</span>
       <strong>{promise.tool === 'computer' ? '컴퓨터' : '책'}</strong></p>
   </section>
