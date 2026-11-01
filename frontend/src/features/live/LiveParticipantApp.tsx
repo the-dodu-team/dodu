@@ -1,5 +1,7 @@
+import LiveSelfReport, { LiveSelfReportEntry } from '../self-report/LiveSelfReport'
+import { createLiveSurveyApi } from '../../api/liveSurveyApi'
 import LiveOnboardingFlow from '../onboarding/LiveOnboardingFlow'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createParticipantPromiseApi, ParticipantPromiseApiError } from '../../api/participantPromiseApi'
 import type { ParticipantState, PromiseResponse } from '../../api/participantPromiseApi'
 import ParticipantEntryPage from '../access/ParticipantEntryPage'
@@ -38,6 +40,8 @@ function errorMessage(error: unknown) {
 export default function LiveParticipantApp() {
   const [session] = useState(() => createLiveSession(sessionStorage, localStorage))
   const [api] = useState(() => createParticipantPromiseApi({ getToken: session.token }))
+  const [surveyApi] = useState(() => createLiveSurveyApi(session.token))
+  const [surveyId, setSurveyId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('self-report'))
   const [participant, setParticipant] = useState<ParticipantState | null>(null)
   const [active, setActive] = useState<PromiseResponse | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -138,13 +142,20 @@ export default function LiveParticipantApp() {
     }
   }
   const clockNow = () => serverClock ? serverClock.value + performance.now() - serverClock.measured : Date.now()
-  const home = () => { setError(''); setScreen('home') }
+  const home = useCallback(() => {
+    setError(''); setScreen('home'); setSurveyId(null)
+    const url = new URL(window.location.href)
+    url.searchParams.delete('self-report')
+    window.history.replaceState(window.history.state, '', url)
+  }, [])
   const modifyAllowed = Boolean(active && now !== null && Date.parse(active.scheduledAt) > now && !pending)
   let page
   if (closed) page = <AccessClosedPage />
   else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={code => { void login(code) }} isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} />
   else if (!loaded) page = <main aria-busy={busy}><p role="status">확인 중…</p></main>
   else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow onClose={() => { setOnboardingDismissed(true); setScreen('home') }} />
+  else if (surveyId) page = <LiveSelfReport key={surveyId} api={surveyApi} promiseId={surveyId}
+    target={null} onHome={home} />
   else if (screen === 'name') page = <PromiseTaskNamePage initialValue={taskName} onBack={home} onNext={value => { setTaskName(value); setScreen('time') }} />
   else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt} onBack={value => { setScheduledAt(value); setScreen('name') }} onNext={value => { setScheduledAt(value); setScreen('tool') }} />
   else if (screen === 'tool') page = <PromiseToolPage initialValue={tool} onBack={() => setScreen('time')} onNext={value => { setTool(value); setScreen('confirm') }} />
@@ -159,6 +170,7 @@ export default function LiveParticipantApp() {
   else page = <div className="home-page"><AppHeader /><main className="live-home-main" aria-label="홈"><h1 className="visually-hidden">홈</h1>
     <TodayPromiseCard promise={active ? { taskName: active.taskTitle, isToday: new Date(Date.parse(active.scheduledAt) + 9 * 3600000).toISOString().slice(0, 10) === new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10), startTimeLabel: formatPromiseDateTime(Date.parse(active.scheduledAt)), toolLabel: active.toolType === 'BOOK' ? '책' : '컴퓨터' } : null}
       canCreate={!pending} canEdit={modifyAllowed} onEdit={() => setScreen('manage')} onCreate={() => { setTaskName(''); setScheduledAt(''); setTool('computer'); setScreen('name') }} />
+    <LiveSelfReportEntry api={surveyApi} onOpen={setSurveyId} />
     {/* 이력 API 연결 전에는 빈 배열을 조회된 기록으로 취급하지 않는다. */}
     <WeeklyPromiseCard todayKey={new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10)} historyState="unavailable" />
   </main></div>
