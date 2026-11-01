@@ -281,6 +281,8 @@
 - 범위: Supabase 비공개 사진 저장소 adapter, `PhotoObjectReader`, AI worker 실제 호출, 결과·재시도·철회 보호, 30일 보관·삭제와 통합 검증.
 - 외부 준비: Supabase bucket·Render 환경변수 등록은 운영 담당자 준비 범위. 비밀값은 로컬 문서·Jira·Git에 기록하지 않는다.
 - 상태: 해야 할 일. 외부 설정과 구현·운영 QA 완료 전까지 완료 처리하지 않는다.
+- 구현 증분: `SupabasePhotoObjectStore` 업로드·조회·삭제 adapter와 사진 제출 시 선택적 원본 저장 연결을 추가했다. `DODU_PHOTO_STORAGE_PROVIDER`가 설정되지 않으면 저장소 호출을 활성화하지 않는다.
+- 검증: adapter 단위 테스트와 AI handler 테스트 통과, 백엔드 package 통과. 전체 통합 테스트 40건은 Docker 환경 부재로 실행 실패.
 
 ### 사진 재사용 정책 보강 — 2026-10-29
 

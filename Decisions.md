@@ -842,3 +842,11 @@
 - 근거: worker 코드·README·실제 `/health`, `/predict`, `/predict/batch` 응답 확인.
 - 영향: AI endpoint와 사진 저장소가 환경변수·`PhotoObjectReader`로 연결되면 모델 버전이 이력에 보존된다. AI 운영 완료나 Jira 완료 처리는 하지 않는다.
 - 검증: 단건 laptop 200, 3장 batch(book/other/laptop) 200, 백엔드 mapper 테스트 보강. API 자격정보는 출력·문서·커밋에 포함하지 않았다.
+
+## DEV-20261101-07 — Supabase Storage adapter 경계
+
+- 배경: Sprint 4 SCRUM-89 구현을 위해 private photo metadata와 실제 원본 저장소 사이의 실행 가능한 adapter가 필요하다.
+- 결정: `DODU_PHOTO_STORAGE_PROVIDER=supabase`일 때만 Supabase Storage HTTP adapter를 활성화한다. bucket, 프로젝트 URL, service role secret은 환경변수로만 주입하고, 미설정 환경에서는 기존 안전한 비활성 경계를 유지한다.
+- 근거: 사진 원문은 PostgreSQL·로그·Git에 저장하지 않고 private object storage에서만 읽어야 한다는 정책과 SCRUM-89 범위.
+- 영향: 사진 제출 시 adapter가 원본을 저장하고, recovery worker가 같은 storage key로 읽어 AI worker에 전달하며, 삭제 경로에서 원본을 제거할 수 있다. provider 설정 전 운영 완료로 표시하지 않는다.
+- 검증: Supabase HTTP adapter의 업로드·조회·삭제·인증 헤더 단위 테스트, AI mapper 테스트, 백엔드 package 빌드 통과. 실제 Supabase bucket smoke test는 외부 설정 후 실행한다.

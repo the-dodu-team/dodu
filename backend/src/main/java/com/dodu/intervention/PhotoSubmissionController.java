@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -36,16 +37,20 @@ public class PhotoSubmissionController {
     private final InterventionWindowPolicy windowPolicy;
     private final InterventionLifecycleGate lifecycleGate = new InterventionLifecycleGate();
     private final ParticipantAuthService authService;
+    private final PhotoObjectWriter photoObjectWriter;
     @Autowired
-    public PhotoSubmissionController(JdbcTemplate jdbc, ParticipantAuthService authService) {
-        this(jdbc, authService, Clock.systemUTC());
+    public PhotoSubmissionController(JdbcTemplate jdbc, ParticipantAuthService authService,
+                                     ObjectProvider<PhotoObjectWriter> photoObjectWriters) {
+        this(jdbc, authService, Clock.systemUTC(), photoObjectWriters.getIfAvailable());
     }
 
-    PhotoSubmissionController(JdbcTemplate jdbc, ParticipantAuthService authService, Clock clock) {
+    PhotoSubmissionController(JdbcTemplate jdbc, ParticipantAuthService authService, Clock clock,
+                              PhotoObjectWriter photoObjectWriter) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.windowPolicy = new InterventionWindowPolicy(clock);
         this.authService = authService;
+        this.photoObjectWriter = photoObjectWriter;
     }
 
     @Operation(summary = "사진 제출")
@@ -137,10 +142,18 @@ public class PhotoSubmissionController {
         }
 
         UUID assetId = UUID.randomUUID();
+        String storageKey = UUID.randomUUID().toString();
+        if (photoObjectWriter != null) {
+            try {
+                photoObjectWriter.write(storageKey, contentType, content);
+            } catch (RuntimeException exception) {
+                throw error(HttpStatus.SERVICE_UNAVAILABLE, "PHOTO_STORAGE_UNAVAILABLE");
+            }
+        }
         jdbc.update("""
                 insert into photo_asset(id, storage_key, content_type, byte_size, sha256_hash, received_at)
                 values (?, ?, ?, ?, ?, ?)
-                """, assetId, UUID.randomUUID(), contentType, content.length, photoHash, timestamp(now));
+                """, assetId, storageKey, contentType, content.length, photoHash, timestamp(now));
         int insertedCount = jdbc.update("""
                 insert into auth_attempt(id, promise_id, client_request_id, request_fingerprint, tool_type,
                                          processing_status, request_received_at, valid_received_at, photo_asset_id)
@@ -161,6 +174,9 @@ public class PhotoSubmissionController {
         }
         if (insertedCount == 0) {
             jdbc.update("delete from photo_asset where id = ?", assetId);
+            if (photoObjectWriter != null) {
+                try { photoObjectWriter.delete(storageKey); } catch (RuntimeException ignored) { }
+            }
         }
         ensureRecoveryJob(inserted.id(), promiseId, now);
         return new PhotoAttemptResponse(inserted.id(), promiseId, inserted.processingStatus(), inserted.requestReceivedAt());

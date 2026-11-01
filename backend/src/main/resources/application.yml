@@ -15,6 +15,11 @@ dodu:
     code-pepper: ${DODU_ACCESS_CODE_PEPPER:}
     # Empty by default: forwarded client-IP headers are ignored until the deployment proxy is explicitly allowlisted.
     trusted-proxies: ${DODU_TRUSTED_PROXIES:}
+  photo-storage:
+    provider: ${DODU_PHOTO_STORAGE_PROVIDER:none}
+    supabase-url: ${DODU_SUPABASE_URL:}
+    bucket: ${DODU_PHOTO_BUCKET:dodu-photos}
+    service-role-key: ${DODU_SUPABASE_SERVICE_ROLE_KEY:}
 
 # API 문서(swagger). 기본은 꺼져 있고, 개발 환경에서만 DODU_SWAGGER_ENABLED=true 로 켭니다.
 springdoc:
