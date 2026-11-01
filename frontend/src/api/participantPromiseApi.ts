@@ -124,9 +124,9 @@ export function createParticipantPromiseApi(options: {
     // 약속 컨트롤러는 현재 envelope와 serverTime을 반환하지 않는다.
     active: (signal?: AbortSignal) => request('/api/promises/active',
       (value): value is PromiseResponse | null => value === null || promise(value), { signal }, false),
-    prepareCreate: (payload: PromisePayload) => {
+    prepareCreate: (payload: PromisePayload, requestKey: string = crypto.randomUUID()) => {
       const ownerToken = options.getToken()
-      const key = crypto.randomUUID()
+      const key = requestKey
       const body = JSON.stringify(payload)
       let inFlight: Promise<ApiResult<PromiseResponse>> | null = null
       let completed: ApiResult<PromiseResponse> | null = null

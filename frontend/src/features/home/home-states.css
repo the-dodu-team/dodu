@@ -28,3 +28,14 @@
 /* 오늘 날짜여도 최종 인증 결과의 글자색을 유지한다. */
 .home-page .weekly-promise-day--verified { color: #5668b4; background: #ededff; }
 .home-page .weekly-promise-day--unverified { color: #c33335; background: #ffe3e3; }
+/* 홈 카드에는 공통 main의 가운데 정렬과 추가 여백을 적용하지 않는다. */
+.home-page > .live-home-main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}

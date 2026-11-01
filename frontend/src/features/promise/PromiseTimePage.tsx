@@ -24,13 +24,13 @@ function earliestTimeLabel(timestamp: number, today: string) {
   return `${dateKey(timestamp) === today ? '오늘' : dateLabel(dateKey(timestamp))} ${hour < 12 ? '오전' : '오후'} ${hour % 12 || 12}:${String(kst.getUTCMinutes()).padStart(2, '0')}`
 }
 
-function getInitialParts(value: string) {
+function getInitialParts(value: string, now = Date.now()) {
   const parsed = value ? Date.parse(value) : Number.NaN
 
   // 미선택 상태에서 휠이 보여줄 기본 위치.
   const timestamp = Number.isFinite(parsed)
     ? parsed
-    : Math.ceil((Date.now() + 5 * MINUTE) / (5 * MINUTE)) * 5 * MINUTE
+    : Math.ceil((now + 5 * MINUTE) / (5 * MINUTE)) * 5 * MINUTE
 
   const kst = new Date(timestamp + KST_OFFSET)
   const hour = kst.getUTCHours()
@@ -143,6 +143,7 @@ function TimeWheel({
 }
 
 type PromiseTimePageProps = {
+  getNow?: () => number
   initialValue?: string
   mode?: 'create' | 'edit'
   blockedReason?: string
@@ -155,6 +156,7 @@ type PromiseTimePageProps = {
 }
 
 export default function PromiseTimePage({
+  getNow = Date.now,
   initialValue = '',
   mode = 'create',
   blockedReason = '',
@@ -168,23 +170,23 @@ export default function PromiseTimePage({
   // 기존 초기값: getInitialParts(initialValue)
   const [initial] = useState(() => getInitialParts(chooseInitialPromiseTime({
     initialValue,
-    now: Date.now(),
+    now: getNow(),
     isEditing: mode === 'edit',
     isBlocked: (day) => Boolean(getDateBlockedReason?.(day) || isDateUnavailable?.(day)),
     interventionEndsAt,
-  })))
+  }), getNow()))
   const [date, setDate] = useState(initial.date)
   const [period, setPeriod] = useState(initial.period)
   const [hour, setHour] = useState(initial.hour)
   const [minute, setMinute] = useState(initial.minute)
   const [selected, setSelected] = useState(initial.selected)
-  const [now, setNow] = useState(Date.now)
+  const [now, setNow] = useState(getNow)
   const [checkedDate, setCheckedDate] = useState(initial.date)
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000)
+    const timer = setInterval(() => setNow(getNow()), 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [getNow])
 
   const isEditing = mode === 'edit'
   const today = dateKey(now)
