@@ -356,7 +356,7 @@
 - 이번 범위: 운영 설정을 알 수 없는 상태에서 재현 가능한 코드 경계만 보강했다. `ClientIpResolver`를 추가해 trusted proxy가 비어 있으면 전달 IP 헤더를 무시하고, 허용된 IPv4/IPv6 네트워크에서만 `X-Forwarded-For`/`Forwarded`의 원본 주소를 사용한다. 참가자 코드 rate limit은 기존 PostgreSQL 저장소를 그대로 사용한다.
 - 검증: `ClientIpResolverTests` 3건, `npm run security:scan`, `git diff --check`, 백엔드 컴파일을 확인했다. 전체 `npm run verify`는 프런트 검증까지 통과했지만 Testcontainers가 Docker 엔진을 찾지 못해 백엔드 통합 테스트 40건이 실행되지 않아 실패했다.
 - 완료로 표시하지 않는 범위: 실제 FCM/Web Push 자격정보·endpoint·발송/수신 QA, 실제 사진 객체 저장소와 AI worker, FE 화면의 세션·약속 실데이터 연결 및 사용자 QA, 모든 API envelope 전환 승인, 실제 배포 프록시/CIDR와 다중 노드 운영 QA, Figma 최종 화면 비교, Sprint 3 최종 승인.
-- Figma: 최종 핸드오프 확인 완료. [10/13 최종 검토](https://www.figma.com/design/Qx26p9tdYo9doDhbxYGnfB/%EA%B9%80%EC%84%B1%EC%A4%80%EB%8B%98?node-id=1806-1897) 섹션에서 홈·약속·사진 인증·자기보고·권한 오류·행동검증 종료 화면과 `+5분~+72시간` 예약 기준 메모를 확인했다. 화면 구현·반응형·상태 QA는 아직 남아 있다.
+- Figma: 현재 기준 파일을 [Dodu 디자인 파일](https://www.figma.com/design/SyTucdjEX94fcqYzRmK5xE/%EB%94%94%EC%9E%90%EC%9D%B8-%ED%8C%8C%EC%9D%BC?node-id=393-1781)로 갱신했다. `393:1781` 페이지 `v2.5 디자인 핸드오프`가 존재하는 것을 metadata로 확인했다. 이전 `Qx26p9tdYo9doDhbxYGnfB` 파일은 보조 기준으로 내리고, 현재 화면 비교·상태 QA는 아직 남아 있다.
 - Jira: SCRUM-70·76·83·84·85·86은 외부 연동·인수 조건이 남아 진행 중으로 유지하고, SCRUM-87은 FE 사용자 검증 전까지 해야 할 일/진행 범위로 유지한다.
 ### SCRUM-83 / 사진 원본 저장소 선택 — 2026-11-01
 
