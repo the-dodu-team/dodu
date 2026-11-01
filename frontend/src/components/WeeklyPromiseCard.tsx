@@ -69,7 +69,8 @@ export default function WeeklyPromiseCard({
           <li key={day.key}
             className={`weekly-promise-day weekly-promise-day--${day.timing} weekly-promise-day--${day.status}`}
             aria-current={day.timing === 'today' ? 'date' : undefined}>
-            <span>{day.date.getUTCDate()}</span><span>{day.label}</span>
+            <span aria-hidden="true">{day.date.getUTCDate()}</span><span aria-hidden="true">{day.label}</span>
+            <time className="visually-hidden" dateTime={day.key}>{day.date.getUTCFullYear()}년 {formatDate(day.date)} {day.label}요일 </time>
             <span className="visually-hidden">{!historyReady ? '인증 결과 미확인' : day.status === 'verified' ? '인증 완료'
               : day.status === 'unverified' ? '인증 미완료' : '최종 인증 결과 없음'}</span>
           </li>

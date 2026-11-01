@@ -1,3 +1,4 @@
+import { focusScreenHeading } from '../promise/focusScreenHeading'
 import LiveOnboardingFlow from '../onboarding/LiveOnboardingFlow'
 import { useEffect, useRef, useState } from 'react'
 import { createParticipantPromiseApi, ParticipantPromiseApiError } from '../../api/participantPromiseApi'
@@ -52,6 +53,8 @@ export default function LiveParticipantApp() {
   const [pending, setPending] = useState<PendingWrite | null>(() => session.pending())
   const [serverClock, setServerClock] = useState<{ value: number; measured: number } | null>(null)
   const [, tick] = useState(0)
+  const content = useRef<HTMLDivElement>(null)
+  const lastFocusedScreen = useRef<string | null>(null)
   const running = useRef(false)
   const epoch = useRef(0)
   const mounted = useRef(false)
@@ -140,10 +143,24 @@ export default function LiveParticipantApp() {
   const clockNow = () => serverClock ? serverClock.value + performance.now() - serverClock.measured : Date.now()
   const home = () => { setError(''); setScreen('home') }
   const modifyAllowed = Boolean(active && now !== null && Date.parse(active.scheduledAt) > now && !pending)
+  // 실제 화면 전환 때만 제목으로 이동한다. 시계 갱신과 서버 재조회는 포커스를 빼앗지 않는다.
+  const visibleScreen = closed ? 'closed'
+    : !participant && !session.token() ? 'entry'
+    : !loaded ? 'loading'
+    : participant && !participant.onboardingCompleted && !onboardingDismissed ? 'onboarding'
+    : screen
+  useEffect(() => {
+    if (busy || visibleScreen === 'loading' || lastFocusedScreen.current === visibleScreen) return
+    const frame = requestAnimationFrame(() => {
+      focusScreenHeading(content.current)
+      lastFocusedScreen.current = visibleScreen
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [visibleScreen, busy])
   let page
   if (closed) page = <AccessClosedPage />
   else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={code => { void login(code) }} isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} />
-  else if (!loaded) page = <main aria-busy={busy}><p role="status">확인 중…</p></main>
+  else if (!loaded) page = <main aria-label="홈" aria-busy={busy}><h1 className="visually-hidden">홈</h1><p role="status">확인 중…</p></main>
   else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow onClose={() => { setOnboardingDismissed(true); setScreen('home') }} />
   else if (screen === 'name') page = <PromiseTaskNamePage initialValue={taskName} onBack={home} onNext={value => { setTaskName(value); setScreen('time') }} />
   else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt} onBack={value => { setScheduledAt(value); setScreen('name') }} onNext={value => { setScheduledAt(value); setScreen('tool') }} />
@@ -169,6 +186,6 @@ export default function LiveParticipantApp() {
       {session.token() && <button type="button" disabled={busy} onClick={() => { void refresh() }}>서버 상태 다시 확인</button>}
       {pending?.kind === 'create' && <button type="button" disabled={busy} onClick={() => { void write(pending) }}>같은 저장 요청 다시 확인</button>}
     </aside>}
-    <div inert={busy} aria-busy={busy}>{page}</div>
+    <div ref={content} inert={busy} aria-busy={busy}>{page}</div>
   </>
 }
