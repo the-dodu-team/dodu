@@ -1,3 +1,4 @@
+import NotificationPermissionCheck from './NotificationPermissionCheck'
 import { detectOnboardingPlatform } from './detectOnboardingPlatform'
 import { useEffect, useRef, useState } from 'react'
 import OnboardingIntroPage from './OnboardingIntroPage'
@@ -21,6 +22,7 @@ export default function OnboardingMockFlow({
 }: Props) {
   // const [platform, setPlatform] = useState<Platform>('ios')
   const [platform, setPlatform] = useState<Platform>(detectOnboardingPlatform)
+  const [checkBrowserPermission, setCheckBrowserPermission] = useState(false)
   const [step, setStep] = useState<Step>(() => initialStep === 'install' && platform !== 'ios' ? 'notification' : initialStep)
   const [notification, setNotification] = useState<Permission>('default')
   const [camera, setCamera] = useState<Permission>(
@@ -72,10 +74,12 @@ export default function OnboardingMockFlow({
   // 개발 전용 분기는 실제 권한이나 설치 상태를 변경하지 않는다.
   if (!import.meta.env.DEV) return null
 
+  if (checkBrowserPermission) return <NotificationPermissionCheck onClose={() => setCheckBrowserPermission(false)} />
+
   return (
     <div>
       <aside aria-label="개발용 온보딩 테스트" style={{ padding: 16, background: '#ebe9fb', color: '#283044' }}>
-        <p style={{ margin: '0 0 8px' }}>개발용 mock · 실제 설치나 권한 요청은 실행하지 않아요.</p>
+        <button type="button" onClick={() => setCheckBrowserPermission(true)}>실제 알림 권한 확인</button><p style={{ margin: '0 0 8px' }}>개발용 mock · 실제 설치나 권한 요청은 실행하지 않아요.</p>
         <label style={{ display: 'block' }}>
           테스트 환경
           <select
@@ -125,3 +129,4 @@ export default function OnboardingMockFlow({
     </div>
   )
 }
+
