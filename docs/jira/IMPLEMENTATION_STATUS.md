@@ -10,6 +10,36 @@
 - Figma: 최종 파일 스크린샷은 확인했으나 지정 노드의 구조화된 디자인 컨텍스트 선택 오류로 정확한 치수·컴포넌트 매핑은 확인하지 못함. 임의의 픽셀 단위 보정은 하지 않음.
 - 테스트: FE API 계약 테스트 추가. `npm run verify` 성공: 보안 스캔 335개 Git-visible 파일, FE 테스트 4종, lint/build, 백엔드 232건, Flyway V1~V9/Testcontainers PostgreSQL, 패키지 빌드.
 
+## 2026-11-02 / Swagger 실행 중 발견한 입장 API 결함
+
+- 로컬 Swagger 실행에서 `POST /api/access/enter`가 `participant_device.last_seen_at`의 Instant 바인딩 오류로 HTTP 500을 반환함.
+- `ParticipantAccessController`의 기기 생성·갱신 SQL 시간 파라미터를 PostgreSQL JDBC가 인식하는 `Timestamp`로 변환함.
+- 수정 후 Swagger 실제 결과를 이어서 기록하며, 수정 전 500은 실패 결과로 남김.
+- 추가 확인: 수정 전 UUID 형식 세션은 입장 200 후 후속 API가 401이 됨. `SessionToken.generate` 사용으로 발급·인증 형식을 통일함.
+
+## 2026-11-02 / 로컬 Swagger 실제 실행 결과
+
+실행 환경: `http://127.0.0.1:8080`, Swagger UI `/swagger-ui/index.html`, OpenAPI `/v3/api-docs`, PostgreSQL 16 Docker, 합성 테스트 참가자. 접근 코드·토큰·사진 원문은 기록하지 않음.
+
+| 항목 | 실제 결과 |
+|---|---|
+| Swagger UI / OpenAPI | UI 200 / OpenAPI 200, 17개 path 노출 |
+| A-01 참가자 입장 | 200, 세션 토큰 발급 |
+| A-02 잘못된 코드 | 401 |
+| A-03 재입장 후 기존 세션 | 기존 토큰 401, 신규 토큰 200 |
+| A-04 토큰 없음 | 400 |
+| B-01 약속 생성 | 200 |
+| B-11 동일 멱등성 키 재요청 | 200, 동일 promise 반환 |
+| C-01 예정 시간 수정 | 200, version 1 |
+| C-03 2차 수정 | 409 |
+| D-01 약속 취소 | 200 |
+| E-01 T 이전 사진 제출 | 409 `PHOTO_WINDOW_CLOSED` |
+| E-history 인증 이력 조회(판정 전) | 404 |
+| 자기보고 조회(대상 없음) | 404 |
+| G-06 알림 조회(발송 데이터 없음) | 200, 빈 배열 |
+
+직접 실행하지 않은 항목: 실제 AI callback, Push provider 수신·재시도, T/T+10/T+20 시간 조작 시나리오, Supabase 사진 저장소 운영 연결.
+
 이 파일은 구현 완료 범위와 Jira 추적 상태를 함께 기록한다. 구현이 완료된 항목은 관련 티켓의 완료 조건과 검증 결과를 남긴다. 원격 Jira 상태를 변경할 수 없는 경우에는 완료로 표시하지 않고 사유를 기록한다.
 
 ## 2026-10-25 현재 Sprint 3 상태 및 dev 반영

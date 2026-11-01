@@ -1,5 +1,15 @@
 # 개발 결정 기록
 
+## DEV-20261102-02 Swagger 실제 입장 API JDBC 시간값 수정
+
+- 배경: 로컬 Swagger 실행에서 `POST /api/access/enter`가 참가자 기기 생성·갱신 시 PostgreSQL JDBC 500을 반환함.
+- 원인: `JdbcTemplate`에 `java.time.Instant`를 직접 전달해 PostgreSQL timestamptz 바인딩 타입을 추론하지 못함.
+- 선택: 해당 SQL 파라미터를 `Timestamp.from(Instant)`로 변환해 기존 DB 스키마와 명시적으로 맞춤.
+- 검증: 수정 후 로컬 Swagger에서 입장·세션 발급부터 약속·알림 흐름을 재실행하고, 관련 통합 테스트를 확인.
+
+- 추가 원인: 입장 응답은 UUID 연결 문자열을 발급해 `SessionToken`의 43자 Base64URL 형식을 위반했고, 후속 인증이 401로 거절됨.
+- 수정: 세션 발급을 공통 `SessionToken.generate`로 통일해 저장 해시와 Authorization 파서의 계약을 일치시킴.
+
 ## DEV-20261102-01 FE 실제 API 흐름 통합
 
 - 배경: 웹 FE의 약속·사진·이력·자기보고·알림 화면을 mock 흐름에서 실제 Dodu API로 전환해야 함.

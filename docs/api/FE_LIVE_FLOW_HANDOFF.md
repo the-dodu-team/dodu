@@ -18,7 +18,7 @@
 
 - 자동 검증: FE build/lint와 API 계약 테스트 실행 대상.
 - 백엔드 자동 검증: 기존 MockMvc/Testcontainers 테스트에서 약속·사진·이력·자기보고·알림 소유권 및 상태 경계를 확인.
-- Swagger 수동 검증: 실제 배포 주소·접근 코드·토큰이 필요한 항목은 사용자 환경에서 실행 전까지 `⏳`.
+- Swagger 수동 검증: 로컬 Swagger UI/OpenAPI 200, 입장 200, 약속 생성·조회·멱등·수정·취소·알림 조회를 확인. 사진 T 이전 제출은 정책대로 409 `PHOTO_WINDOW_CLOSED`. 실제 배포·Push·AI 운영 검증은 별도.
 - 운영 검증: 외부 사진 저장소, AI worker callback, Push provider, 모바일 기기 QA가 준비된 뒤 수행.
 
 민감한 사진 원문, 접근 코드, API 자격정보는 이 문서와 테스트 출력에 기록하지 않는다.
