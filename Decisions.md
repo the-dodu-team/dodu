@@ -812,3 +812,10 @@
 - 대안: 관리형 저장소는 자동 청구 조건을 검토한 뒤에만 다시 선택한다. PostgreSQL bytea는 데이터베이스 부담과 백업·삭제 복구 문제 때문에 운영 대안으로 선택하지 않는다.
 - 영향: 사진 원본 운영 연동은 보류되며, 자동 결제 없는 고정비·선불형 호스팅과 백업 방식을 정해야 SCRUM-83 구현을 시작할 수 있다.
 - 검증: `docs/operations/PHOTO_STORAGE.md`에 자동 결제 금지, 개발용 볼륨, provider 확정 후 권한·보관·삭제 절차를 기록했다. 실제 provider smoke test와 통합 테스트는 운영 방식 확정 후 수행한다.
+## DEV-20261101-03 — React Native 전환을 위한 플랫폼 경계
+
+- 배경: 웹 UI를 앱스토어용 React Native 화면으로 전환할 가능성이 있으므로, 화면 코드가 브라우저 API와 API 계약에 직접 묶이지 않게 할 필요가 있다.
+- 결정: API 응답 타입은 `frontend/src/shared/apiTypes.ts`, 저장소 접근은 `KeyValueStorage`와 `ParticipantSessionStore`, HTTP 호출은 기존 typed API client에 둔다. 웹은 브라우저 storage adapter를 주입하고 RN은 AsyncStorage 계열 adapter를 주입한다.
+- 영향: 현재 mock 화면을 즉시 RN으로 재작성하지 않고, API·세션·도메인 규칙을 먼저 공유 가능하게 만든다. 웹 전용 UI와 RN UI는 별도 presentation layer로 유지한다.
+- 대안: 웹 DOM/CSS를 RN에서 직접 재사용하거나 화면마다 `localStorage`·`window`를 호출하는 방식은 플랫폼 전환 비용과 테스트 격리를 악화시키므로 선택하지 않는다.
+- 검증: 플랫폼 adapter 테스트를 추가하고 프런트 TypeScript build·lint·기존 화면 테스트에 포함한다.

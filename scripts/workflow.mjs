@@ -80,6 +80,7 @@ try {
     await npm(['run', 'security:scan'])
     await npm(['run', 'test:home', '--workspace', 'frontend'])
     await npm(['run', 'test:photo', '--workspace', 'frontend'])
+    await npm(['run', 'test:platform', '--workspace', 'frontend'])
     await npm(['run', 'lint', '--workspace', 'frontend'])
     await npm(['run', 'build', '--workspace', 'frontend'])
     await maven('verify')

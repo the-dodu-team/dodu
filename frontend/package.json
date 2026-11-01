@@ -9,6 +9,7 @@
     "lint": "oxlint src tests vite.config.ts",
     "test:home": "node tests/home-history.test.cjs",
     "test:photo": "node tests/photo-auth.test.cjs",
+    "test:platform": "node tests/platform-adapters.test.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

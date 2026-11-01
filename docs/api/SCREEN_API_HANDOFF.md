@@ -74,3 +74,9 @@ S07은 이 초안에서 별도 API 책임을 배정하지 않았다. 화면 번�
 - [ ] 모듈별 FE/BE 인수와 승인 근거 연결
 
 앱 코드·DB 마이그레이션·실제 권한 요청은 이 증분에서 변경하지 않는다.
+## 1.3 플랫폼 중립 FE 기반 — 2026-11-01
+
+- `src/shared/apiTypes.ts`에 API 성공·오류 envelope, 알림, 인증 이력, 자기보고 응답 타입을 화면과 분리했다.
+- `src/platform/storage.ts`는 브라우저 저장소와 React Native의 AsyncStorage 계열 구현이 같은 `KeyValueStorage` 계약을 사용할 수 있게 한다.
+- `ParticipantSessionStore`는 세션 토큰과 기기 식별자 저장 정책을 UI에서 분리한다. 저장소 구현은 토큰을 로그나 URL에 기록하지 않는다.
+- 현재 웹 미리보기는 계속 기존 mock 흐름을 사용한다. RN 화면 전환은 후속 단계에서 같은 API client·shared 타입·도메인 함수를 사용한다.

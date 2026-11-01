@@ -364,3 +364,8 @@
 - 정책: 공식 개입 종료시각+30일을 DB 기준으로 삭제 worker가 처리하며, provider 확정 후에만 Lifecycle 안전망을 추가한다. 브라우저·DB·로그에는 저장소 비밀값과 공개 URL을 남기지 않는다.
 - 문서: `docs/operations/PHOTO_STORAGE.md`, `Decisions.md`의 `DEV-20261101-02`.
 - 남은 범위: 자동 결제 없는 운영 저장소·배포 호스트·백업 방식 확정, 실제 adapter 구현, 업로드/조회/삭제 smoke test, 삭제 worker와 통합 테스트. 운영 방식이 확정되기 전에는 완료 처리하지 않는다.
+### SCRUM-87·76 / React Native 전환 기반 — 2026-11-01
+
+- 구현: API 타입을 shared 영역으로 분리하고, 브라우저/RN 저장소를 교체할 수 있는 `KeyValueStorage`·`ParticipantSessionStore`를 추가했다. 기존 mock 화면은 변경하지 않았다.
+- 검증: `test:platform`에 저장소·세션 어댑터 테스트를 추가하고 전체 프런트 검증 workflow에 포함했다.
+- 남은 범위: RN 프로젝트 생성, 네이티브 화면 재작성, 카메라·알림 권한 adapter, 실제 세션·약속 API 화면 연결과 기기 QA.
