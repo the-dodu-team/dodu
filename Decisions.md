@@ -834,3 +834,11 @@
 - 근거: 새 Figma URL과 metadata 조회 결과의 페이지 ID·페이지명 일치.
 - 영향: 이후 Figma 화면 보정·상태 화면 검토는 새 파일을 기준으로 진행한다. 기존 정책·API 계약과 충돌하면 정책 원문과 승인 결정을 우선한다.
 - 검증: Figma top-level metadata 조회 성공. 지정 노드 screenshot은 MCP timeout으로 시각 검증하지 못했으며, 코드 반영과 화면 QA는 후속 작업이다.
+
+## DEV-20261101-06 — AI worker 응답 계약 연결
+
+- 배경: 전달된 DINOv2-base FastAPI worker의 실제 응답 형식과 기존 Dodu AI adapter의 모델 버전 매핑을 대조할 필요가 있다.
+- 결정: Dodu는 `POST /predict/batch`에 사진 1장을 `files` multipart로 전송하고, `laptop`·`book`은 `Completed`, `other`는 `Rejected/AI_OTHER`로 매핑한다. worker의 현재 모델 식별 필드 `model`도 `model_version`의 대체값으로 저장한다.
+- 근거: worker 코드·README·실제 `/health`, `/predict`, `/predict/batch` 응답 확인.
+- 영향: AI endpoint와 사진 저장소가 환경변수·`PhotoObjectReader`로 연결되면 모델 버전이 이력에 보존된다. AI 운영 완료나 Jira 완료 처리는 하지 않는다.
+- 검증: 단건 laptop 200, 3장 batch(book/other/laptop) 200, 백엔드 mapper 테스트 보강. API 자격정보는 출력·문서·커밋에 포함하지 않았다.

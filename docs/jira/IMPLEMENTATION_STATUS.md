@@ -267,6 +267,14 @@
 - 검증: AI 응답 매핑 3개 단위 테스트, 로컬 HTTP server를 이용한 실제 multipart 호출 2개 기능 테스트, Docker/Testcontainers 복구 worker 2개 기능 테스트가 통과했다.
 - 남은 범위: 실제 외부 사진 저장소 provider 구현, 운영 endpoint smoke test, AI 서버 운영 QA. provider와 저장소가 확정되기 전에는 SCRUM-85를 완료 처리하지 않는다.
 
+### SCRUM-85 / AI worker 실제 응답 대조 — 2026-11-01
+
+- 확인: 전달된 DINOv2-base FastAPI worker의 `/health`, `/predict`, `/predict/batch` 응답을 실제 호출로 확인했다. `laptop`·`book`·`other` 결과와 `model: dinov2-base-prototype`을 확인했다.
+- 변경: Dodu mapper가 `model_version`뿐 아니라 현재 worker의 `model` 필드도 모델 버전으로 저장하도록 보강했다. AI worker 계약을 `docs/api/AI_WORKER_CONTRACT.md`에 기록했다.
+- 보안: AI 패키지·샘플·공개 URL·인증 비밀값이 저장소에 올라가지 않도록 외부 bundle 디렉터리를 `.gitignore`에 추가했다.
+- 검증: `AiPhotoEvaluationRecoveryHandlerTests` 통과, `npm run security:scan` 통과, 실제 AI 단건·3장 batch HTTP 200 확인.
+- 남은 범위: 실제 사진 저장소 `PhotoObjectReader` 구현·운영 endpoint 환경변수 등록·AI 담당자 운영 QA. SCRUM-85는 완료 처리하지 않는다.
+
 ### 사진 재사용 정책 보강 — 2026-10-29
 
 - 상태: 같은 약속 내 재시도 허용과 다른 날짜 사진 재사용 차단을 구현·검증했다.

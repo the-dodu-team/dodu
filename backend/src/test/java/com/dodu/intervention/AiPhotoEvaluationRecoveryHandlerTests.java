@@ -37,7 +37,7 @@ class AiPhotoEvaluationRecoveryHandlerTests {
         server.createContext("/predict/batch", exchange -> {
             receivedKey.set(exchange.getRequestHeaders().getFirst("x-api-key"));
             requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-            respond(exchange, 200, "{\"candidates\":[{\"label\":\"laptop\"}]}");
+            respond(exchange, 200, "{\"model\":\"dinov2-base-prototype\",\"results\":[{\"filename\":\"photo.jpg\",\"prediction\":\"laptop\"}]}");
         });
 
         var handler = new AiPhotoEvaluationRecoveryHandler(new ObjectMapper(),
@@ -46,6 +46,7 @@ class AiPhotoEvaluationRecoveryHandlerTests {
         var result = handler.recover(job());
 
         assertEquals(PhotoEvaluationRecoveryHandler.Outcome.COMPLETED, result.outcome());
+        assertEquals("dinov2-base-prototype", result.modelVersion());
         assertEquals("test-secret", receivedKey.get());
         assertTrue(requestBody.get().contains("name=\"files\""));
         assertTrue(requestBody.get().contains("filename=\"photo\""));
