@@ -803,3 +803,12 @@
 - 영향: 개발·기본 운영 환경은 헤더 위조에 안전한 보수적 동작을 유지합니다. 실제 배포 CIDR은 배포 구조 확정 후 환경변수로 주입해야 하며 소스나 저장소에 운영 주소를 고정하지 않습니다.
 - 검증: IPv4 CIDR, IPv6 CIDR, 다중 `X-Forwarded-For`, 미신뢰 직접 연결의 단위 테스트와 전체 빌드로 확인합니다.
 - 남은 작업: 실제 배포 프록시 목록과 원본 IP 헤더 규칙을 운영 환경에서 확정하고 공격·오차단 QA를 수행해야 합니다.
+## DEV-20261101-02 — 사진 원본 저장소와 운영 자격정보 경계
+
+- 배경: 현재 Dodu는 `photo_asset` 메타데이터와 `storage_key`만 저장하고 실제 객체 저장소 provider는 연결하지 않았다. 사진 원본을 PostgreSQL이나 공개 URL에 두면 보관·삭제·접근 통제가 불명확해진다.
+- 결정: Sprint 3 기본 provider는 AWS S3 private bucket으로 한다. 백엔드는 `PhotoObjectStore` 경계를 통해 업로드·조회·삭제하고, 브라우저에는 저장소 자격정보나 공개 URL을 전달하지 않는다. 객체는 무작위 UUID 키와 SSE-S3로 보호한다.
+- 자격정보: AWS 실행 IAM Role을 우선 사용한다. AWS 외부 배포에서만 Secret Manager의 제한된 서비스 자격정보를 사용하며, 환경별로 분리하고 버킷 관리자 권한을 부여하지 않는다. 실제 값은 저장소·로그·문서에 기록하지 않는다.
+- 보관: 공식 개입 종료시각+30일을 DB 삭제 기준으로 삼고, 삭제 worker가 객체 삭제 후 메타데이터를 정리한다. S3 Lifecycle은 worker 장애 대비 안전망으로만 둔다.
+- 대안: 사진을 PostgreSQL bytea에 저장하거나 공개 CDN URL을 제공하는 방식은 데이터베이스 부담과 접근 통제·삭제 증적 문제 때문에 선택하지 않는다. Cloudflare R2/GCS는 S3 호환 adapter의 후속 provider로 열어둔다.
+- 영향: provider 선택과 보안 경계는 확정되지만 실제 AWS 계정·리전·버킷·IAM 발급은 운영 담당자가 수행해야 한다. 이 결정만으로 SCRUM-83을 완료 처리하지 않는다.
+- 검증: `docs/operations/PHOTO_STORAGE.md`에 권한·보관·삭제·운영 작업을 기록했다. 실제 provider smoke test와 통합 테스트는 자격정보 발급 후 수행한다.

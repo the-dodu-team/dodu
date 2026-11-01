@@ -358,3 +358,9 @@
 - 완료로 표시하지 않는 범위: 실제 FCM/Web Push 자격정보·endpoint·발송/수신 QA, 실제 사진 객체 저장소와 AI worker, FE 화면의 세션·약속 실데이터 연결 및 사용자 QA, 모든 API envelope 전환 승인, 실제 배포 프록시/CIDR와 다중 노드 운영 QA, Figma 최종 화면 비교, Sprint 3 최종 승인.
 - Figma 차단: Jira가 가리키는 최신 핸드오프 링크의 유효한 디자인 노드가 현재 연결 세션에서 확인되지 않아 화면을 추정 구현하지 않는다. 유효한 노드 URL 또는 최신 handoff가 필요하다.
 - Jira: SCRUM-70·76·83·84·85·86은 외부 연동·인수 조건이 남아 진행 중으로 유지하고, SCRUM-87은 FE 사용자 검증 전까지 해야 할 일/진행 범위로 유지한다.
+### SCRUM-83 / 사진 원본 저장소 선택 — 2026-11-01
+
+- 결정: AWS S3 private bucket, SSE-S3, 무작위 객체 키, 백엔드 `PhotoObjectStore` 경계를 사용한다. AWS 실행 IAM Role을 우선하고, 외부 배포는 Secret Manager의 제한된 자격정보를 사용한다.
+- 정책: 공식 개입 종료시각+30일을 DB 기준으로 삭제 worker가 처리하며, S3 Lifecycle은 늦은 안전망으로만 둔다. 브라우저·DB·로그에는 저장소 비밀값과 공개 URL을 남기지 않는다.
+- 문서: `docs/operations/PHOTO_STORAGE.md`, `Decisions.md`의 `DEV-20261101-02`.
+- 남은 범위: AWS 계정·리전·버킷·IAM Role 발급, 실제 adapter 구현, 업로드/조회/삭제 smoke test, 삭제 worker와 통합 테스트. 운영 자격정보가 발급되기 전에는 완료 처리하지 않는다.
