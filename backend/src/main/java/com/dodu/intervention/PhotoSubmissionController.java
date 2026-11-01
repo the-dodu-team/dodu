@@ -154,6 +154,8 @@ public class PhotoSubmissionController {
                 insert into photo_asset(id, storage_key, content_type, byte_size, sha256_hash, received_at)
                 values (?, ?, ?, ?, ?, ?)
                 """, assetId, storageKey, contentType, content.length, photoHash, timestamp(now));
+        jdbc.update("update photo_asset set delete_due_at = ? where id = ?",
+                timestamp(PhotoRetentionWorker.deleteDueAt(promise.interventionEndsAt())), assetId);
         int insertedCount = jdbc.update("""
                 insert into auth_attempt(id, promise_id, client_request_id, request_fingerprint, tool_type,
                                          processing_status, request_received_at, valid_received_at, photo_asset_id)

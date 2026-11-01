@@ -850,3 +850,11 @@
 - 근거: 사진 원문은 PostgreSQL·로그·Git에 저장하지 않고 private object storage에서만 읽어야 한다는 정책과 SCRUM-89 범위.
 - 영향: 사진 제출 시 adapter가 원본을 저장하고, recovery worker가 같은 storage key로 읽어 AI worker에 전달하며, 삭제 경로에서 원본을 제거할 수 있다. provider 설정 전 운영 완료로 표시하지 않는다.
 - 검증: Supabase HTTP adapter의 업로드·조회·삭제·인증 헤더 단위 테스트, AI mapper 테스트, 백엔드 package 빌드 통과. 실제 Supabase bucket smoke test는 외부 설정 후 실행한다.
+
+## DEV-20261101-08 — 사진 30일 보관·삭제 worker
+
+- 배경: 정책의 행동검증 종료 후 30일 보관과 원본 삭제 조건을 실제 저장소 adapter와 연결해야 한다.
+- 결정: 사진 저장 시 개입 종료시각+30일을 `photo_asset.delete_due_at`에 기록하고, due worker가 provider 원본 삭제 성공 후 `auth_attempt.photo_asset_id` 연결과 삭제 metadata를 정리한다. provider 실패 시 행을 남겨 다음 실행에서 재시도한다.
+- 근거: 서비스 운영 정책의 30일 보관·자동삭제와 참가자 삭제 요청 처리 기준.
+- 영향: 삭제 전까지 원본은 private storage에만 존재하며, 삭제 실패가 DB metadata 선삭제로 이어지지 않는다. 실제 provider smoke test와 참가자 삭제 API 연동은 남아 있다.
+- 검증: retention deadline 단위 테스트, Supabase adapter 단위 테스트, 백엔드 package 및 targeted test 통과. Docker 기반 DB migration/worker 통합 검증은 Docker 환경 부재로 미실행.

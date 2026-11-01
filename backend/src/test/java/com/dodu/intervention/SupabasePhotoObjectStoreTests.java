@@ -53,6 +53,12 @@ class SupabasePhotoObjectStoreTests {
         assertEquals("POSTGETDELETE", methods.get());
     }
 
+    @Test
+    void retentionDeadlineIsThirtyDaysAfterInterventionEnd() {
+        var endsAt = java.time.Instant.parse("2026-11-01T00:00:00Z");
+        assertEquals(endsAt.plus(java.time.Duration.ofDays(30)), PhotoRetentionWorker.deleteDueAt(endsAt));
+    }
+
     private static void respond(com.sun.net.httpserver.HttpExchange exchange, int status, String body)
             throws java.io.IOException { respond(exchange, status, body.getBytes(StandardCharsets.UTF_8)); }
 

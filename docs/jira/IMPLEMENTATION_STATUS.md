@@ -283,6 +283,8 @@
 - 상태: 해야 할 일. 외부 설정과 구현·운영 QA 완료 전까지 완료 처리하지 않는다.
 - 구현 증분: `SupabasePhotoObjectStore` 업로드·조회·삭제 adapter와 사진 제출 시 선택적 원본 저장 연결을 추가했다. `DODU_PHOTO_STORAGE_PROVIDER`가 설정되지 않으면 저장소 호출을 활성화하지 않는다.
 - 검증: adapter 단위 테스트와 AI handler 테스트 통과, 백엔드 package 통과. 전체 통합 테스트 40건은 Docker 환경 부재로 실행 실패.
+- 추가 구현: `delete_due_at` 기반 30일 보관·삭제 worker를 추가하고 provider 삭제 성공 후 DB 연결 metadata를 정리하도록 했다. provider 실패 시 다음 실행에서 재시도한다.
+- 남은 범위: 실제 Supabase migration·bucket smoke test, 참가자 삭제 요청 연동, Docker 통합 검증과 운영 QA.
 
 ### 사진 재사용 정책 보강 — 2026-10-29
 

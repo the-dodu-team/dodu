@@ -43,7 +43,7 @@
 
 ## 남은 연결 조건
 
-- 실제 사진 저장소 `PhotoObjectReader` 구현
+- 운영 Supabase bucket과 환경변수 등록
 - 운영 AI endpoint와 환경변수 등록
 - 운영 worker 장애·재시도·철회 후 결과 QA
 - AI 담당자의 모델 교체·운영 장애 대응 확인
