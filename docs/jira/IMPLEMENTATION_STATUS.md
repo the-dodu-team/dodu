@@ -1,5 +1,15 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-02 / FE 실제 API 흐름·검증 보강
+
+- 대응 티켓: SCRUM-87, SCRUM-76. 외부 배포·Push·AI worker 연결은 별도 운영 조건으로 남김.
+- FE 약속 흐름: `POST /api/promises`, `PATCH /api/promises/{id}/schedule`, `POST /api/promises/{id}/cancel` 연결. 멱등성 키와 `expectedVersion`을 실제 호출에 사용.
+- FE 사진 흐름: JPG/PNG 단일 파일을 `POST /api/promises/{id}/photo-attempts`로 제출하고 `processingStatus`를 화면에 표시.
+- FE 이력·자기보고·알림: 인증 이력, 자기보고 상태/건너뛰기, 알림 조회·읽음 처리를 실제 API client로 연결. 민감한 사진 원문과 접근 자격정보는 화면·로그에 노출하지 않음.
+- Swagger 체크리스트: 이번 변경에서 직접 Swagger를 실행한 결과는 기록하지 않음. 기존 MockMvc/Testcontainers 결과를 근거로 자동 검증 범위를 갱신하며, 수동 Swagger 결과 칸은 사용자 환경 확인 전까지 `⏳`로 유지.
+- Figma: 최종 파일 스크린샷은 확인했으나 지정 노드의 구조화된 디자인 컨텍스트 선택 오류로 정확한 치수·컴포넌트 매핑은 확인하지 못함. 임의의 픽셀 단위 보정은 하지 않음.
+- 테스트: FE API 계약 테스트 추가. `npm run verify` 성공: 보안 스캔 335개 Git-visible 파일, FE 테스트 4종, lint/build, 백엔드 232건, Flyway V1~V9/Testcontainers PostgreSQL, 패키지 빌드.
+
 이 파일은 구현 완료 범위와 Jira 추적 상태를 함께 기록한다. 구현이 완료된 항목은 관련 티켓의 완료 조건과 검증 결과를 남긴다. 원격 Jira 상태를 변경할 수 없는 경우에는 완료로 표시하지 않고 사유를 기록한다.
 
 ## 2026-10-25 현재 Sprint 3 상태 및 dev 반영
