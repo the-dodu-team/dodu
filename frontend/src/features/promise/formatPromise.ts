@@ -20,3 +20,11 @@ export function formatStartTime(startTime: string) {
 
   return `${period} ${hour % 12 || 12}:${minutes}`
 }
+
+// 숫자 날짜는 브라우저 로캘의 마침표 대신 슬래시로 표시한다.
+export function formatPromiseDateTime(timestamp: number) {
+  const kst = new Date(timestamp + 9 * 60 * 60_000)
+  if (!Number.isFinite(timestamp)) return ''
+  const time = String(kst.getUTCHours()).padStart(2, '0') + ':' + String(kst.getUTCMinutes()).padStart(2, '0')
+  return kst.getUTCMonth() + 1 + '/' + kst.getUTCDate() + ' ' + formatStartTime(time)
+}

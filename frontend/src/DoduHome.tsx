@@ -1,3 +1,5 @@
+import { getHomeState, interventionClosed } from './features/home/homeState'
+import './features/home/home-states.css'
 import { getFinalPromiseRecord } from './features/promise/promiseHistory'
 import type { FinalPromiseRecord } from './features/promise/promiseHistory'
 import { useEffect, useState } from 'react'
@@ -28,6 +30,7 @@ type DoduHomeProps = {
   onEdit: () => void
   onViewAll?: () => void
   onVerify: () => void
+  interventionEndsAt?: number
 }
 
 export default function DoduHome({
@@ -37,6 +40,7 @@ export default function DoduHome({
   onEdit,
   onViewAll,
   onVerify,
+  interventionEndsAt,
 }: DoduHomeProps) {
   const [now, setNow] = useState(Date.now)
   const today = getKstDateKey()
@@ -56,7 +60,9 @@ export default function DoduHome({
   // 현재 앱은 약속 한 개를 보관하므로 오늘 날짜로 제한하지 않고 표시한다.
   // 인증 진행 중인 약속도 시작 시각이 지났다는 이유만으로 숨기지 않는다.
   const finalResult = getFinalPromiseRecord(promise, now)
-  const upcomingPromise = finalResult || promise?.status === 'techFailed' ? null : promise
+  const state = getHomeState(promise, now)
+  const ended = interventionClosed(now, interventionEndsAt)
+  const upcomingPromise = ['ended', 'empty', 'blocked'].includes(state) ? null : promise
   const finalRecords = finalResult ? [...pastResults, finalResult] : pastResults
 
   /*
@@ -97,6 +103,8 @@ export default function DoduHome({
         }
         onCreate={onCreate}
         onEdit={onEdit}
+        canCreate={!ended && state !== 'blocked'}
+        canEdit={!ended && state === 'scheduled'}
       />
 
       <WeeklyPromiseCard
@@ -106,11 +114,12 @@ export default function DoduHome({
       />
 
       <footer className="home-footer">
-        {promise && (
+        {promise && !['cancelled', 'withdrawn', 'permissionBlocked'].includes(promise.status) && (
           <PromiseAuthPreview
             key={promise.date + promise.startTime}
             promise={promise}
             onVerify={onVerify}
+            interventionEndsAt={interventionEndsAt}
           />
         )}
 

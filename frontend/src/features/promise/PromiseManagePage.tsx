@@ -1,3 +1,4 @@
+import { formatPromiseDateTime } from './formatPromise'
 import { useRef, useState } from 'react'
 import arrowLeftIcon from '../../assets/icons/arrow-left.svg'
 import clockIcon from '../../assets/icons/clock-filled-gray.svg'
@@ -31,14 +32,14 @@ export default function PromiseManagePage({
   )
 
   const timeLabel = Number.isFinite(timestamp)
-    ? new Intl.DateTimeFormat('ko-KR', {
+    ? formatPromiseDateTime(timestamp) /* 기존 날짜 포맷: new Intl.DateTimeFormat('ko-KR', {
         timeZone: 'Asia/Seoul',
         month: 'numeric',
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
-      }).format(new Date(timestamp))
+      }).format(new Date(timestamp)) */
     : '시작 시간을 확인해 주세요'
 
   function openCancelDialog() {
