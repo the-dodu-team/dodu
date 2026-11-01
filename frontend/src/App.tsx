@@ -30,6 +30,9 @@ import type {
 
 import ParticipantEntryPage from './features/access/ParticipantEntryPage'
 import OnboardingMockFlow from './features/onboarding/OnboardingMockFlow'
+import { createDoduAccessApi } from './api/doduApi'
+import { ParticipantSessionStore } from './platform/participantSession'
+import { createBrowserStorage } from './platform/storage'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -169,7 +172,43 @@ export default function App() {
     )
   }
 
+  if (import.meta.env.VITE_DODU_API_BASE_URL) {
+    return <LiveParticipantEntry />
+  }
+
   return <HomePrototype interventionEndsAt={interventionEndsAt} />
+}
+
+function LiveParticipantEntry() {
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  async function handleSubmit(code: string) {
+    setErrorMessage('')
+    setIsSubmitting(true)
+    try {
+      const storage = createBrowserStorage(window.localStorage)
+      const sessions = new ParticipantSessionStore(storage)
+      const deviceKey = await sessions.getOrCreateDeviceKey()
+      const response = await createDoduAccessApi(import.meta.env.VITE_DODU_API_BASE_URL).enter(code, deviceKey)
+      await sessions.saveToken(response.accessToken)
+      window.location.reload()
+    } catch (error) {
+      const codeValue = error instanceof Error ? error.message : 'ACCESS_REQUIRED'
+      setErrorMessage(codeValue === 'ACCESS_REQUIRED' ? '접근 코드를 확인해 주세요.' : '입장할 수 없습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <ParticipantEntryPage
+      isSubmitting={isSubmitting}
+      errorMessage={errorMessage}
+      onClearError={() => setErrorMessage('')}
+      onSubmit={handleSubmit}
+    />
+  )
 }
 
 // 개발 환경의 화면 분기 확인용이다. 실제 인증이나 세션 저장은 실행하지 않는다.

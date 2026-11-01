@@ -399,3 +399,8 @@
 - 구현: 세션 입장, 약속 CRUD, multipart 사진 제출, 참가자 철회 client를 추가하고 raw 응답과 공통 envelope 응답을 구분했다.
 - 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check` 통과.
 - 미완료: 실제 FE 화면에서 토큰 발급·약속·사진 API를 연결하는 사용자 흐름 QA, 운영 API base URL 등록, 실제 Supabase·AI worker 연동.
+### FE 참가자 입장 화면 실제 API 전환
+
+- 구현: `VITE_DODU_API_BASE_URL` 설정 시 입장 화면이 실제 `/api/access/enter`를 호출하고 브라우저 세션 저장소에 토큰을 보관한다. 미설정 환경은 기존 mock preview를 유지한다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check` 통과.
+- 미완료: 실제 Render API 주소를 넣은 운영 FE smoke test 및 약속·사진·이력 화면 연결.

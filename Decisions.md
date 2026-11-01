@@ -873,3 +873,10 @@
 - 근거: 현재 백엔드 계약이 혼재하므로 응답 형식을 임의로 바꾸지 않고 실제 endpoint 계약을 보존해야 한다. 세션 토큰은 API client 외부의 `ParticipantSessionStore`가 관리한다.
 - 영향: 이후 화면은 mock fetch를 반복하지 않고 같은 client를 사용해 웹·PWA·향후 RN adapter에서 재사용할 수 있다. 실제 화면을 운영 API로 전환하는 작업과 외부 환경 QA는 별도 범위다.
 - 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.
+## DEV-20261101-11 FE 입장 화면의 운영 API 전환 방식
+
+- 배경: 기존 참가자 입장 화면은 개발 preview에서만 mock 코드를 처리하고 있었다.
+- 결정: `VITE_DODU_API_BASE_URL`이 설정된 환경에서만 실제 입장 API를 호출하고, 브라우저 저장소의 `ParticipantSessionStore`에 세션 토큰을 저장한다. 환경변수가 없으면 기존 preview를 보존한다.
+- 근거: 배포 전 API 주소가 없는 로컬 디자인 preview를 깨지 않으면서 동일한 화면으로 실제 세션 흐름을 검증할 수 있다.
+- 영향: 운영 FE는 접근 코드·device key·세션 발급을 실제 백엔드와 연결할 수 있고, API 주소는 빌드 환경 설정으로 교체할 수 있다. 약속·사진·이력 화면의 실제 wiring은 후속 작업이다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.
