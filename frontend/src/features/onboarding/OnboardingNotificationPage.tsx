@@ -6,6 +6,8 @@ type OnboardingNotificationPageProps = {
   isDenied: boolean
   recoveryText: string
   attempt: number
+  requestDisabled?: boolean
+  requestBusy?: boolean
   onRequest: () => void
   onBack: () => void
   onClose: () => void
@@ -13,6 +15,8 @@ type OnboardingNotificationPageProps = {
 
 export default function OnboardingNotificationPage({
   totalSteps, isDenied, recoveryText, attempt, onRequest,
+  requestDisabled = false,
+  requestBusy = false,
   onBack,
   onClose,
 }: OnboardingNotificationPageProps) {
@@ -78,6 +82,8 @@ export default function OnboardingNotificationPage({
           type="button"
           className="onboarding-next"
           onClick={onRequest}
+          disabled={requestDisabled || requestBusy}
+          aria-busy={requestBusy}
         >
           {isDenied ? '권한 다시 확인하기' : '알림 권한 허용하기'}
         </button>
