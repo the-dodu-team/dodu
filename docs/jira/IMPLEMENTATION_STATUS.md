@@ -360,7 +360,7 @@
 - Jira: SCRUM-70·76·83·84·85·86은 외부 연동·인수 조건이 남아 진행 중으로 유지하고, SCRUM-87은 FE 사용자 검증 전까지 해야 할 일/진행 범위로 유지한다.
 ### SCRUM-83 / 사진 원본 저장소 선택 — 2026-11-01
 
-- 결정: Cloudflare R2 private bucket, R2 기본 암호화, 무작위 객체 키, 백엔드 `PhotoObjectStore` 경계를 사용한다. R2 API Token은 버킷 단위 최소 권한으로 발급하고 secret 저장소에서만 주입한다.
-- 정책: 공식 개입 종료시각+30일을 DB 기준으로 삭제 worker가 처리하며, R2 Lifecycle은 늦은 안전망으로만 둔다. 브라우저·DB·로그에는 저장소 비밀값과 공개 URL을 남기지 않는다.
+- 결정 변경: 자동 결제를 허용하지 않으므로 R2·Supabase Storage를 운영 provider로 확정하지 않는다. provider 확정 전에는 개발용 비공개 마운트 볼륨만 허용하고 운영 원본 사진 기능은 비활성화한다.
+- 정책: 공식 개입 종료시각+30일을 DB 기준으로 삭제 worker가 처리하며, provider 확정 후에만 Lifecycle 안전망을 추가한다. 브라우저·DB·로그에는 저장소 비밀값과 공개 URL을 남기지 않는다.
 - 문서: `docs/operations/PHOTO_STORAGE.md`, `Decisions.md`의 `DEV-20261101-02`.
-- 남은 범위: Cloudflare 계정·버킷·endpoint·R2 API Token 발급, 실제 adapter 구현, 업로드/조회/삭제 smoke test, 삭제 worker와 통합 테스트. 운영 자격정보가 발급되기 전에는 완료 처리하지 않는다.
+- 남은 범위: 자동 결제 없는 운영 저장소·배포 호스트·백업 방식 확정, 실제 adapter 구현, 업로드/조회/삭제 smoke test, 삭제 worker와 통합 테스트. 운영 방식이 확정되기 전에는 완료 처리하지 않는다.
