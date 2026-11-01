@@ -858,3 +858,11 @@
 - 근거: 서비스 운영 정책의 30일 보관·자동삭제와 참가자 삭제 요청 처리 기준.
 - 영향: 삭제 전까지 원본은 private storage에만 존재하며, 삭제 실패가 DB metadata 선삭제로 이어지지 않는다. 실제 provider smoke test와 참가자 삭제 API 연동은 남아 있다.
 - 검증: retention deadline 단위 테스트, Supabase adapter 단위 테스트, 백엔드 package 및 targeted test 통과. Docker 기반 DB migration/worker 통합 검증은 Docker 환경 부재로 미실행.
+## DEV-20261101-09 참가자 철회 요청의 서버 연동 경계
+
+- 배경: 참가자 삭제 요청은 인증된 참가자 본인만 수행해야 하며, 철회 이후 약속·설문·알림·사진 처리도 같은 상태 전이를 따라야 한다.
+- 선택: `DELETE /api/participant/account`를 추가하고 기존 철회 트랜잭션을 재사용한다. 참가자 ID·접근 코드를 요청 입력으로 받지 않고 세션에서 결정한다. 활성 약속은 `Withdrawn`으로 마감하고, 대기 자기보고·미발송 알림은 중지하며, 사진은 즉시 원본을 지우지 않고 retention worker가 처리하도록 `delete_due_at`을 현재 시각으로 설정한다.
+- 근거: 서버 시간과 세션 소유권을 기준으로 중복·타인 접근을 차단하고, provider 장애가 DB 철회 상태를 되돌리지 않도록 저장소 삭제를 후속 worker로 분리한다.
+- 대안: 참가자 ID를 본문으로 받거나 원본 사진을 요청 처리 중 직접 삭제하는 방식은 권한 혼동과 외부 provider 장애 시 트랜잭션 불일치를 키우므로 채택하지 않는다.
+- 영향: 철회 직후 새 약속·알림·자기보고·사진 판정 결과가 최종 상태를 덮어쓰지 않는다. 실제 provider 삭제는 Supabase 자격정보가 등록된 환경에서 별도 smoke test가 필요하다.
+- 검증: Docker 기반 `mvnw.cmd -q test`, Flyway V1~V9 마이그레이션, `git diff --check`.

@@ -118,6 +118,50 @@ public class OperatorAccessRepository {
                 .update();
     }
 
+    /** 참가자 철회와 동시에 활성 작업과 후속 수집을 멈춘다. 사진 원본은 retention worker가 삭제한다. */
+    public void stopParticipantWork(UUID participantId, Instant now) {
+        jdbc.sql("""
+                update promise
+                   set lifecycle_status = 'Closed', final_outcome = 'Withdrawn',
+                       closed_at = :now, updated_at = :now, row_version = row_version + 1
+                 where participant_id = :participantId
+                   and lifecycle_status in ('Scheduled', 'AuthAvailable', 'Evaluating', 'AuthCompleted', 'AuthIncomplete')
+                """)
+                .param("participantId", participantId)
+                .param("now", utc(now))
+                .update();
+        jdbc.sql("""
+                update validation_survey vs
+                   set lifecycle_status = 'Expired'
+                 where vs.promise_id in (select id from promise where participant_id = :participantId)
+                   and vs.lifecycle_status in ('Pending', 'Prompted', 'Reminded')
+                """)
+                .param("participantId", participantId)
+                .update();
+        jdbc.sql("""
+                update notification_delivery
+                   set lifecycle_status = 'CANCELLED', failure_code = 'PARTICIPANT_WITHDRAWN',
+                       next_attempt_at = null
+                 where participant_id = :participantId
+                   and lifecycle_status in ('SCHEDULED', 'FAILED', 'UNCONFIGURED')
+                """)
+                .param("participantId", participantId)
+                .update();
+        jdbc.sql("""
+                update photo_asset
+                   set delete_due_at = least(coalesce(delete_due_at, :now), :now)
+                 where id in (
+                    select a.photo_asset_id from auth_attempt a
+                    join promise p on p.id = a.promise_id
+                    where p.participant_id = :participantId and a.photo_asset_id is not null
+                 )
+                   and deleted_at is null
+                """)
+                .param("participantId", participantId)
+                .param("now", utc(now))
+                .update();
+    }
+
     /**
      * 운영자 작업 감사 기록을 남깁니다. {@code detailJson}에는 코드·토큰 원문을 넣지 않습니다.
      * 참가자를 찾지 못한 거부 기록도 남길 수 있게 {@code participantId}는 null을 허용합니다.

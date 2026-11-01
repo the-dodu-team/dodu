@@ -147,8 +147,7 @@ public class OperatorAccessService {
             int endedSessions = accessRepository.endActiveSessions(
                     participantId, now, SessionRevokeReason.ACCESS_REVOKED);
             int deactivated = accessRepository.deactivateActiveSubscriptions(participantId, now);
-
-            // TODO(철회 후속, 계약 §7.2 4·5번): 활성 약속을 Withdrawn으로 종료하고 예약된 알림·자기보고를 무효화합니다. 약속·스케줄러 쪽 구현이 정해지면 같은 트랜잭션 안에서 호출하세요.
+            operatorRepository.stopParticipantWork(participantId, now);
 
             operatorRepository.insertAuditLog(OperatorAction.WITHDRAW, participantId, operatorRef,
                     OperatorResult.SUCCESS,
@@ -157,6 +156,11 @@ public class OperatorAccessService {
                     now);
             return new WithdrawResult(endedSessions, deactivated);
         });
+    }
+
+    /** Authenticated participant self-service path; operator audit uses a stable non-user ref. */
+    public WithdrawResult withdrawSelf(UUID participantId, Instant requestedAt) {
+        return withdraw(participantId, requestedAt, "participant-self-service");
     }
 
     private IssuedCredential createCredential(UUID participantId, Instant now, UUID replacesCredentialId) {

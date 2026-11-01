@@ -388,3 +388,9 @@
 - 구현: API 타입을 shared 영역으로 분리하고, 브라우저/RN 저장소를 교체할 수 있는 `KeyValueStorage`·`ParticipantSessionStore`를 추가했다. 기존 mock 화면은 변경하지 않았다.
 - 검증: `test:platform`에 저장소·세션 어댑터 테스트를 추가하고 전체 프런트 검증 workflow에 포함했다.
 - 남은 범위: RN 프로젝트 생성, 네이티브 화면 재작성, 카메라·알림 권한 adapter, 실제 세션·약속 API 화면 연결과 기기 QA.
+### 참가자 철회 요청 API
+
+- 구현: `DELETE /api/participant/account` 추가.
+- 범위: 인증된 세션 소유자만 자기 계정을 철회할 수 있으며 서버 시각을 사용한다. 세션·구독 종료, 활성 약속 `Withdrawn` 마감, 자기보고·미발송 알림 중지, 사진 retention worker 삭제 예약을 하나의 트랜잭션으로 처리한다.
+- 검증: Docker Desktop을 사용한 전체 백엔드 테스트 및 Flyway 9단계 마이그레이션 검증 통과. Surefire 실패·오류 없음.
+- 미완료: 실제 Supabase storage 삭제 smoke test와 운영 환경 QA는 자격정보·배포 환경 설정 후 별도 확인 필요.
