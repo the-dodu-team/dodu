@@ -275,6 +275,13 @@
 - 검증: `AiPhotoEvaluationRecoveryHandlerTests` 통과, `npm run security:scan` 통과, 실제 AI 단건·3장 batch HTTP 200 확인.
 - 남은 범위: 실제 사진 저장소 `PhotoObjectReader` 구현·운영 endpoint 환경변수 등록·AI 담당자 운영 QA. SCRUM-85는 완료 처리하지 않는다.
 
+### SCRUM-89 / Sprint 4 사진 저장소·AI worker 실제 연결 티켓 — 2026-11-01
+
+- Jira: `SCRUM-89` 생성, `SCRUM Sprint 4`(ID 36) 배정, 담당 `mono`.
+- 범위: Supabase 비공개 사진 저장소 adapter, `PhotoObjectReader`, AI worker 실제 호출, 결과·재시도·철회 보호, 30일 보관·삭제와 통합 검증.
+- 외부 준비: Supabase bucket·Render 환경변수 등록은 운영 담당자 준비 범위. 비밀값은 로컬 문서·Jira·Git에 기록하지 않는다.
+- 상태: 해야 할 일. 외부 설정과 구현·운영 QA 완료 전까지 완료 처리하지 않는다.
+
 ### 사진 재사용 정책 보강 — 2026-10-29
 
 - 상태: 같은 약속 내 재시도 허용과 다른 날짜 사진 재사용 차단을 구현·검증했다.
