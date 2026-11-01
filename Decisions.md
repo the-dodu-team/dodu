@@ -866,3 +866,10 @@
 - 대안: 참가자 ID를 본문으로 받거나 원본 사진을 요청 처리 중 직접 삭제하는 방식은 권한 혼동과 외부 provider 장애 시 트랜잭션 불일치를 키우므로 채택하지 않는다.
 - 영향: 철회 직후 새 약속·알림·자기보고·사진 판정 결과가 최종 상태를 덮어쓰지 않는다. 실제 provider 삭제는 Supabase 자격정보가 등록된 환경에서 별도 smoke test가 필요하다.
 - 검증: Docker 기반 `mvnw.cmd -q test`, Flyway V1~V9 마이그레이션, `git diff --check`.
+## DEV-20261101-10 FE API client의 실제 계약 연결 범위
+
+- 배경: 기존 FE client는 알림·이력·자기보고만 typed API로 제공하고 약속·사진·입장 API는 mock 화면에 남아 있었다.
+- 결정: 세션 입장, 활성 약속 조회·생성·수정·취소, multipart 사진 제출, 참가자 철회 API를 client에 추가한다. 공통 envelope 응답과 기존 raw 응답을 구분하고 multipart 요청에는 JSON content type을 강제하지 않는다.
+- 근거: 현재 백엔드 계약이 혼재하므로 응답 형식을 임의로 바꾸지 않고 실제 endpoint 계약을 보존해야 한다. 세션 토큰은 API client 외부의 `ParticipantSessionStore`가 관리한다.
+- 영향: 이후 화면은 mock fetch를 반복하지 않고 같은 client를 사용해 웹·PWA·향후 RN adapter에서 재사용할 수 있다. 실제 화면을 운영 API로 전환하는 작업과 외부 환경 QA는 별도 범위다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.

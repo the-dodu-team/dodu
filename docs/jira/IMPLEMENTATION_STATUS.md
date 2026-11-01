@@ -394,3 +394,8 @@
 - 범위: 인증된 세션 소유자만 자기 계정을 철회할 수 있으며 서버 시각을 사용한다. 세션·구독 종료, 활성 약속 `Withdrawn` 마감, 자기보고·미발송 알림 중지, 사진 retention worker 삭제 예약을 하나의 트랜잭션으로 처리한다.
 - 검증: Docker Desktop을 사용한 전체 백엔드 테스트 및 Flyway 9단계 마이그레이션 검증 통과. Surefire 실패·오류 없음.
 - 미완료: 실제 Supabase storage 삭제 smoke test와 운영 환경 QA는 자격정보·배포 환경 설정 후 별도 확인 필요.
+### FE 실제 API client 계약 보강
+
+- 구현: 세션 입장, 약속 CRUD, multipart 사진 제출, 참가자 철회 client를 추가하고 raw 응답과 공통 envelope 응답을 구분했다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check` 통과.
+- 미완료: 실제 FE 화면에서 토큰 발급·약속·사진 API를 연결하는 사용자 흐름 QA, 운영 API base URL 등록, 실제 Supabase·AI worker 연동.

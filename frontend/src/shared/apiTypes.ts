@@ -18,6 +18,27 @@ export type ApiErrorEnvelope = {
   serverTime: string
 }
 
+export type AccessResponse = {
+  accessToken: string
+  participantId: string
+  accessEndsAt: string | null
+}
+
+export type PromiseRecord = {
+  promiseId: string
+  taskTitle: string
+  toolType: 'COMPUTER' | 'BOOK'
+  scheduledAt: string
+  version: number
+}
+
+export type PhotoAttempt = {
+  attemptId: string
+  promiseId: string
+  processingStatus: string
+  receivedAt: string
+}
+
 export type Notification = {
   notificationId: string
   promiseId: string
