@@ -25,11 +25,14 @@ public class ParticipantAccessController {
     private final JdbcTemplate jdbc;
     private final AccessCredentialHasher hasher;
     private final AccessFailureRateLimiter failureRateLimiter;
+    private final ClientIpResolver clientIpResolver;
 
     @Autowired
-    public ParticipantAccessController(JdbcTemplate jdbc, AccessFailureRateLimiter failureRateLimiter) {
+    public ParticipantAccessController(JdbcTemplate jdbc, AccessFailureRateLimiter failureRateLimiter,
+                                       ClientIpResolver clientIpResolver) {
         this.jdbc = jdbc;
         this.failureRateLimiter = failureRateLimiter;
+        this.clientIpResolver = clientIpResolver;
         this.hasher = new AccessCredentialHasher(System.getenv().getOrDefault(
                 "DODU_CREDENTIAL_PEPPER", "local-development-only"));
     }
@@ -38,7 +41,8 @@ public class ParticipantAccessController {
     @PostMapping("/enter")
     @Transactional
     public ResponseEntity<AccessResponse> enter(@RequestBody AccessRequest request, HttpServletRequest httpRequest) {
-        String ipAddress = httpRequest.getRemoteAddr();
+        String ipAddress = clientIpResolver.resolve(httpRequest.getRemoteAddr(),
+                httpRequest.getHeader("X-Forwarded-For"), httpRequest.getHeader("Forwarded"));
         AccessFailureRateLimiter.BlockStatus blockStatus = failureRateLimiter.status(ipAddress);
         if (blockStatus.blocked()) {
             throw blocked(blockStatus.blockedUntil());

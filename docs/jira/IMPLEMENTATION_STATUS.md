@@ -351,3 +351,10 @@
 - 상태: 구현 대조 문서 보강 완료.
 - 갱신: 공통 응답 계약에 실제 적용 범위와 기존 DTO 호환 경계를 기록하고, 화면 API 인수 지도에 알림 목록·읽음 처리 계약과 404 소유권 규칙을 추가했다.
 - 남은 범위: FE/BE가 모든 업무 API를 envelope로 전환할지에 대한 최종 합의와 실제 화면 인수 승인.
+### SCRUM-70·76·83·86·87 / 비AI 통합 마감 점검 — 2026-11-01
+
+- 이번 범위: 운영 설정을 알 수 없는 상태에서 재현 가능한 코드 경계만 보강했다. `ClientIpResolver`를 추가해 trusted proxy가 비어 있으면 전달 IP 헤더를 무시하고, 허용된 IPv4/IPv6 네트워크에서만 `X-Forwarded-For`/`Forwarded`의 원본 주소를 사용한다. 참가자 코드 rate limit은 기존 PostgreSQL 저장소를 그대로 사용한다.
+- 검증: `ClientIpResolverTests` 3건, `npm run security:scan`, `git diff --check`, 백엔드 컴파일을 확인했다. 전체 `npm run verify`는 프런트 검증까지 통과했지만 Testcontainers가 Docker 엔진을 찾지 못해 백엔드 통합 테스트 40건이 실행되지 않아 실패했다.
+- 완료로 표시하지 않는 범위: 실제 FCM/Web Push 자격정보·endpoint·발송/수신 QA, 실제 사진 객체 저장소와 AI worker, FE 화면의 세션·약속 실데이터 연결 및 사용자 QA, 모든 API envelope 전환 승인, 실제 배포 프록시/CIDR와 다중 노드 운영 QA, Figma 최종 화면 비교, Sprint 3 최종 승인.
+- Figma 차단: Jira가 가리키는 최신 핸드오프 링크의 유효한 디자인 노드가 현재 연결 세션에서 확인되지 않아 화면을 추정 구현하지 않는다. 유효한 노드 URL 또는 최신 handoff가 필요하다.
+- Jira: SCRUM-70·76·83·84·85·86은 외부 연동·인수 조건이 남아 진행 중으로 유지하고, SCRUM-87은 FE 사용자 검증 전까지 해야 할 일/진행 범위로 유지한다.
