@@ -404,3 +404,8 @@
 - 구현: `VITE_DODU_API_BASE_URL` 설정 시 입장 화면이 실제 `/api/access/enter`를 호출하고 브라우저 세션 저장소에 토큰을 보관한다. 미설정 환경은 기존 mock preview를 유지한다.
 - 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check` 통과.
 - 미완료: 실제 Render API 주소를 넣은 운영 FE smoke test 및 약속·사진·이력 화면 연결.
+### FE 홈 활성 약속 조회 연결
+
+- 구현: 실제 API base URL과 세션 토큰이 있으면 `/api/promises/active`를 호출하고 KST 화면 모델로 변환해 홈에 표시한다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check` 통과.
+- 미완료: 약속 생성·수정·취소·사진·이력 화면의 실제 mutation/조회 wiring과 운영 API QA.

@@ -880,3 +880,10 @@
 - 근거: 배포 전 API 주소가 없는 로컬 디자인 preview를 깨지 않으면서 동일한 화면으로 실제 세션 흐름을 검증할 수 있다.
 - 영향: 운영 FE는 접근 코드·device key·세션 발급을 실제 백엔드와 연결할 수 있고, API 주소는 빌드 환경 설정으로 교체할 수 있다. 약속·사진·이력 화면의 실제 wiring은 후속 작업이다.
 - 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.
+## DEV-20261101-12 FE 홈 화면의 활성 약속 조회 연결
+
+- 배경: 실제 입장 후에도 홈 화면이 항상 mock 약속 상태를 사용하면 백엔드 세션·약속 조회를 확인할 수 없다.
+- 결정: API base URL과 유효한 세션 토큰이 있는 경우 `/api/promises/active`를 호출해 현재 약속을 홈 화면 모델로 변환한다. API base URL이 없거나 세션이 없으면 기존 preview 흐름을 유지한다.
+- 근거: 서버가 반환한 ISO 시각을 KST 표시 모델로 변환하고, 기존 화면 상태 모델과 API 계약을 분리하면 이후 생성·수정·취소 wiring을 단계적으로 붙일 수 있다.
+- 영향: 실제 세션의 활성 약속 조회가 가능해진다. 생성·수정·취소·사진 제출 UI는 아직 mock action이므로 전체 FE 운영 흐름 완료로 표시하지 않는다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.

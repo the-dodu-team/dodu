@@ -30,7 +30,8 @@ import type {
 
 import ParticipantEntryPage from './features/access/ParticipantEntryPage'
 import OnboardingMockFlow from './features/onboarding/OnboardingMockFlow'
-import { createDoduAccessApi } from './api/doduApi'
+import { createDoduAccessApi, createDoduApi } from './api/doduApi'
+import type { PromiseRecord } from './api/doduApi'
 import { ParticipantSessionStore } from './platform/participantSession'
 import { createBrowserStorage } from './platform/storage'
 
@@ -173,10 +174,65 @@ export default function App() {
   }
 
   if (import.meta.env.VITE_DODU_API_BASE_URL) {
-    return <LiveParticipantEntry />
+    return <LiveApp interventionEndsAt={interventionEndsAt} />
   }
 
   return <HomePrototype interventionEndsAt={interventionEndsAt} />
+}
+
+function LiveApp({ interventionEndsAt }: { interventionEndsAt?: number }) {
+  const [token, setToken] = useState<string | null>(null)
+  const [activePromise, setActivePromise] = useState<PromiseRecord | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    const sessions = new ParticipantSessionStore(createBrowserStorage(window.localStorage))
+    sessions.getToken().then(async (savedToken) => {
+      if (cancelled) return
+      if (!savedToken) {
+        setIsLoading(false)
+        return
+      }
+      setToken(savedToken)
+      try {
+        const promise = await createDoduApi(savedToken, import.meta.env.VITE_DODU_API_BASE_URL).getActivePromise()
+        if (!cancelled) setActivePromise(promise)
+      } catch {
+        if (!cancelled) setErrorMessage('현재 약속 정보를 불러오지 못했습니다.')
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  if (isLoading) return <p role="status">불러오는 중입니다.</p>
+  if (!token) return <LiveParticipantEntry />
+  if (errorMessage) return <p role="alert">{errorMessage}</p>
+  return <HomePrototype
+    interventionEndsAt={interventionEndsAt}
+    initialPromise={activePromise ? toPreviewPromise(activePromise) : undefined}
+  />
+}
+
+function toPreviewPromise(record: PromiseRecord): ManagedPreviewPromise {
+  const scheduled = new Date(record.scheduledAt)
+  const kst = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(scheduled)
+  const value = (type: string) => kst.find((part) => part.type === type)?.value ?? ''
+  return {
+    taskName: record.taskTitle,
+    date: `${value('year')}-${value('month')}-${value('day')}`,
+    startTime: `${value('hour')}:${value('minute')}`,
+    tool: record.toolType === 'COMPUTER' ? 'computer' : 'book',
+    status: 'pending',
+    timeEditCount: 0,
+    isRecreated: false,
+  }
 }
 
 function LiveParticipantEntry() {
@@ -316,6 +372,7 @@ type HomePrototypeProps = {
   previewControls?: Ref<PreviewHomeControls>
   initialScreen?: PreviewScreen
   interventionEndsAt?: number
+  initialPromise?: ManagedPreviewPromise
 }
 
 function HomePrototype({
@@ -323,6 +380,7 @@ function HomePrototype({
   initialPastResults = [],
   previewControls,
   interventionEndsAt,
+  initialPromise,
 }: HomePrototypeProps) {
   const [screen, setScreen] = useState<PreviewScreen>(initialScreen)
 
@@ -336,7 +394,7 @@ function HomePrototype({
   const [scheduledAt, setScheduledAt] = useState('')
   const [selectedTool, setSelectedTool] = useState<PromiseTool | null>(null)
   const [confirmError, setConfirmError] = useState('')
-  const [storedPromise, setPromise] = useState<ManagedPreviewPromise | null>(null)
+  const [storedPromise, setPromise] = useState<ManagedPreviewPromise | null>(initialPromise ?? null)
   const photo = usePhotoAuthMock()
   const promise: ManagedPreviewPromise | null = storedPromise && photo.session &&
     promiseKey(storedPromise) === promiseKey(photo.session.promise)
