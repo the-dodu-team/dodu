@@ -3,6 +3,7 @@ import cameraIcon from '../../assets/icons/camera-filled.svg'
 
 type OnboardingCameraPageProps = {
   isComplete?: boolean
+  requestDisabled?: boolean
   totalSteps: 3 | 4
   isDenied: boolean
   recoveryText: string
@@ -14,6 +15,7 @@ type OnboardingCameraPageProps = {
 
 export default function OnboardingCameraPage({
   isComplete = false,
+  requestDisabled = false,
   totalSteps, isDenied, recoveryText, attempt, onRequest,
   onBack,
   onClose,
@@ -127,6 +129,7 @@ export default function OnboardingCameraPage({
           type="button"
           className="onboarding-next"
           onClick={onRequest}
+          disabled={requestDisabled}
         >
           {!isComplete && (
             <span

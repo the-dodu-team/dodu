@@ -1,3 +1,4 @@
+import LiveOnboardingFlow from '../onboarding/LiveOnboardingFlow'
 import { useEffect, useRef, useState } from 'react'
 import { createParticipantPromiseApi, ParticipantPromiseApiError } from '../../api/participantPromiseApi'
 import type { ParticipantState, PromiseResponse } from '../../api/participantPromiseApi'
@@ -41,6 +42,7 @@ export default function LiveParticipantApp() {
   const [active, setActive] = useState<PromiseResponse | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
   const [closed, setClosed] = useState(false)
   const [screen, setScreen] = useState<Screen>('home')
   const [taskName, setTaskName] = useState('')
@@ -59,7 +61,7 @@ export default function LiveParticipantApp() {
   function fail(reason: unknown) {
     if (reason instanceof DOMException && reason.name === 'AbortError') return
     if (reason instanceof ParticipantPromiseApiError && reason.httpStatus === 401) {
-      session.clear(); setParticipant(null); setActive(null); setLoaded(false); setPending(null)
+      setOnboardingDismissed(false); session.clear(); setParticipant(null); setActive(null); setLoaded(false); setPending(null)
     }
     if (reason instanceof ParticipantPromiseApiError && reason.code === 'STUDY_PERIOD_ENDED') setClosed(true)
     setError(errorMessage(reason))
@@ -104,7 +106,7 @@ export default function LiveParticipantApp() {
     try {
       const result = await api.enter(code, session.device())
       if (!mounted.current || version !== epoch.current) return
-      session.enter(result.data.sessionToken)
+      setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
     } catch (reason) { if (mounted.current && version === epoch.current) fail(reason) }
     finally {
@@ -142,6 +144,7 @@ export default function LiveParticipantApp() {
   if (closed) page = <AccessClosedPage />
   else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={code => { void login(code) }} isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} />
   else if (!loaded) page = <main aria-busy={busy}><p role="status">확인 중…</p></main>
+  else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow onClose={() => { setOnboardingDismissed(true); setScreen('home') }} />
   else if (screen === 'name') page = <PromiseTaskNamePage initialValue={taskName} onBack={home} onNext={value => { setTaskName(value); setScreen('time') }} />
   else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt} onBack={value => { setScheduledAt(value); setScreen('name') }} onNext={value => { setScheduledAt(value); setScreen('tool') }} />
   else if (screen === 'tool') page = <PromiseToolPage initialValue={tool} onBack={() => setScreen('time')} onNext={value => { setTool(value); setScreen('confirm') }} />
