@@ -84,6 +84,8 @@ button:focus-visible {outline: 3px solid #be741d; outline-offset: 4px;}
 .weekly-promise-day--verified {color: #5668b4; background: #ededff;}
 .weekly-promise-day--unverified {color: #c33335; background: #ffe3e3;}
 .weekly-promise-day--today {color: #161a29; font-weight: 600;}
+.weekly-promise-day-label--saturday {color: #4f72d8;}
+.weekly-promise-day-label--sunday {color: #d85b63;}
 .weekly-promise-empty {padding: 20px 0 0; text-align: center;}
 .weekly-promise-empty h3 {margin: 0; color: #363c4d; font-size: 18px; font-weight: 500;}
 .weekly-promise-empty p {margin: 8px 0 0; color: #6b7285; font-size: 14px;}
