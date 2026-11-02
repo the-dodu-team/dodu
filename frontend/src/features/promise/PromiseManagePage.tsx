@@ -175,7 +175,7 @@ export default function PromiseManagePage({
               className="promise-cancel-keep"
               onClick={closeCancelDialog}
             >
-              유지
+              돌아가기
             </button>
 
             <button
