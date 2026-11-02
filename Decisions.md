@@ -933,3 +933,11 @@
 - 영향: FE가 로그인 시 서버 이력을 불러와 새로고침 후에도 지난 약속을 표시한다. 아직 응답 envelope로 통일하지 않은 기존 약속 API 형식을 유지한다.
 - 검증: PromiseController Testcontainers 통합 테스트, FE API 계약 테스트, FE build/lint.
 - 보완: API가 반환하는 마감 후 `Scheduled`/`AuthAvailable` 상태도 FE에서 미완료 이력으로 표시한다.
+- DEV-20261102-07 배포 클릭 경로와 런타임 설정
+
+  - 배경: 웹/PWA를 계정에서 반복 설정하지 않고 배포할 수 있는 최소 설정이 필요하다.
+  - 선택: 백엔드는 Render Blueprint와 멀티스테이지 Dockerfile, 프런트엔드는 Vercel의 `frontend` 루트와 Vite 설정을 사용한다. DB·사진 저장소는 Supabase를 환경변수로 연결하고 사진 버킷은 비공개로 둔다.
+  - 근거: 현재 Spring Boot jar가 프런트 정적 산출물을 번들할 수 있고, FE는 `VITE_DODU_API_BASE_URL`로 API 주소를 주입받는다. 저장소에 자격정보를 넣지 않고 계정 화면에서만 입력할 수 있다.
+  - 대안: Render DB·공개 사진 URL·저장소 내 비밀값 보관은 선택하지 않는다.
+  - 영향: 사용자는 Render Blueprint와 Vercel Import를 실행한 뒤 환경변수만 입력하면 된다. Supabase·Render·Vercel 계정 생성과 실제 운영 QA는 외부 작업으로 남는다.
+  - 검증: Docker 이미지 빌드 성공, 프런트 빌드 성공, 백엔드 233개 테스트·패키지 성공, 비밀값 검사 성공. 일시적으로 899초로 계산되던 Retry-After 경계 테스트도 올림 계산으로 안정화했다.

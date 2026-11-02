@@ -474,3 +474,9 @@
 - 취소 확인창의 보조 버튼 문구를 `돌아가기`에서 `닫기`로 변경함.
 - 취소 확정 동작과 모달 포커스 흐름은 변경하지 않음.
 - 검증: FE 테스트·빌드 및 `git diff --check`.
+## 2026-11-02 / 클릭 중심 배포 설정
+
+- 완료 범위: Render Blueprint, 백엔드 멀티스테이지 Dockerfile, Vercel Vite 설정, Spring Boot `PORT`·호스팅 DB URL·명시적 CORS origin 환경변수 지원, 배포 클릭 가이드.
+- 파일: `render.yaml`, `deploy/backend.Dockerfile`, `.dockerignore`, `frontend/vercel.json`, `docs/operations/DEPLOYMENT_CLICK_GUIDE.md`.
+- 검증 범위: Docker 이미지 빌드 성공, `npm run verify` 성공(프런트 테스트·빌드, 백엔드 233개 테스트·패키지), 비밀값 검사 성공, `git diff --check` 통과. 실제 Render·Vercel·Supabase 계정 배포와 외부 smoke test는 계정 입력 후 진행한다.
+- Jira: SCRUM-70 운영 배포 경계와 SCRUM-83 사진 저장소 연동 범위에 구현 근거를 남긴다. 외부 계정 설정 전에는 완료 처리하지 않는다.

@@ -1,0 +1,13 @@
+.git
+.github
+.tools
+.vscode
+node_modules
+**/node_modules
+backend/target
+frontend/dist
+.env*
+*.log
+ai_model_for_dodu
+dinov2-base-fastapi-ut
+output

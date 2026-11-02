@@ -2,6 +2,7 @@ package com.dodu.access;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.UUID;
 
 import com.dodu.participant.domain.SessionToken;
@@ -137,7 +138,8 @@ public class ParticipantAccessController {
 
     @org.springframework.web.bind.annotation.ExceptionHandler(AccessBlockedException.class)
     ResponseEntity<ErrorResponse> accessBlocked(AccessBlockedException exception) {
-        long retryAfter = Math.max(1, exception.blockedUntil().getEpochSecond() - Instant.now().getEpochSecond());
+        long retryAfter = Math.max(1, (long) Math.ceil(
+                Duration.between(Instant.now(), exception.blockedUntil()).toNanos() / 1_000_000_000d));
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, Long.toString(retryAfter))
                 .body(new ErrorResponse("TOO_MANY_ATTEMPTS"));
