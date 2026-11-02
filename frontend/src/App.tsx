@@ -238,7 +238,8 @@ function toFinalPromiseRecord(record: PromiseHistoryRecord): FinalPromiseRecord[
   if (record.finalOutcome === 'Cancelled' || record.finalOutcome === 'Withdrawn') return []
   const status = record.lifecycleStatus === 'AuthCompleted' || record.finalOutcome === 'AuthCompleted'
     ? 'verified'
-    : record.lifecycleStatus === 'AuthIncomplete' || record.finalOutcome === 'AuthIncomplete' || record.finalOutcome === 'TechFailed'
+    : record.lifecycleStatus === 'AuthIncomplete' || record.lifecycleStatus === 'Scheduled' || record.lifecycleStatus === 'AuthAvailable'
+      || record.finalOutcome === 'AuthIncomplete' || record.finalOutcome === 'TechFailed'
       ? 'unverified'
       : null
   if (!status) return []

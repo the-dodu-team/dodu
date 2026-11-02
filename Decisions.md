@@ -925,3 +925,4 @@
 - 근거: 약속 원장은 이미 `lifecycle_status`, `final_outcome`, `auth_window_ends_at`를 저장하므로 별도 이력 테이블을 추가하지 않아도 저장·조회가 가능하다. 응답이 늦는 `Evaluating` 약속은 자동 미완료로 바꾸지 않는다.
 - 영향: FE가 로그인 시 서버 이력을 불러와 새로고침 후에도 지난 약속을 표시한다. 아직 응답 envelope로 통일하지 않은 기존 약속 API 형식을 유지한다.
 - 검증: PromiseController Testcontainers 통합 테스트, FE API 계약 테스트, FE build/lint.
+- 보완: API가 반환하는 마감 후 `Scheduled`/`AuthAvailable` 상태도 FE에서 미완료 이력으로 표시한다.

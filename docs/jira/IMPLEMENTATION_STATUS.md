@@ -465,5 +465,6 @@
 
 - 구현: `GET /api/promises/history`가 참가자 소유 약속 원장의 종료 상태와 마감 후 미응답 약속을 반환한다. FE 로그인 시 이 API를 호출해 주간 지난 약속과 이력 화면에 반영한다.
 - 상태 매핑: `AuthCompleted`는 인증 완료, `AuthIncomplete`와 기술 실패는 미완료로 표시하며 `Cancelled`·`Withdrawn`은 인증 이력에서 제외한다. `Evaluating` 지연 결과는 자동 미완료 처리하지 않는다.
+- 보완: API가 반환하는 마감 후 `Scheduled`·`AuthAvailable` 상태도 미완료로 표시한다.
 - 검증: PromiseController Testcontainers 통합 테스트 통과, 전체 백엔드 233건 통과, FE API 계약·홈·사진·플랫폼 테스트 통과, FE build 통과, lint 경고만 존재.
 - 남은 범위: 실제 배포 API와의 smoke test, 전체 Swagger 결과 기록, 운영 QA 및 Jira 완료 승인은 별도 진행.
