@@ -26,8 +26,6 @@ export default function WeeklyPromiseCard({
     const key = date.toISOString().slice(0, 10)
     return {
       date, key, label,
-      weekendClass: index === 5 ? 'weekly-promise-day-label--saturday'
-        : index === 6 ? 'weekly-promise-day-label--sunday' : '',
       status: weekRecords.find(record => record.date === key)?.status ?? 'none',
       timing: key === todayKey ? 'today' : key < todayKey ? 'past' : 'future',
     }
@@ -65,7 +63,7 @@ export default function WeeklyPromiseCard({
           <li key={day.key}
             className={`weekly-promise-day weekly-promise-day--${day.timing} weekly-promise-day--${day.status}`}
             aria-current={day.timing === 'today' ? 'date' : undefined}>
-            <span>{day.date.getUTCDate()}</span><span className={day.weekendClass}>{day.label}</span>
+            <span>{day.date.getUTCDate()}</span><span>{day.label}</span>
             <span className="visually-hidden">{day.status === 'verified' ? '인증 완료'
               : day.status === 'unverified' ? '인증 미완료' : '최종 인증 결과 없음'}</span>
           </li>
