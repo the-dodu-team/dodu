@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { createDoduApi } from '../../api/doduApi'
 import type { AuthAttempt, Notification, ValidationSurvey } from '../../shared/apiTypes'
+import type { FinalPromiseRecord } from '../promise/promiseHistory'
 
-type Props = { api: ReturnType<typeof createDoduApi>; promiseId?: string; onBack: () => void }
+type Props = {
+  api: ReturnType<typeof createDoduApi>
+  promiseId?: string
+  promiseHistory?: FinalPromiseRecord[]
+  onBack: () => void
+}
 
-export default function LiveParticipantPanel({ api, promiseId, onBack }: Props) {
+export default function LiveParticipantPanel({ api, promiseId, promiseHistory = [], onBack }: Props) {
   const [attempts, setAttempts] = useState<AuthAttempt[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [survey, setSurvey] = useState<ValidationSurvey | null>(null)
@@ -55,6 +61,8 @@ export default function LiveParticipantPanel({ api, promiseId, onBack }: Props) 
   return <main className="report-page live-participant-panel">
     <header className="report-header"><button type="button" onClick={onBack}>Back</button><h1>History & notifications</h1></header>
     {error && <p role="alert">{error}</p>}
+    <section><h2>Promise history</h2>{promiseHistory.length ? <ul>{promiseHistory.map(item =>
+      <li key={`${item.date}-${item.status}`}>{item.date} · {item.status === 'verified' ? 'Verified' : 'Not verified'}</li>)}</ul> : <p>No completed promises.</p>}</section>
     <section><h2>Authentication history</h2>{attempts.length ? <ul>{attempts.map(item =>
       <li key={item.attemptId}>{item.processingStatus} · {item.decisionResult ?? 'PENDING'} · {item.modelVersion ?? 'model version unavailable'}</li>)}
     </ul> : <p>No authentication attempts.</p>}</section>

@@ -32,6 +32,11 @@ export type PromiseRecord = {
   version: number
 }
 
+export type PromiseHistoryRecord = PromiseRecord & {
+  lifecycleStatus: string
+  finalOutcome: string | null
+}
+
 export type PhotoAttempt = {
   attemptId: string
   promiseId: string

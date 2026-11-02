@@ -34,7 +34,7 @@ import ParticipantEntryPage from './features/access/ParticipantEntryPage'
 import OnboardingMockFlow from './features/onboarding/OnboardingMockFlow'
 import { createDoduAccessApi, createDoduApi } from './api/doduApi'
 import { DoduApiError } from './api/doduApi'
-import type { PromiseRecord } from './api/doduApi'
+import type { PromiseHistoryRecord, PromiseRecord } from './api/doduApi'
 import { ParticipantSessionStore } from './platform/participantSession'
 import { createBrowserStorage } from './platform/storage'
 
@@ -189,6 +189,7 @@ function LiveApp({ interventionEndsAt }: { interventionEndsAt?: number }) {
   const [token, setToken] = useState<string | null>(null)
   const [api, setApi] = useState<ReturnType<typeof createDoduApi> | null>(null)
   const [activePromise, setActivePromise] = useState<PromiseRecord | null>(null)
+  const [pastResults, setPastResults] = useState<FinalPromiseRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -205,8 +206,14 @@ function LiveApp({ interventionEndsAt }: { interventionEndsAt?: number }) {
       const liveApi = createDoduApi(savedToken, import.meta.env.VITE_DODU_API_BASE_URL)
       setApi(liveApi)
       try {
-        const promise = await liveApi.getActivePromise()
-        if (!cancelled) setActivePromise(promise)
+        const [promise, history] = await Promise.all([
+          liveApi.getActivePromise(),
+          liveApi.listPromiseHistory(),
+        ])
+        if (!cancelled) {
+          setActivePromise(promise)
+          setPastResults(history.flatMap(toFinalPromiseRecord))
+        }
       } catch {
         if (!cancelled) setErrorMessage('현재 약속 정보를 불러오지 못했습니다.')
       } finally {
@@ -223,7 +230,20 @@ function LiveApp({ interventionEndsAt }: { interventionEndsAt?: number }) {
     interventionEndsAt={interventionEndsAt}
     api={api ?? undefined}
     initialPromise={activePromise ? toPreviewPromise(activePromise) : undefined}
+    initialPastResults={pastResults}
   />
+}
+
+function toFinalPromiseRecord(record: PromiseHistoryRecord): FinalPromiseRecord[] {
+  if (record.finalOutcome === 'Cancelled' || record.finalOutcome === 'Withdrawn') return []
+  const status = record.lifecycleStatus === 'AuthCompleted' || record.finalOutcome === 'AuthCompleted'
+    ? 'verified'
+    : record.lifecycleStatus === 'AuthIncomplete' || record.finalOutcome === 'AuthIncomplete' || record.finalOutcome === 'TechFailed'
+      ? 'unverified'
+      : null
+  if (!status) return []
+  const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date(record.scheduledAt))
+  return [{ date, status }]
 }
 
 function toPreviewPromise(record: PromiseRecord): ManagedPreviewPromise {
@@ -875,7 +895,8 @@ function HomePrototype({
   }
   if (screen === 'history') {
     if (api && promise?.promiseId) {
-      return <LiveParticipantPanel api={api} promiseId={promise.promiseId} onBack={() => setScreen('home')} />
+      return <LiveParticipantPanel api={api} promiseId={promise.promiseId} promiseHistory={pastResults}
+        onBack={() => setScreen('home')} />
     }
     const currentResult = getFinalPromiseRecord(promise, now)
     return <HistoryPage records={currentResult ? [...pastResults, currentResult] : pastResults}

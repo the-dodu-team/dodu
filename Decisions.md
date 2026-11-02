@@ -918,3 +918,10 @@
 - 근거: 서버가 반환한 ISO 시각을 KST 표시 모델로 변환하고, 기존 화면 상태 모델과 API 계약을 분리하면 이후 생성·수정·취소 wiring을 단계적으로 붙일 수 있다.
 - 영향: 실제 세션의 활성 약속 조회가 가능해진다. 생성·수정·취소·사진 제출 UI는 아직 mock action이므로 전체 FE 운영 흐름 완료로 표시하지 않는다.
 - 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.
+## DEV-20261102-05 — 서버 기반 약속 이력 조회
+
+- 배경: 기존 FE의 지난 약속 목록은 메모리에만 생성되어 새로고침 후 사라졌다.
+- 결정: `GET /api/promises/history`를 추가하고 기존 `promise` 원장의 종료 상태·결과를 참가자 소유권 기준으로 조회한다. 인증 완료·미완료는 FE의 주간 이력으로 표시하고 취소·철회는 인증 이력에서 제외한다.
+- 근거: 약속 원장은 이미 `lifecycle_status`, `final_outcome`, `auth_window_ends_at`를 저장하므로 별도 이력 테이블을 추가하지 않아도 저장·조회가 가능하다. 응답이 늦는 `Evaluating` 약속은 자동 미완료로 바꾸지 않는다.
+- 영향: FE가 로그인 시 서버 이력을 불러와 새로고침 후에도 지난 약속을 표시한다. 아직 응답 envelope로 통일하지 않은 기존 약속 API 형식을 유지한다.
+- 검증: PromiseController Testcontainers 통합 테스트, FE API 계약 테스트, FE build/lint.

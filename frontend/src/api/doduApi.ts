@@ -1,11 +1,11 @@
 import type {
   AccessResponse, ApiEnvelope, ApiErrorEnvelope, AuthAttempt, Notification, PhotoAttempt,
-  PromiseRecord, ValidationSurvey,
+  PromiseHistoryRecord, PromiseRecord, ValidationSurvey,
 } from '../shared/apiTypes'
 
 export type {
   AccessResponse, ApiEnvelope, ApiErrorBody, ApiErrorEnvelope, AuthAttempt, Notification,
-  PhotoAttempt, PromiseRecord, ValidationSurvey,
+  PhotoAttempt, PromiseHistoryRecord, PromiseRecord, ValidationSurvey,
 } from '../shared/apiTypes'
 
 export class DoduApiError extends Error {
@@ -57,6 +57,7 @@ export function createDoduApi(token: string, baseUrl = '') {
 
   return {
     getActivePromise: () => requestRaw<PromiseRecord | null>('/api/promises/active'),
+    listPromiseHistory: () => requestRaw<PromiseHistoryRecord[]>('/api/promises/history'),
     createPromise: (payload: {
       taskTitle: string
       toolType: 'COMPUTER' | 'BOOK'

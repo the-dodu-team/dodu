@@ -7,7 +7,7 @@ const livePhoto = fs.readFileSync(path.join(__dirname, '../src/features/photo-au
 const livePanel = fs.readFileSync(path.join(__dirname, '../src/features/self-report/LiveParticipantPanel.tsx'), 'utf8')
 
 for (const endpoint of [
-  '/api/promises/active', '/api/promises', '/api/participant/notifications',
+  '/api/promises/active', '/api/promises/history', '/api/promises', '/api/participant/notifications',
   '/api/promises/${promiseId}/auth-attempts', '/api/promises/${promiseId}/validation-survey',
 ]) assert.ok(api.includes(endpoint), `missing endpoint: ${endpoint}`)
 assert.match(api, /instanceof FormData/)
