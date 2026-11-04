@@ -93,9 +93,12 @@ export function createParticipantPromiseApi(options: {
       throw new ParticipantPromiseApiError('INVALID_RESPONSE', response.status, writing)
     }
     if (!response.ok || (object(body) && body.status === 'error')) {
-      const serverError = object(body) && object(body.error) ? body.error : null
-      const code = serverError && typeof serverError.code === 'string' ? serverError.code : `HTTP_${response.status}`
-      throw new ParticipantPromiseApiError(code, response.status, writing && response.status >= 500)
+      const serverError = object(body) && object(body.error) ? body.error : object(body) ? body : null
+      const candidate = serverError?.code
+      const code = typeof candidate === 'string' && /^[A-Z][A-Z0-9_]{2,63}$/.test(candidate)
+        ? candidate : `HTTP_${response.status}`
+      throw new ParticipantPromiseApiError(code, response.status,
+        writing && (response.status >= 500 || code === 'PROMISE_CREATION_IN_PROGRESS'))
     }
     let data = body
     let serverTime: string | null = null
