@@ -1,5 +1,13 @@
 # 개발 결정 기록
 
+## DEV-20261104-02 — Vercel Linux 빌드용 Rolldown 선택적 바인딩
+
+- 배경: Vercel의 Linux 빌드에서 Windows lockfile에 기록된 `rolldown` 네이티브 바인딩만 설치되어 `npm run build`가 실패했다.
+- 결정: 프런트엔드에 Linux x64 GNU/MUSL Rolldown 바인딩을 선택적 의존성으로 명시하고 Node.js 22 범위를 frontend package에도 선언한다.
+- 근거: Vercel과 Docker의 Linux 빌드가 플랫폼별 선택적 의존성을 재현할 수 있고, Windows 개발 환경에서는 비호환 패키지가 자동 제외된다.
+- 영향: Vercel에서 별도 수동 설치 없이 `npm ci` 후 Vite 빌드가 가능해진다.
+- 검증: `npm install --package-lock-only --ignore-scripts`, `npm run build --workspace frontend`, `git diff --check`. Vercel 재배포 확인은 외부 대시보드에서 진행한다.
+
 ## DEV-20261104-01 — 사진 업로드 전 브라우저 자동 압축
 
 - 배경: 최신 스마트폰 사진은 원본 용량이 커서 사진 인증 업로드 전에 저장소·API 한도를 넘을 수 있다.
