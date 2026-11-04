@@ -146,11 +146,13 @@ public class PromiseController {
         Instant now = clock.instant();
         return jdbc.query("""
                         select id, task_title, tool_type, scheduled_at, row_version, lifecycle_status, final_outcome
-                          from promise
+                          from promise p
                          where participant_id = ?
                            and (
                                lifecycle_status in ('Closed', 'AuthCompleted', 'AuthIncomplete')
-                               or (lifecycle_status in ('Scheduled', 'AuthAvailable') and auth_window_ends_at <= ?)
+                               or (lifecycle_status in ('Scheduled', 'AuthAvailable') and auth_window_ends_at <= ?
+                                   and not exists (select 1 from auth_attempt a where a.promise_id = p.id
+                                                   and a.processing_status in ('Evaluating', 'Completed', 'TechFailed')))
                            )
                          order by scheduled_at desc
                         """,
@@ -161,7 +163,7 @@ public class PromiseController {
                         rs.getTimestamp("scheduled_at").toInstant(),
                         rs.getLong("row_version"),
                         rs.getString("lifecycle_status"),
-                        rs.getString("final_outcome")),
+                        historyOutcome(rs.getString("lifecycle_status"), rs.getString("final_outcome"))),
                 participantId, timestamp(now));
     }
 
@@ -220,6 +222,15 @@ public class PromiseController {
     private static ResponseStatusException error(HttpStatus status, String code) { return new ResponseStatusException(status, code); }
 
     private static Timestamp timestamp(Instant instant) { return Timestamp.from(instant); }
+
+    // Only expired unanswered rows pass the history query above. This is a read projection,
+    // not a mutation of the promise or a claim that actual work did not start.
+    private static String historyOutcome(String lifecycle, String outcome) {
+        if (outcome == null && ("Scheduled".equals(lifecycle) || "AuthAvailable".equals(lifecycle))) {
+            return "AuthIncomplete";
+        }
+        return outcome;
+    }
 
     private UUID participantFromBearer(String authorization) {
         return authService.authenticate(authorization).participant().id();

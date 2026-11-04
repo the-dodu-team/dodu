@@ -11,7 +11,7 @@ async function main() {
       Object.defineProperty(navigator.permissions, 'query', { configurable: true, value: async () => permission })
     })
     const now = new Date().toISOString(), envelope = data => ({ status: 'success', data, serverTime: now })
-    let row = null, logins = 0, creates = 0, unsubscribes = 0
+    let row = null, logins = 0, creates = 0, unsubscribes = 0, expired = false
     const activeTokens = []
     await page.route('**/api/**', async route => {
       const request = route.request(), path = new URL(request.url()).pathname; let data
@@ -20,8 +20,8 @@ async function main() {
         logins++
         data = envelope({ sessionToken: 'synthetic-session-' + logins, onboardingCompleted: true, expiresAt: new Date(Date.now() + 86400000).toISOString() })
       } else if (path.endsWith('/me')) data = envelope({ onboardingCompleted: true, expiresAt: new Date(Date.now() + 86400000).toISOString() })
-      else if (path.endsWith('/active')) { activeTokens.push(request.headers().authorization); data = row }
-      else if (path.endsWith('/history')) data = []
+      else if (path.endsWith('/active')) { activeTokens.push(request.headers().authorization); data = expired ? null : row }
+      else if (path.endsWith('/history')) data = expired ? [{ ...row, scheduledAt: new Date(Date.now() - 3600000).toISOString(), lifecycleStatus: 'Scheduled', finalOutcome: 'AuthIncomplete' }] : []
       else if (path.endsWith('/notifications')) data = envelope([])
       else if (path.endsWith('/notification-subscription')) { assert.equal(request.method(), 'DELETE'); unsubscribes++; data = envelope(null) }
       else if (path === '/api/promises' && request.method() === 'POST') {
@@ -54,8 +54,13 @@ async function main() {
     await page.reload()
     await page.locator('.today-promise-name').getByText('재입장 보존 테스트', { exact: true }).waitFor()
     assert.equal(creates, 1)
+    expired = true
+    await page.reload()
+    await page.getByRole('button', { name: '전체 보기', exact: true }).click()
+    await page.locator('.history-chip.unverified').waitFor()
+    assert.equal(await page.locator('.history-chip.unverified').innerText(), '인증 미완료')
     assert.deepEqual(errors, [])
-    console.log('PASS: 실제 생성 폼→홈 카드→로그아웃→같은 코드 재입장→새 세션으로 기존 약속 조회→새로고침 보존 (합성 API)')
+    console.log('PASS: 생성→홈 카드→로그아웃→동일 코드→새 세션 조회→새로고침 보존·마감 미제출 이력 표시 (합성 API)')
   } finally { await browser.close() }
 }
 main().catch(e => { console.error(e.message); process.exitCode = 1 })

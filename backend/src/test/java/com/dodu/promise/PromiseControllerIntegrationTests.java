@@ -286,10 +286,25 @@ class PromiseControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].promiseId").value(expiredId.toString()))
                 .andExpect(jsonPath("$[0].lifecycleStatus").value("Scheduled"))
+                .andExpect(jsonPath("$[0].finalOutcome").value("AuthIncomplete"))
                 .andExpect(jsonPath("$[1].promiseId").value(cancelledId.toString()))
                 .andExpect(jsonPath("$[1].finalOutcome").value("Cancelled"))
                 .andExpect(jsonPath("$[2].promiseId").value(verifiedId.toString()))
                 .andExpect(jsonPath("$[2].lifecycleStatus").value("AuthCompleted"));
+    }
+
+    @Test
+    void expiredScheduledHistoryDoesNotMisclassifyAcceptedOrTechnicalAttempts() throws Exception {
+        Instant now = Instant.now();
+        for (String processing : new String[] {"Evaluating", "Completed", "TechFailed"}) {
+            UUID id = insertHistoryPromise("excluded " + processing, now.minusSeconds(3600), "Scheduled", null);
+            jdbc.update("insert into auth_attempt(promise_id, client_request_id, request_fingerprint, tool_type, processing_status, request_received_at, valid_received_at) values (?, ?, ?, 'BOOK', ?, ?, ?)",
+                    id, UUID.randomUUID(), "synthetic-" + processing, processing,
+                    timestamp(now.minusSeconds(3500)), timestamp(now.minusSeconds(3500)));
+        }
+        mockMvc.perform(get("/api/promises/history").header("Authorization", authorization))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        assertEquals(3, jdbc.queryForObject("select count(*) from promise where participant_id = ? and lifecycle_status = 'Scheduled'", Integer.class, participantId));
     }
 
     private UUID insertHistoryPromise(String title, Instant scheduled, String lifecycle, String outcome) {
