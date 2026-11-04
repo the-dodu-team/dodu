@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "engines": { "node": ">=22.12.0 <23" },
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -13,7 +15,8 @@
     "test:platform": "node tests/platform-adapters.test.cjs",
     "test:api": "node tests/api-contract.test.cjs && node tests/participant-entry.test.cjs",
     "test:integration-ui": "node --test tests/home-state.test.cjs tests/live-participant.test.cjs tests/live-survey.test.cjs tests/notification-permission.test.cjs tests/camera-permission.test.cjs tests/participant-promise-api.test.cjs tests/final-design.test.cjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:browser-recovery": "node tests/reminder-recovery.browser.cjs"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -25,6 +28,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
+    "playwright": "1.64.1",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   },

@@ -33,6 +33,19 @@ export function createLiveSurveyApi(getToken: () => string | null, fetcher: type
     ...survey,
     ...timedSurvey,
     now: () => Date.now() + offset,
+    async claimReminder(id: string): Promise<boolean> {
+      const token = getToken()
+      if (!token) throw new SurveyApiError('session')
+      const response = await checkedFetch(`/api/promises/${encodeURIComponent(id)}/validation-survey/inapp-reminder`, {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }, cache: 'no-store', redirect: 'error',
+      })
+      if (token !== getToken()) throw new SurveyApiError('stale')
+      if (!response.ok) throw new SurveyApiError('http', response.status)
+      const body = await response.json()
+      if (token !== getToken()) throw new SurveyApiError('stale')
+      if (body?.status !== 'success' || typeof body?.data?.show !== 'boolean') throw new SurveyApiError('invalid-response')
+      return body.data.show
+    },
     async candidates(): Promise<string[]> {
       const token = getToken()
       if (!token) throw new SurveyApiError('session')

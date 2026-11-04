@@ -10,6 +10,7 @@ import { HistoryPage } from '../self-report/ReportScreens'
 import type { FinalPromiseRecord } from '../promise/promiseHistory'
 import type { ReportTarget } from '../self-report/selfReportModel'
 import LiveOnboardingFlow from '../onboarding/LiveOnboardingFlow'
+import PermissionRecoveryGate from '../onboarding/PermissionRecoveryGate'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createParticipantPromiseApi, ParticipantPromiseApiError } from '../../api/participantPromiseApi'
 import type { ParticipantState, PromiseResponse } from '../../api/participantPromiseApi'
@@ -234,6 +235,8 @@ export default function LiveParticipantApp() {
   useEffect(() => {
     if (busy || visibleScreen === 'loading' || lastFocusedScreen.current === visibleScreen) return
     const frame = requestAnimationFrame(() => {
+      const modal = content.current?.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]')
+      if (modal && modal.getClientRects().length) { modal.focus(); lastFocusedScreen.current = visibleScreen; return }
       focusScreenHeading(content.current)
       lastFocusedScreen.current = visibleScreen
     })
@@ -278,7 +281,7 @@ export default function LiveParticipantApp() {
   else page = <div className="home-page"><AppHeader onSettings={() => setScreen('settings')} /><main className="live-home-main" aria-label="홈"><h1 className="visually-hidden">홈</h1>
     <TodayPromiseCard promise={active ? { taskName: active.taskTitle, isToday: new Date(Date.parse(active.scheduledAt) + 9 * 3600000).toISOString().slice(0, 10) === new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10), startTimeLabel: formatPromiseDateTime(Date.parse(active.scheduledAt)), toolLabel: active.toolType === 'BOOK' ? '책' : '컴퓨터' } : null}
       canCreate={!pending} canEdit={modifyAllowed} onEdit={() => setScreen('manage')} onCreate={() => { setTaskName(''); setScheduledAt(''); setTool('computer'); setScreen('name') }} />
-    <LiveSelfReportEntry api={surveyApi} onOpen={setSurveyId} />
+    <LiveSelfReportEntry api={surveyApi} onOpen={setSurveyId} targets={reportTargets} />
     <WeeklyPromiseCard todayKey={new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10)}
       records={history} historyState={historyLoaded ? 'ready' : 'unavailable'} onViewAll={() => setScreen('history')} />
   </main>{active && <footer className="live-home-cta"><PromiseAuthPreview promise={asDisplay(active)} isLive onVerify={() => setScreen('photo')} /></footer>}</div>
@@ -289,6 +292,7 @@ export default function LiveParticipantApp() {
       {session.token() && <button className="button" type="button" disabled={busy} onClick={() => { void refresh() }}>서버 상태 다시 확인</button>}
       {pending?.kind === 'create' && <button className="button" type="button" disabled={busy} onClick={() => { void write(pending) }}>같은 저장 요청 다시 확인</button>}
     </aside>}
-    <div ref={content} inert={busy} aria-busy={busy}>{page}</div>
+    <div ref={content} inert={busy} aria-busy={busy}>{participant?.onboardingCompleted && loaded && !closed
+      ? <PermissionRecoveryGate key={currentToken}>{page}</PermissionRecoveryGate> : page}</div>
   </>
 }

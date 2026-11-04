@@ -3,7 +3,7 @@ import type { ValidationSurvey } from '../../api/doduApi'
 import { canOpenLiveSurvey, encodeLiveAnswers } from '../../api/liveSurveyApi'
 import type { LiveSurveyApi } from '../../api/liveSurveyApi'
 import { SurveyApiError } from '../../api/validationSurveyApi'
-import { SelfReportPage } from './ReportScreens'
+import { SelfReportPage, ReportReminder } from './ReportScreens'
 import ScreenState from '../../components/ScreenState'
 import { cleanAnswers, completeAnswers } from './selfReportModel'
 import type { ReportAnswers, ReportTarget } from './selfReportModel'
@@ -11,10 +11,16 @@ import type { ReportAnswers, ReportTarget } from './selfReportModel'
 const failure = '일시적인 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'
 
 // 전체 대상 목록이 아니라 서버가 발송한 최근 자기보고 알림에서 후보를 얻는다.
-export function LiveSelfReportEntry({ api, onOpen }: { api: LiveSurveyApi; onOpen: (id: string) => void }) {
+export function LiveSelfReportEntry({ api, onOpen, targets = {} }: { api: LiveSurveyApi; onOpen: (id: string) => void; targets?: Record<string, ReportTarget> }) {
   const [id, setId] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
   const [revision, setRevision] = useState(0)
+  const [reminder, setReminder] = useState<string | null>(null)
+  const claims = useRef(new Map<string, Promise<boolean>>())
+  const presented = useRef(new Set<string>())
+  const skipping = useRef(false)
+  const [skipBusy, setSkipBusy] = useState(false)
+  const [skipError, setSkipError] = useState('')
   useEffect(() => {
     let disposed = false
     async function load() {
@@ -28,7 +34,20 @@ export function LiveSelfReportEntry({ api, onOpen }: { api: LiveSurveyApi; onOpe
             throw error
           }
           if (disposed) return
-          if (canOpenLiveSurvey(row, api.now())) { setId(candidate); setFailed(false); return }
+          if (canOpenLiveSurvey(row, api.now())) {
+            setId(candidate); setFailed(false)
+            if (targets[candidate] && !presented.current.has(candidate)) {
+              // Share the request across StrictMode effect replay. Never retry an uncertain claim automatically.
+              if (!claims.current.has(candidate)) claims.current.set(candidate, api.claimReminder(candidate))
+              try {
+                const show = await claims.current.get(candidate)
+                if (!disposed && show && !presented.current.has(candidate)) {
+                  presented.current.add(candidate); setReminder(candidate)
+                }
+              } catch { /* Keep the normal entry available if the one-time claim cannot be confirmed. */ }
+            }
+            return
+          }
         }
         if (!disposed) { setId(null); setFailed(false) }
       } catch { if (!disposed) setFailed(true) }
@@ -37,14 +56,29 @@ export function LiveSelfReportEntry({ api, onOpen }: { api: LiveSurveyApi; onOpe
     const refresh = () => { if (document.visibilityState === 'visible') setRevision(value => value + 1) }
     window.addEventListener('focus', refresh)
     return () => { disposed = true; window.removeEventListener('focus', refresh) }
-  }, [api, revision])
+  }, [api, revision, targets])
+  async function skipReminder() {
+    if (!reminder || skipping.current) return
+    skipping.current = true; setSkipBusy(true); setSkipError('')
+    try { await api.skip(reminder); setReminder(null); setId(null); setRevision(value => value + 1) }
+    catch {
+      try {
+        const latest = await api.get(reminder)
+        if (!canOpenLiveSurvey(latest, api.now())) { setReminder(null); setId(null); setRevision(value => value + 1); return }
+      } catch { /* Do not expose transport errors or questionnaire data. */ }
+      setSkipError('처리 결과를 확인하지 못했어요. 다시 확인하거나 잠시 후 시도해 주세요.')
+    }
+    finally { skipping.current = false; setSkipBusy(false) }
+  }
   if (failed) return <section aria-label="자기보고"><p role="alert">{failure}</p>
     <button className="report-primary" type="button" onClick={() => setRevision(value => value + 1)}>다시 시도</button></section>
   if (!id) return null
-  return <section className="report-question" aria-label="자기보고">
+  return <><section className="report-question" aria-label="자기보고">
     <h2 className="survey-title">지난 약속은 어떠셨나요?</h2>
     <button type="button" className="report-primary" onClick={() => onOpen(id)}>지금 작성하기</button>
-  </section>
+  </section>{reminder && targets[reminder] && <ReportReminder target={targets[reminder]} busy={skipBusy} error={skipError}
+    onWrite={() => { const selected = reminder; setReminder(null); onOpen(selected) }}
+    onSkip={() => { void skipReminder() }} onDismiss={() => { if (!skipping.current) setReminder(null) }} />}</>
 }
 
 export default function LiveSelfReport({ api, promiseId, target, onHome }: {

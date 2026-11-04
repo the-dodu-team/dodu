@@ -10,6 +10,8 @@
 
 ### 2026-11-05 실제 온보딩·로그아웃 연결
 
+- 인앱 재안내 1회와 현재 기기 권한 복구 후속 구현: [API·상태·검증·배포 계약](INAPP_REMINDER_AND_PERMISSION_RECOVERY.md). 새 재안내 POST는 공통 envelope의 `data.show`를 반환하며 설문 상태를 종료하거나 시간을 연장하지 않는다.
+
 - `PUT /api/participant/onboarding`: 인증된 현재 참가자의 최초 완료 시각 저장. 본문 없음. 공통 envelope로 `data.onboardingCompleted=true`, `data.expiresAt`, `serverTime` 반환. 교체·철회·만료는 401. 브라우저 권한 증명은 아니다.
 - `DELETE /api/participant/notification-subscription`: 현재 세션 소유 구독만 비활성화·토큰 제거. 성공 또는 세션 무효 401 후 FE 로컬 세션 정리. 일반 오류는 모달에서 재시도하며 로그아웃 완료로 표시하지 않는다. 참가자 철회 API와 구분한다.
 - 카메라 확인 → 서버 완료 저장 → 홈. 온보딩 닫기 → 현재 구독 해제·입장 화면. 새 API의 BE 배포 전에는 완료 저장 실패 안내가 나올 수 있다.

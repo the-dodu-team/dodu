@@ -4,6 +4,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.dodu.participant.domain.SecretHasher;
 import java.sql.Timestamp;
@@ -31,6 +34,8 @@ class ValidationSurveyControllerIntegrationTests {
 
     @Autowired private WebApplicationContext context;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private com.dodu.participant.service.ParticipantAuthService auth;
+    @Autowired private InAppSurveyReminderService reminders;
     private MockMvc mockMvc;
     private UUID promiseId;
     private String authorization;
@@ -93,6 +98,11 @@ class ValidationSurveyControllerIntegrationTests {
         mockMvc.perform(get("/api/promises/" + promiseId + "/validation-survey")
                         .header("Authorization", "Bearer " + otherToken))
                 .andExpect(status().isNotFound());
+        assertEquals("Pending", jdbc.queryForObject("select lifecycle_status from validation_survey where promise_id = ?", String.class, promiseId));
+        mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey/inapp-reminder")
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.show").value(false));
+        assertEquals(0, jdbc.queryForObject("select count(*) from validation_survey where promise_id = ? and inapp_reprompted_at is not null", Integer.class, promiseId));
     }
 
     @Test
@@ -122,6 +132,67 @@ class ValidationSurveyControllerIntegrationTests {
                         .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.lifecycleStatus").value("Skipped"));
+        mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey")
+                        .header("Authorization", authorization).contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"actualStarted\":false}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void reminderClaimIsOnceOnlyWithoutClosingTheSurvey() throws Exception {
+        for (boolean expected : new boolean[] {true, false}) {
+            mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey/inapp-reminder")
+                            .header("Authorization", authorization))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.show").value(expected));
+        }
+        assertEquals("Pending", jdbc.queryForObject("select lifecycle_status from validation_survey where promise_id = ?", String.class, promiseId));
+        mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey/inapp-reminder"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void concurrentReminderClaimsHaveExactlyOneWinner() throws Exception {
+        var session = auth.authenticate(authorization);
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(4)) {
+            var gate = new java.util.concurrent.CountDownLatch(1);
+            var futures = new java.util.ArrayList<java.util.concurrent.Future<Boolean>>();
+            for (int i = 0; i < 4; i++) futures.add(pool.submit(() -> { gate.await(); return reminders.claim(promiseId, session); }));
+            gate.countDown();
+            int winners = 0;
+            for (var future : futures) if (future.get()) winners++;
+            assertEquals(1, winners);
+        }
+    }
+
+    @Test
+    void reminderRequiresEligibleOpenWindowAndLiveSession() {
+        var session = auth.authenticate(authorization);
+        Instant start = Instant.now(), end = start.plusSeconds(86400);
+        jdbc.update("update participant_session set expires_at = ? where id = ?", Timestamp.from(end.plusSeconds(3600)), session.session().id());
+        jdbc.update("update study_period set access_ends_at = ? where id = (select study_period_id from participant where id = ?)",
+                Timestamp.from(end.plusSeconds(3600)), session.participant().id());
+        jdbc.update("update validation_survey set available_at = ?, expires_at = ? where promise_id = ?",
+                Timestamp.from(start), Timestamp.from(end), promiseId);
+        var before = new InAppSurveyReminderService(jdbc, java.time.Clock.fixed(start.minusSeconds(1), java.time.ZoneOffset.UTC));
+        var boundary = new InAppSurveyReminderService(jdbc, java.time.Clock.fixed(end, java.time.ZoneOffset.UTC));
+        assertFalse(before.claim(promiseId, session));
+        assertFalse(boundary.claim(promiseId, session));
+        assertTrue(new InAppSurveyReminderService(jdbc, java.time.Clock.fixed(start, java.time.ZoneOffset.UTC)).claim(promiseId, session));
+        jdbc.update("update validation_survey set inapp_reprompted_at = null where promise_id = ?", promiseId);
+        // Use the seeded live session's own time for status/withdrawal checks.
+        jdbc.update("update validation_survey set available_at = ?, expires_at = ? where promise_id = ?",
+                Timestamp.from(Instant.now().minusSeconds(60)), Timestamp.from(Instant.now().plusSeconds(3600)), promiseId);
+        for (String state : new String[] {"Submitted", "Skipped", "Expired"}) {
+            jdbc.update("update validation_survey set lifecycle_status = ? where promise_id = ?", state, promiseId);
+            assertFalse(reminders.claim(promiseId, session));
+        }
+        jdbc.update("update validation_survey set lifecycle_status = 'Pending', eligibility_status = 'TechFailed' where promise_id = ?", promiseId);
+        assertFalse(reminders.claim(promiseId, session));
+        jdbc.update("update validation_survey set eligibility_status = 'AuthCompleted' where promise_id = ?", promiseId);
+        jdbc.update("update participant set withdrawn_at = now() where id = ?", session.participant().id());
+        assertFalse(reminders.claim(promiseId, session));
+        jdbc.update("update participant set withdrawn_at = null where id = ?", session.participant().id());
+        assertTrue(reminders.claim(promiseId, session));
     }
 
     @TestConfiguration(proxyBeanMethods = false)
