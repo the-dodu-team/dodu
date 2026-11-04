@@ -117,7 +117,7 @@ button:focus-visible {outline: 3px solid #be741d; outline-offset: 4px;}
 /* 온보딩 공통 */
 .onboarding-page {display: flex; flex-direction: column; width: 100%; max-width: 430px; min-height: 100dvh; margin: 0 auto; padding-top: env(safe-area-inset-top, 0px); background: linear-gradient(to bottom, #f4f4fa, #f7f7fb); color: #161a29; font-family: 'Pretendard', system-ui, sans-serif; line-height: 1.4; letter-spacing: -0.015em;}
 .onboarding-header {display: flex; align-items: center; flex-shrink: 0; height: 48px; padding: 0 6px 0 16px;}
-.onboarding-close {display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent;}
+.onboarding-close {display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: #161a29;}
 .onboarding-close img {display: block;}
 .onboarding-main {width: 100%; max-width: none; margin: 0; padding: 20px 24px 24px;}
 .onboarding-step {margin: 0; color: #a2a9ba; font-size: 14px; font-weight: 500;}
