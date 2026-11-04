@@ -12,7 +12,7 @@ const loaded = new Module(file, module)
 loaded.filename = file
 loaded.paths = module.paths
 loaded._compile(compiled, file)
-const { createDoduAccessApi, createDoduApi, DoduApiError, DoduRequestTimeout, fetchDoduJson } = loaded.exports
+const { createDoduAccessApi, createDoduApi, createBackendFetch, DoduApiError, DoduRequestTimeout, fetchDoduJson } = loaded.exports
 
 async function main() {
   const previousFetch = global.fetch
@@ -46,6 +46,26 @@ async function main() {
 
     global.fetch = async () => new Response('', { status: 200 })
     assert.equal(await createDoduApi('synthetic-session').getActivePromise(), null)
+    global.fetch = async (url) => {
+      assert.equal(url, 'https://example.invalid/api/participant/me')
+      return Response.json({ status: 'success', data: { onboardingCompleted: false } })
+    }
+    const hosted = await createBackendFetch('https://example.invalid/')('/api/participant/me')
+    assert.equal((await hosted.json()).data.onboardingCompleted, false)
+    for (const failure of [{ code: 'PHOTO_EVALUATION_IN_PROGRESS' }, null,
+      { status: 'error', error: { code: 'PHOTO_EVALUATION_IN_PROGRESS', message: 'private-stack-trace' } }]) {
+      global.fetch = async () => Response.json(failure, { status: 409 })
+      await assert.rejects(createDoduApi('synthetic-session').listAuthAttempts('synthetic-promise'), error => {
+        assert.ok(error instanceof DoduApiError)
+        assert.equal(error.httpStatus, 409)
+        assert.doesNotMatch(error.message, /private-stack-trace|undefined/)
+        return true
+      })
+    }
+    global.fetch = async () => new Response('private-proxy-error', { status: 502 })
+    await assert.rejects(createDoduApi('synthetic-session').getActivePromise(), DoduApiError)
+    global.fetch = async () => Response.json([{ attemptId: 'synthetic-attempt', processingStatus: 'Evaluating' }])
+    assert.equal((await createDoduApi('synthetic-session').listAuthAttempts('synthetic-promise'))[0].processingStatus, 'Evaluating')
     global.fetch = async () => new Response('null', { status: 200 })
     assert.equal(await createDoduApi('synthetic-session').getActivePromise(), null)
     console.log('PASS: participant entry contract, bounded fetch/body waits, no automatic retry, and empty active promise')

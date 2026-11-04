@@ -93,7 +93,8 @@ public class ValidationSurveyController {
                    and vs.lifecycle_status in ('Pending', 'Prompted', 'Reminded')
                    and vs.available_at is not null and vs.expires_at is not null
                    and ? >= vs.available_at and ? < vs.expires_at
-                """, now, promiseId, participantId, now, now);
+                """, java.sql.Timestamp.from(now), promiseId, participantId,
+                java.sql.Timestamp.from(now), java.sql.Timestamp.from(now));
         if (updated != 1) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "survey is not skippable");
         }
@@ -102,6 +103,7 @@ public class ValidationSurveyController {
 
     @Operation(summary = "검증 설문 제출")
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional
     public SurveyResponse submit(@PathVariable UUID promiseId,
                                  @RequestHeader(value = "Authorization", required = false) String authorization,
                                  @RequestBody SurveySubmission request) {
@@ -119,8 +121,8 @@ public class ValidationSurveyController {
                 try (var rs = statement.executeQuery()) {
                     if (!rs.next()) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
                     var eligibility = policy.eligibility(rs.getString("eligibility_status"));
-                    Instant availableAt = rs.getObject("available_at", Instant.class);
-                    Instant expiresAt = rs.getObject("expires_at", Instant.class);
+                    Instant availableAt = rs.getTimestamp("available_at") == null ? null : rs.getTimestamp("available_at").toInstant();
+                    Instant expiresAt = rs.getTimestamp("expires_at") == null ? null : rs.getTimestamp("expires_at").toInstant();
                     if (!policy.canRespond(eligibility, availableAt, expiresAt, now)) {
                         throw new ResponseStatusException(HttpStatus.CONFLICT, "survey is not available");
                     }
@@ -137,7 +139,7 @@ public class ValidationSurveyController {
                         update.setString(2, request.startOrder());
                         update.setString(3, request.startDelayBucket());
                         update.setString(4, request.noStartReason());
-                        update.setObject(5, now);
+                        update.setTimestamp(5, java.sql.Timestamp.from(now));
                         update.setObject(6, rs.getObject("id", UUID.class));
                         if (update.executeUpdate() != 1) throw new ResponseStatusException(HttpStatus.CONFLICT, "survey already submitted");
                     }

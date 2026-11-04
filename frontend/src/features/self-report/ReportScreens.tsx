@@ -49,19 +49,19 @@ const reasonOptions = [
   ['motivation', '하기 싫거나 흥미가 떨어져서'], ['distraction', '인증 후 다른 일을 해서'],
   ['other', '기타'],
 ] as const
-function Choices<T extends string>({ name, question, options, value, onChange }: {
-  name: string; question: string; options: readonly (readonly [T, string])[]
+function Choices<T extends string>({ name, question, options, value, onChange, disabled = false }: {
+  disabled?: boolean; name: string; question: string; options: readonly (readonly [T, string])[]
   value: T | null; onChange: (value: T) => void
 }) {
-  return <fieldset className="report-question">
+  return <fieldset className="report-question" disabled={disabled}>
     <legend>{question}</legend>
     <div className="report-options">{options.map(([key, label]) =>
       <label key={key}><input type="radio" name={name} value={key} checked={value === key}
         onChange={() => onChange(key)} /><span>{label}</span></label>)}</div>
   </fieldset>
 }
-export function SelfReportPage({ target, onClose, onSkip, onSubmit }: {
-  target: ReportTarget; onClose: () => void; onSkip: () => void
+export function SelfReportPage({ target, onClose, onSkip, onSubmit, busy = false }: {
+  target: ReportTarget | null; onClose: () => void; onSkip: () => void; busy?: boolean
   onSubmit: (answers: ReportAnswers) => void
 }) {
   const [answers, setAnswers] = useState<ReportAnswers>({ ...emptyAnswers })
@@ -70,9 +70,9 @@ export function SelfReportPage({ target, onClose, onSkip, onSubmit }: {
   return <main className="report-page survey-page">
     <header className="report-header"><button type="button" aria-label="닫기" onClick={onClose}>×</button></header>
     <h1 className="survey-title" ref={heading} tabIndex={-1}>지난 약속은 어떠셨나요?</h1>
-    <p className="survey-target">{reportLabel(target)}</p>
-    <form onSubmit={event => { event.preventDefault(); if (completeAnswers(answers)) onSubmit(answers) }}>
-      <fieldset className="report-question">
+    <p className="survey-target">{target ? reportLabel(target) : null}</p>
+    <form onSubmit={event => { event.preventDefault(); if (!busy && completeAnswers(answers)) onSubmit(answers) }}>
+      <fieldset className="report-question" disabled={busy}>
         <legend>실제 작업을 시작했나요?</legend>
         <div className="report-yesno">
           {(['yes', 'no'] as const).map(value => <label key={value}>
@@ -82,18 +82,18 @@ export function SelfReportPage({ target, onClose, onSkip, onSubmit }: {
           </label>)}
         </div>
       </fieldset>
-      {answers.started === 'yes' && <Choices name="order" question="인증과 작업 중 무엇을 먼저 했나요?"
+      {answers.started === 'yes' && <Choices disabled={busy} name="order" question="인증과 작업 중 무엇을 먼저 했나요?"
         options={orderOptions} value={answers.order}
         onChange={order => setAnswers(previous => ({ ...previous, order, delay: null }))} />}
       {answers.started === 'yes' && answers.order === 'after' &&
-        <Choices name="delay" question="인증 후 얼마 만에 작업을 시작했나요?" options={delayOptions}
+        <Choices disabled={busy} name="delay" question="인증 후 얼마 만에 작업을 시작했나요?" options={delayOptions}
           value={answers.delay} onChange={delay => setAnswers(previous => ({ ...previous, delay }))} />}
-      {answers.started === 'no' && <Choices name="reason" question="시작하지 못한 이유는 무엇인가요?"
+      {answers.started === 'no' && <Choices disabled={busy} name="reason" question="시작하지 못한 이유는 무엇인가요?"
         options={reasonOptions} value={answers.reason}
         onChange={reason => setAnswers(previous => ({ ...previous, reason }))} />}
       <footer className="report-footer">
-        <button className="report-primary" type="submit" disabled={!completeAnswers(answers)}>제출</button>
-        <button className="report-text" type="button" onClick={onSkip}>건너뛰기</button>
+        <button className="report-primary" type="submit" disabled={busy || !completeAnswers(answers)} aria-busy={busy}>제출</button>
+        <button className="report-text" type="button" disabled={busy} onClick={onSkip}>건너뛰기</button>
       </footer>
     </form>
   </main>

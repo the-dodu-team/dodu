@@ -1,3 +1,7 @@
+import HomeStatePreview from './features/home/HomeStatePreview'
+import AccessClosedPage from './features/home/AccessClosedPage'
+import { interventionClosed } from './features/home/homeState'
+import type { HomeSeed } from './features/home/HomeStatePreview'
 import SelfReportPreview from './features/self-report/SelfReportPreview'
 import type { Ref } from 'react'
 import type { PreviewHomeControls } from './features/self-report/SelfReportPreview'
@@ -132,6 +136,9 @@ export default function App() {
   const preview = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('preview')
     : null
+
+  if (preview === 'home') return <HomeStatePreview renderHome={seed => <HomePrototype {...seed} />} />
+  if (preview === 'access-closed') return <AccessClosedPage />
 
   if (preview === 'self-report') {
     return <SelfReportPreview renderHome={(records, controls) => (
@@ -342,47 +349,8 @@ function ParticipantEntryPreview() {
     }
   }
 
-  if (screen === 'closed') {
-    return (
-      <div className="entry-page">
-        <header className="entry-header">
-          <span className="app-header-logo">DODU</span>
-        </header>
-
-        <main className="entry-main" aria-labelledby="access-closed-title">
-          <div className="entry-form">
-            <div className="entry-content">
-              <h1
-                ref={closedTitleRef}
-                id="access-closed-title"
-                className="entry-title"
-                tabIndex={-1}
-              >
-                서비스 접근이 종료되었어요
-              </h1>
-              <p className="entry-description">
-                현재 참가자 코드로는 서비스를 이용할 수 없어요.
-                확인이 필요하면 운영자에게 문의해 주세요.
-              </p>
-            </div>
-
-            <footer className="entry-footer">
-              <button
-                type="button"
-                className="entry-submit"
-                onClick={() => {
-                  setErrorMessage('')
-                  setScreen('entry')
-                }}
-              >
-                코드 입력으로 돌아가기
-              </button>
-            </footer>
-          </div>
-        </main>
-      </div>
-    )
-  }
+  // 기존 임시 종료 문구 대신 S13 핸드오프 화면을 사용한다.
+  if (screen === 'closed') return <AccessClosedPage />
 
   return (
     <ParticipantEntryPage
@@ -404,12 +372,12 @@ type PreviewScreen =
   | 'photo-auth'
   | 'history'
 
-type HomePrototypeProps = {
+type HomePrototypeProps = Omit<HomeSeed, 'initialPromise'> & {
   initialPastResults?: FinalPromiseRecord[]
   previewControls?: Ref<PreviewHomeControls>
   initialScreen?: PreviewScreen
   interventionEndsAt?: number
-  initialPromise?: ManagedPreviewPromise
+  initialPromise?: (PreviewPromise & Partial<ManagedPreviewPromise>) | null
   api?: ReturnType<typeof createDoduApi>
 }
 
@@ -418,8 +386,10 @@ function HomePrototype({
   initialPastResults = [],
   previewControls,
   interventionEndsAt,
-  initialPromise,
+  initialPromise = null,
   api,
+  initialPhotoSession = null,
+  accessClosed = false,
 }: HomePrototypeProps) {
   const [screen, setScreen] = useState<PreviewScreen>(initialScreen)
 
@@ -433,8 +403,9 @@ function HomePrototype({
   const [scheduledAt, setScheduledAt] = useState('')
   const [selectedTool, setSelectedTool] = useState<PromiseTool | null>(null)
   const [confirmError, setConfirmError] = useState('')
-  const [storedPromise, setPromise] = useState<ManagedPreviewPromise | null>(initialPromise ?? null)
-  const photo = usePhotoAuthMock()
+  const [storedPromise, setPromise] = useState<ManagedPreviewPromise | null>(() => initialPromise
+    ? { timeEditCount: 0, isRecreated: false, ...initialPromise } : null)
+  const photo = usePhotoAuthMock(initialPhotoSession)
   const promise: ManagedPreviewPromise | null = storedPromise && photo.session &&
     promiseKey(storedPromise) === promiseKey(photo.session.promise)
     ? { ...storedPromise, status: photoPromiseStatus(photo.session) } : storedPromise
@@ -449,7 +420,7 @@ function HomePrototype({
   const currentReportTarget = asReportTarget(promise, now)
   const report = useSelfReportMock(
     currentReportTarget ? [...archivedReportTargets, currentReportTarget] : archivedReportTargets,
-    now, screen === 'home',
+    now, screen === 'home' && !accessClosed,
   )
 
   // 취소 기록은 인증 결과와 구분하여 메모리에만 보관한다.
@@ -475,6 +446,12 @@ function HomePrototype({
       document.removeEventListener('visibilitychange', updateTime)
     }
   }, [])
+
+  useEffect(() => {
+    if (screen === 'home' && !report.activeTarget && !report.reminderTarget && !accessClosed) {
+      document.querySelector<HTMLElement>('.home-page')?.focus()
+    }
+  }, [screen, report.activeTarget, report.reminderTarget, accessClosed])
 
   const editBlockedReason = promise
     ? getEditBlockedReason(promise, now)
@@ -515,13 +492,14 @@ function HomePrototype({
       recreationUsedDatesRef.current.has(date) ||
       cancelledCount >= 2
     ) {
-      return `${formatDateLabel(date)}에는 이미 약속을 한 번 다시 만들었어요. 다른 날을 선택해 주세요.`
+      return `${formatDateLabel(date)}에는 이미 약속을 한 번 다시 만들었어요. 다른 날짜를 선택해 주세요.`
     }
 
     return ''
   }
 
   function openCreator() {
+    if (accessClosed || interventionClosed(Date.now(), interventionEndsAt)) return
     setRecoveryDate(null)
     // 현재 미리보기는 저장된 약속 한 개를 관리한다.
     if (promise && promise.status !== 'techFailed' && !getFinalPromiseRecord(promise, Date.now())) {
@@ -554,6 +532,7 @@ function HomePrototype({
   }
 
   function openTimeEditor() {
+    if (accessClosed || interventionClosed(Date.now(), interventionEndsAt)) return
     if (!promise) return
 
     const current = Date.now()
@@ -583,6 +562,7 @@ function HomePrototype({
   // 미리보기 전용: 실제 서버 저장·예약·알림은 실행하지 않는다.
   // API 연결 시 서버 저장 성공을 확인한 뒤에만 홈으로 이동한다.
   async function savePreview() {
+    if (accessClosed || interventionClosed(Date.now(), interventionEndsAt)) return
     if (creationInProgressRef.current) return
 
     if (promise && promise.status !== 'techFailed' && !getFinalPromiseRecord(promise, Date.now())) {
@@ -701,6 +681,7 @@ function HomePrototype({
 
   // 시간 수정은 기존 약속의 날짜·시간만 바꾼다.
   async function saveEditedTime(value: string) {
+    if (accessClosed || interventionClosed(Date.now(), interventionEndsAt)) return
     if (!promise) return
 
     const current = Date.now()
@@ -870,7 +851,9 @@ function HomePrototype({
 
   */
   function verifyPreviewPromise() {
-    if (!promise) return
+    if (!promise || accessClosed) return
+    if (interventionClosed(Date.now(), interventionEndsAt) &&
+      !['evaluating', 'verified', 'unverified', 'techFailed'].includes(promise.status)) return
     if (api && promise.promiseId) {
       setScreen('photo-auth')
       return
@@ -881,6 +864,7 @@ function HomePrototype({
   }
 
   function openTechnicalRecovery() {
+    if (accessClosed || interventionClosed(Date.now(), interventionEndsAt)) return
     if (!promise || photo.session?.stage !== 'tech-failed-recoverable') return
     if (technicalRecoveryUsedDates.has(promise.date)) {
       return
@@ -894,6 +878,8 @@ function HomePrototype({
     home: () => setScreen('home'),
     create: openCreator,
   }))
+
+  if (accessClosed) return <AccessClosedPage />
 
   if (report.activeTarget) {
     return <SelfReportPage key={reportKey(report.activeTarget)} target={report.activeTarget}
@@ -915,6 +901,7 @@ function HomePrototype({
 
   if (screen === 'photo-auth' && photo.session) {
     return <PhotoAuthMockFlow session={photo.session} dispatch={photo.dispatch}
+      interventionEndsAt={interventionEndsAt}
       recoveryUsed={technicalRecoveryUsedDates.has(photo.session.promise.date)}
       onClose={() => setScreen('home')} onRecover={openTechnicalRecovery} />
   }
@@ -1037,7 +1024,7 @@ function HomePrototype({
 
   return (
     <>
-    <main className="home-page" inert={Boolean(report.reminderTarget)}>
+    <main className="home-page" aria-label="홈" tabIndex={-1} inert={Boolean(report.reminderTarget)}>
       <AppHeader />
 
       {screen === 'home' && (
@@ -1049,6 +1036,7 @@ function HomePrototype({
           <DoduHome
             promise={promise}
             pastResults={pastResults}
+            interventionEndsAt={interventionEndsAt}
             onCreate={openCreator}
             onEdit={openManager}
             onViewAll={() => setScreen('history')}

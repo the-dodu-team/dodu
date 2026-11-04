@@ -1,0 +1,139 @@
+import { useEffect, useRef, useState } from 'react'
+import OnboardingIntroPage from './OnboardingIntroPage'
+import OnboardingInstallPage from './OnboardingInstallPage'
+import OnboardingNotificationPage from './OnboardingNotificationPage'
+import OnboardingCameraPage from './OnboardingCameraPage'
+import { detectOnboardingPlatform } from './detectOnboardingPlatform'
+import { createNotificationPermissionController } from './notificationPermission'
+import type { NotificationEnvironment } from './notificationPermission'
+
+function environment(): NotificationEnvironment {
+  return {
+    secure: window.isSecureContext,
+    ios: detectOnboardingPlatform() === 'ios',
+    standalone: window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true,
+    notification: typeof Notification === 'undefined' ? undefined : {
+      permission: Notification.permission,
+      requestPermission: () => Notification.requestPermission(),
+    },
+  }
+}
+
+// 안내를 닫아도 서버 완료 상태나 권한을 임의로 저장하지 않는다.
+export default function LiveOnboardingFlow({ onClose }: { onClose: () => void }) {
+  const [platform] = useState(detectOnboardingPlatform)
+  const [controller] = useState(() => createNotificationPermissionController(environment))
+  const [permission, setPermission] = useState(controller.read)
+  const [step, setStep] = useState<'intro' | 'install' | 'notification' | 'camera'>('intro')
+  const [busy, setBusy] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const content = useRef<HTMLDivElement>(null)
+  const mounted = useRef(false)
+  const pending = useRef(false)
+  const version = useRef(0)
+  const totalSteps = platform === 'ios' ? 4 : 3
+
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; version.current++ }
+  }, [])
+  useEffect(() => {
+    const heading = content.current?.querySelector('h1')
+    heading?.setAttribute('tabindex', '-1')
+    heading?.focus()
+  }, [step])
+  /* 이전 권한 복귀 확인 코드
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') setPermission(controller.read())
+    }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [controller])
+  */
+  useEffect(() => {
+    let disposed = false
+    let status: PermissionStatus | undefined
+    const refresh = () => {
+      if (!disposed && document.visibilityState === 'visible') {
+        const current = controller.read()
+        setPermission(previous => previous === current ? previous : current)
+      }
+    }
+
+    // 권한 변경 자체를 감지하고, 창 복귀와 페이지 복원도 함께 확인한다.
+    window.addEventListener('focus', refresh)
+    window.addEventListener('pageshow', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    if (navigator.permissions?.query) {
+      void navigator.permissions.query({ name: 'notifications' })
+        .then(result => {
+          if (disposed) return
+          status = result
+          status.addEventListener('change', refresh)
+          refresh()
+        })
+        .catch(() => {
+          // 알림 권한 조회를 지원하지 않으면 아래 주기 확인을 사용한다.
+        })
+    }
+
+    // 브라우저 설정창에서 돌아올 때 이벤트가 누락되어도 화면 상태를 갱신한다.
+    const timer = window.setInterval(refresh, 500)
+    refresh()
+    return () => {
+      disposed = true
+      window.clearInterval(timer)
+      status?.removeEventListener('change', refresh)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('pageshow', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [controller])
+
+  function navigate(next: typeof step) {
+    version.current++
+    setStep(next)
+  }
+  function notificationStep() {
+    const current = controller.read()
+    setPermission(current)
+    navigate(current === 'granted' ? 'camera' : 'notification')
+  }
+  async function request() {
+    if (pending.current) return
+    pending.current = true
+    const requestVersion = ++version.current
+    setBusy(true)
+    const result = await controller.request()
+    pending.current = false
+    if (!mounted.current) return
+    setBusy(false)
+    setPermission(result)
+    setAttempt(value => value + 1)
+    if (version.current === requestVersion && result === 'granted') navigate('camera')
+  }
+  const recovery = platform === 'ios'
+    ? '홈 화면의 DODU 앱에서 다시 확인해 주세요. iPhone 설정의 앱별 알림 설정도 확인해 주세요.'
+    : '사용 중인 브라우저의 사이트 권한에서 알림을 허용한 뒤 다시 확인해 주세요.'
+
+  return <div ref={content}>
+    {step === 'intro' && <OnboardingIntroPage totalSteps={totalSteps} onClose={onClose}
+      onNext={() => platform === 'ios' ? navigate('install') : notificationStep()} />}
+    {step === 'install' && <OnboardingInstallPage onClose={onClose} onBack={() => navigate('intro')}
+      onNext={() => { if (environment().standalone) notificationStep() }} />}
+    {step === 'notification' && <OnboardingNotificationPage totalSteps={totalSteps} onClose={onClose}
+      onBack={() => navigate(platform === 'ios' ? 'install' : 'intro')}
+      onRequest={() => { void request() }} requestBusy={busy}
+      requestDisabled={['granted', 'unsupported', 'insecure', 'install-required'].includes(permission)}
+      isDenied={permission === 'denied'} recoveryText={recovery} attempt={attempt} />}
+    {step === 'camera' && <OnboardingCameraPage totalSteps={totalSteps} isComplete={false}
+      isDenied={false} recoveryText="" attempt={0} requestDisabled
+      onBack={() => navigate('notification')} onClose={onClose} onRequest={() => {}} />}
+  </div>
+}

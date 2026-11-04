@@ -1,3 +1,4 @@
+import { formatPromiseDateTime } from './formatPromise'
 import arrowLeftIcon from '../../assets/icons/arrow-left.svg'
 import clockIcon from '../../assets/icons/clock-filled-gray.svg'
 import cameraIcon from '../../assets/icons/camera-filled-gray.svg'
@@ -26,14 +27,14 @@ export default function PromiseConfirmPage({
   const hasValidTime = Number.isFinite(timestamp)
 
   const timeLabel = hasValidTime
-    ? new Intl.DateTimeFormat('ko-KR', {
+    ? formatPromiseDateTime(timestamp) /* 기존 날짜 포맷: new Intl.DateTimeFormat('ko-KR', {
         timeZone: 'Asia/Seoul',
         month: 'numeric',
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
-      }).format(new Date(timestamp))
+      }).format(new Date(timestamp)) */
     : '날짜와 시간을 다시 선택해 주세요'
 
   return (

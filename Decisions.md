@@ -1,13 +1,14 @@
 # 개발 결정 기록
 
-## DEV-20261030-05 Push 발송 분리·사전 차단·FCM 연동 경계
+## DEV-20261105-04 — 실제 앱 진입점과 통합 API 경계
 
-- 배경: Push 외부 호출이 DB 트랜잭션 안에 있었고, 철회·취소·만료된 약속에도 예약된 Push가 나갈 수 있었으며 실제 provider가 없었다.
-- 선택: 외부 호출을 트랜잭션 밖으로 분리하고, 발송 직전에 참가자·약속·인증 창·설문 상태를 다시 검사해 사유와 함께 `SUPPRESSED`로 기록한다. FCM(firebase-admin)은 `dodu.push.fcm.enabled`로 켜고 기본은 꺼 둔다. 토큰은 `notification_subscription.push_token`에 저장한다.
-- 근거: 외부 호출이 트랜잭션을 점유하면 DB 락이 길어지고, 발송 시점의 상태가 예약 시점과 다를 수 있다. 토큰 만료·잘못된 토큰은 재시도해도 성공하지 않는다.
-- 대안: 트랜잭션 안 발송 유지, 예약 시점 검사만으로 충분하다고 보는 방식, 토큰 암호화 선적용(N-01로 이월)은 선택하지 않았다.
-- 영향: 중복 발송이 가능한 at-least-once 방식이며 단일 인스턴스를 전제한다. `UNREGISTERED`·`SENDER_ID_MISMATCH`는 구독을 비활성화하고 `INVALID_ARGUMENT`는 재시도하지 않는다. 키 파일은 저장소에 두지 않는다.
-- 검증: `FcmPushNotificationSenderTests`, `NotificationDeliveryServiceIntegrationTests`, dry-run 수동 확인(`FAILED`/`INVALID_ARGUMENT`, attempt_count 1), 전체 `npm run verify`.
+- 배경: FE PR의 새 진입점과 기존 실제 사진·이력 연결이 분리되어 있었고, 알림 PR의 V9 번호가 배포된 사진 보관 V9과 중복되었다.
+- 선택: PR #23~#28의 실제 참가자·온보딩·권한·자기보고·접근성 흐름을 통합하면서 사진 인증·주간 이력을 새 진입점에도 연결한다. 기존 V9은 보존하고 Push 토큰 추가는 V10으로 이동한다.
+- 근거: 미병합 기능을 통합하면서 기존 운영 세션·API 기본 주소·사진 판정 대기 흐름을 잃지 않아야 한다. 미응답을 미시작으로 단정하는 임시 Push 문구도 제거한다.
+- 대안: 한쪽 App 파일만 채택하거나 적용된 마이그레이션을 수정하는 방식은 사용하지 않는다.
+- 영향: 구형 브라우저 세션을 복원하고 신규 참가자는 서버 미완료 상태에 따라 온보딩으로 이동한다. 사진 제출 중·판정 중 재제출을 차단하고 GET으로 결과를 확인하며 원시 예외 대신 한국어 안내를 표시한다. 자기보고 제출·건너뛰기의 PostgreSQL 시간값 바인딩도 수정한다.
+- 검증: 전체 `npm run verify` 통과(백엔드 248건, 실패·오류·건너뜀 0), 신규 FE PR 테스트 포함, `git diff --check` 통과. 합성 데이터 기반 Chrome 375×812에서 신규 입장→온보딩, 사진 압축→제출→중복 차단→완료 조회, 구형 409 응답 복원 및 닫기 버튼 44×44·가로 넘침 없음을 확인했다. 실제 FCM 수신·AI 판정·모바일 실기기 검증을 의미하지 않는다.
+
 ## DEV-20261105-03 — 배포 환경의 실제 약속 사진 인증 진입
 
 - 배경: 실제 약속이 있어도 사진 인증 버튼이 비활성화됐다. 버튼과 클릭 처리에 남아 있던 `import.meta.env.DEV` 제한이 배포 환경의 실제 API 연결에도 적용되고 있었다.
@@ -107,6 +108,14 @@
 - 대안: FE에서 상태를 추정하거나 mock 결과를 유지하는 방식은 선택하지 않음.
 - 영향: 배포 주소와 외부 사진 저장소·AI worker가 준비되면 동일 화면에서 운영 API를 호출할 수 있음. Figma 노드 구조화 컨텍스트와 Swagger 수동 실행 결과는 외부 확인 전까지 미확정.
 - 검증: FE build, API 계약 테스트, 전체 verify 실행 결과를 같은 커밋에 기록.
+## DEV-20261030-05 Push 발송 분리·사전 차단·FCM 연동 경계
+
+- 배경: Push 외부 호출이 DB 트랜잭션 안에 있었고, 철회·취소·만료된 약속에도 예약된 Push가 나갈 수 있었으며 실제 provider가 없었다.
+- 선택: 외부 호출을 트랜잭션 밖으로 분리하고, 발송 직전에 참가자·약속·인증 창·설문 상태를 다시 검사해 사유와 함께 `SUPPRESSED`로 기록한다. FCM(firebase-admin)은 `dodu.push.fcm.enabled`로 켜고 기본은 꺼 둔다. 토큰은 `notification_subscription.push_token`에 저장한다.
+- 근거: 외부 호출이 트랜잭션을 점유하면 DB 락이 길어지고, 발송 시점의 상태가 예약 시점과 다를 수 있다. 토큰 만료·잘못된 토큰은 재시도해도 성공하지 않는다.
+- 대안: 트랜잭션 안 발송 유지, 예약 시점 검사만으로 충분하다고 보는 방식, 토큰 암호화 선적용(N-01로 이월)은 선택하지 않았다.
+- 영향: 중복 발송이 가능한 at-least-once 방식이며 단일 인스턴스를 전제한다. `UNREGISTERED`·`SENDER_ID_MISMATCH`는 구독을 비활성화하고 `INVALID_ARGUMENT`는 재시도하지 않는다. 키 파일은 저장소에 두지 않는다.
+- 검증: `FcmPushNotificationSenderTests`, `NotificationDeliveryServiceIntegrationTests`, dry-run 수동 확인(`FAILED`/`INVALID_ARGUMENT`, attempt_count 1), 전체 `npm run verify`.
 
 ## DEV-20261013-01 — Notion 최신 작업명 정책 및 구현 근거 동기화
 

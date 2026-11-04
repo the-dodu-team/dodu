@@ -12,6 +12,7 @@
     "test:photo": "node tests/photo-auth.test.cjs && node tests/photo-compression.test.cjs",
     "test:platform": "node tests/platform-adapters.test.cjs",
     "test:api": "node tests/api-contract.test.cjs && node tests/participant-entry.test.cjs",
+    "test:integration-ui": "node --test tests/home-state.test.cjs tests/live-participant.test.cjs tests/live-survey.test.cjs tests/notification-permission.test.cjs tests/participant-promise-api.test.cjs",
     "preview": "vite preview"
   },
   "dependencies": {
