@@ -6,6 +6,8 @@ import OnboardingCameraPage from './OnboardingCameraPage'
 import { detectOnboardingPlatform } from './detectOnboardingPlatform'
 import { createNotificationPermissionController } from './notificationPermission'
 import type { NotificationEnvironment } from './notificationPermission'
+import { requestCameraPermission, cameraRecoveryMessage } from './cameraPermission'
+import type { CameraPermissionState } from './cameraPermission'
 
 function environment(): NotificationEnvironment {
   return {
@@ -25,7 +27,8 @@ export default function LiveOnboardingFlow({ onClose }: { onClose: () => void })
   const [platform] = useState(detectOnboardingPlatform)
   const [controller] = useState(() => createNotificationPermissionController(environment))
   const [permission, setPermission] = useState(controller.read)
-  const [step, setStep] = useState<'intro' | 'install' | 'notification' | 'camera'>('intro')
+  const [step, setStep] = useState<'intro' | 'install' | 'notification' | 'camera' | 'complete'>('intro')
+  const [camera, setCamera] = useState<CameraPermissionState>('default')
   const [busy, setBusy] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const content = useRef<HTMLDivElement>(null)
@@ -118,6 +121,23 @@ export default function LiveOnboardingFlow({ onClose }: { onClose: () => void })
     setAttempt(value => value + 1)
     if (version.current === requestVersion && result === 'granted') navigate('camera')
   }
+  async function requestCamera() {
+    if (pending.current) return
+    pending.current = true
+    const requestVersion = ++version.current
+    setBusy(true)
+    const result = await requestCameraPermission({
+      secure: window.isSecureContext,
+      open: navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices),
+    })
+    pending.current = false
+    if (!mounted.current) return
+    setBusy(false)
+    if (requestVersion !== version.current) return
+    setCamera(result)
+    setAttempt(value => value + 1)
+    if (result === 'granted') navigate('complete')
+  }
   const recovery = platform === 'ios'
     ? '홈 화면의 DODU 앱에서 다시 확인해 주세요. iPhone 설정의 앱별 알림 설정도 확인해 주세요.'
     : '사용 중인 브라우저의 사이트 권한에서 알림을 허용한 뒤 다시 확인해 주세요.'
@@ -132,8 +152,10 @@ export default function LiveOnboardingFlow({ onClose }: { onClose: () => void })
       onRequest={() => { void request() }} requestBusy={busy}
       requestDisabled={['granted', 'unsupported', 'insecure', 'install-required'].includes(permission)}
       isDenied={permission === 'denied'} recoveryText={recovery} attempt={attempt} />}
-    {step === 'camera' && <OnboardingCameraPage totalSteps={totalSteps} isComplete={false}
-      isDenied={false} recoveryText="" attempt={0} requestDisabled
-      onBack={() => navigate('notification')} onClose={onClose} onRequest={() => {}} />}
+    {(step === 'camera' || step === 'complete') && <OnboardingCameraPage totalSteps={totalSteps}
+      isComplete={step === 'complete'} isDenied={!['default', 'granted'].includes(camera)}
+      recoveryText={cameraRecoveryMessage(camera)} attempt={attempt} requestDisabled={busy} requestBusy={busy}
+      onBack={() => navigate('notification')} onClose={onClose}
+      onRequest={step === 'complete' ? onClose : () => { void requestCamera() }} />}
   </div>
 }

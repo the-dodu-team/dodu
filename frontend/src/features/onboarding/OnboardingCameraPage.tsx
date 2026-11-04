@@ -4,6 +4,7 @@ import cameraIcon from '../../assets/icons/camera-filled.svg'
 type OnboardingCameraPageProps = {
   isComplete?: boolean
   requestDisabled?: boolean
+  requestBusy?: boolean
   totalSteps: 3 | 4
   isDenied: boolean
   recoveryText: string
@@ -16,6 +17,7 @@ type OnboardingCameraPageProps = {
 export default function OnboardingCameraPage({
   isComplete = false,
   requestDisabled = false,
+  requestBusy = false,
   totalSteps, isDenied, recoveryText, attempt, onRequest,
   onBack,
   onClose,
@@ -117,8 +119,7 @@ export default function OnboardingCameraPage({
         </div>
         {isDenied && (
           <section className="onboarding-camera-guide" aria-label="권한 복구 안내">
-            <p role="status" key={attempt}>권한이 아직 허용되지 않았어요. 설정을 확인한 뒤 다시 확인해 주세요.</p>
-            <p>{recoveryText}</p>
+            <p role="status" key={attempt}>{recoveryText}</p>
             <p>설정 메뉴 이름은 OS와 브라우저 버전에 따라 다를 수 있어요.</p>
           </section>
         )}
@@ -130,6 +131,7 @@ export default function OnboardingCameraPage({
           className="onboarding-next"
           onClick={onRequest}
           disabled={requestDisabled}
+          aria-busy={requestBusy}
         >
           {!isComplete && (
             <span
@@ -138,7 +140,7 @@ export default function OnboardingCameraPage({
               aria-hidden="true"
             />
           )}
-          {isComplete ? '완료하기' : isDenied ? '권한 다시 확인하기' : '카메라 권한 허용하기'}
+          {requestBusy ? '카메라 확인 중…' : isComplete ? '완료하기' : isDenied ? '권한 다시 확인하기' : '카메라 권한 허용하기'}
         </button>
       </footer>
     </div>
