@@ -1053,6 +1053,7 @@ function HomePrototype({
             onEdit={openManager}
             onViewAll={() => setScreen('history')}
             onVerify={verifyPreviewPromise}
+            livePhotoEnabled={Boolean(api && promise?.promiseId)}
           />
         </>
       )}

@@ -8,16 +8,17 @@ const ts = req('typescript')
 const React = req('react')
 const { renderToStaticMarkup } = req('react-dom/server')
 const cache = new Map()
-function load(file) {
+function load(file, dev = true) {
   if (!path.extname(file)) file = ['.tsx', '.ts'].map(ext => file + ext).find(fs.existsSync)
   if (/\.(svg|png|css)$/.test(file)) return { default: file }
-  if (cache.has(file)) return cache.get(file).exports
-  const mod = { exports: {} }; cache.set(file, mod)
-  const code = ts.transpileModule(fs.readFileSync(file, 'utf8').replaceAll('import.meta.env.DEV', 'true'), { compilerOptions: {
+  const cacheKey = `${file}:${dev}`
+  if (cache.has(cacheKey)) return cache.get(cacheKey).exports
+  const mod = { exports: {} }; cache.set(cacheKey, mod)
+  const code = ts.transpileModule(fs.readFileSync(file, 'utf8').replaceAll('import.meta.env.DEV', String(dev)), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022,
   }}).outputText
   new Function('require', 'module', 'exports', code)(name => name.startsWith('.')
-    ? load(path.resolve(path.dirname(file), name)) : req(name), mod, mod.exports)
+    ? load(path.resolve(path.dirname(file), name), dev) : req(name), mod, mod.exports)
   return mod.exports
 }
 const {getFinalPromiseRecord: final, getWeeklyFinalRecords: weekly, formatAuthWindow: format} = load(root + '/src/features/promise/promiseHistory.ts')
@@ -87,5 +88,16 @@ current=end
 assert.ok(render(Auth,{promise:p,onVerify(){}}).includes('disabled'))
 assert.ok(render(Auth,{promise:p,onVerify(){}}).includes('인증 시간 종료'))
 assert.ok(render(Auth,{promise:{...p,status:'evaluating'},onVerify(){}}).includes('사진 판정 결과를 기다리고 있어요.'))
+const ProductionAuth = load(root + '/src/features/promise/PromiseAuthPreview.tsx', false).default
+current=Date.parse('2026-10-18T12:00:00+09:00')
+assert.ok(!render(ProductionAuth,{promise:p,isLive:true,onVerify(){}}).includes('disabled'))
+assert.ok(render(ProductionAuth,{promise:p,onVerify(){}}).includes('disabled'))
+for (const status of ['cancelled','withdrawn','permissionBlocked']) {
+  assert.ok(render(ProductionAuth,{promise:{...p,status},isLive:true,onVerify(){}}).includes('disabled'))
+}
+current=end
+assert.ok(render(ProductionAuth,{promise:p,isLive:true,onVerify(){}}).includes('disabled'))
+current=Date.parse('2026-10-18T11:59:59+09:00')
+assert.ok(!render(ProductionAuth,{promise:p,isLive:true,onVerify(){}}).includes('<button'))
 global.Date=NativeDate
 console.log('PASS: official-end boundaries, create/edit errors, actual-source helper and React rendering tests: final-only counts, excluded states, deadline, Monday/Sunday rollover, empty design copy, 0% progress, Korean date windows, midnight/year/noon boundaries, button timing.')
