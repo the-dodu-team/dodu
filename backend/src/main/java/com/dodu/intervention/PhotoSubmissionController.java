@@ -79,7 +79,7 @@ public class PhotoSubmissionController {
                   from promise p
                   join participant participant on participant.id = p.participant_id
                   join study_period s on s.id = participant.study_period_id
-                 where p.id = ? and p.participant_id = ?
+                 where p.id = ? and p.participant_id = ? for update of p
                 """, rs -> rs.next()
                         ? new PromiseRow(rs.getTimestamp("scheduled_at").toInstant(), rs.getObject("scheduled_date_kst", LocalDate.class),
                                 rs.getString("lifecycle_status"),

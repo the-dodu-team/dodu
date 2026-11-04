@@ -43,7 +43,8 @@ export function creationBlockCode(payload: PromisePayload, now: number, active: 
   if (active) return 'PROMISE_ACTIVE_EXISTS'
   const starts = Date.parse(payload.scheduledAt)
   if (!Number.isFinite(starts)) return 'DATETIME_OFFSET_REQUIRED'
-  if (blockedDates.has(scheduledDate(payload))) return 'PROMISE_DATE_ALREADY_USED'
+  // A finished promise releases the single active slot, including on the same KST date.
+  void blockedDates
   if (starts < now + 5 * 60000) return 'PROMISE_SCHEDULE_TOO_SOON'
   if (starts > now + 72 * 3600000) return 'PROMISE_SCHEDULE_TOO_FAR'
   return null

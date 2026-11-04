@@ -52,6 +52,8 @@ class PromiseControllerIntegrationTests {
     private JdbcTemplate jdbc;
     @Autowired
     private com.dodu.participant.service.ParticipantEntryService entryService;
+    @Autowired
+    private PromiseLifecycleService lifecycle;
 
     private MockMvc mockMvc;
     private String authorization;
@@ -160,6 +162,113 @@ class PromiseControllerIntegrationTests {
                         .content(body))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("PROMISE_ACTIVE_EXISTS"));
+    }
+
+    @Test
+    void completedPromiseFreesTheSlotForAnotherPromiseOnSameKstDate() throws Exception {
+        String body = "{\"taskTitle\":\"repeat task\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
+        String first = extractPromiseId(createWithKey(body, "repeat-1"));
+        jdbc.update("update promise set lifecycle_status = 'AuthCompleted', final_outcome = 'AuthCompleted' where id = ?", UUID.fromString(first));
+        String second = extractPromiseId(createWithKey(body, "repeat-2"));
+        assertTrue(!first.equals(second));
+        assertEquals(2, jdbc.queryForObject("select count(*) from promise where participant_id = ?", Integer.class, participantId));
+        assertEquals(1, jdbc.queryForObject("select count(*) from promise where participant_id = ? and lifecycle_status = 'Scheduled'", Integer.class, participantId));
+    }
+
+    @Test
+    void concurrentDifferentRequestsStillHaveOnlyOneActiveSlot() throws Exception {
+        String body = "{\"taskTitle\":\"slot task\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var gate = new java.util.concurrent.CountDownLatch(1);
+            var futures = new java.util.ArrayList<Future<Integer>>();
+            for (int i = 0; i < 2; i++) {
+                String key = "slot-" + i;
+                futures.add(pool.submit(() -> { gate.await(); return mockMvc.perform(post("/api/promises")
+                        .header("Authorization", authorization).header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON).content(body)).andReturn().getResponse().getStatus(); }));
+            }
+            gate.countDown();
+            var results = java.util.List.of(futures.get(0).get(), futures.get(1).get());
+            assertTrue(results.contains(200)); assertTrue(results.contains(409));
+            assertEquals(1, jdbc.queryForObject("select count(*) from promise where participant_id = ?", Integer.class, participantId));
+        }
+    }
+
+    @Test
+    void expiredUnansweredPromiseIsPersistedThenNextPromiseCanBeCreated() throws Exception {
+        UUID expired = insertHistoryPromise("expired slot", Instant.now().minusSeconds(3600), "Scheduled", null);
+        String body = "{\"taskTitle\":\"next task\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
+        createWithKey(body, "after-expiry");
+        assertEquals("AuthIncomplete", jdbc.queryForObject("select lifecycle_status from promise where id = ?", String.class, expired));
+        assertEquals(1, jdbc.queryForObject("select count(*) from validation_survey where promise_id = ?", Integer.class, expired));
+        lifecycle.reconcile(participantId);
+        assertEquals(1, jdbc.queryForObject("select count(*) from validation_survey where promise_id = ?", Integer.class, expired));
+    }
+
+    @Test
+    void legacyLowercaseToolIsReadableInActiveAndFinalHistory() throws Exception {
+        UUID old = insertHistoryPromise("legacy laptop", Instant.now().minusSeconds(3600), "AuthCompleted", "AuthCompleted");
+        jdbc.update("update promise set tool_type = 'laptop' where id = ?", old);
+        mockMvc.perform(get("/api/promises/history").header("Authorization", authorization))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].toolType").value("COMPUTER"));
+    }
+
+    @Test
+    void resetPreservesParticipantsCredentialsAndUnrelatedEnrollmentEvents() throws Exception {
+        String code = com.dodu.participant.domain.AccessCode.generate(new SecureRandom());
+        jdbc.update("insert into access_credential(participant_id, secret_hash, issued_at) values (?, ?, now())", participantId, secretHasher.hash(code));
+        insertHistoryPromise("cleanup", Instant.now().minusSeconds(3600), "AuthCompleted", "AuthCompleted");
+        long participants = jdbc.queryForObject("select count(*) from participant", Long.class);
+        long credentials = jdbc.queryForObject("select count(*) from access_credential", Long.class);
+        var reset = context.getBean(com.dodu.operator.service.OperatorTestDataResetService.class);
+        var result = reset.reset();
+        assertEquals(participants, result.participantsKept());
+        assertEquals(credentials, result.credentialsKept());
+        assertEquals(participants, jdbc.queryForObject("select count(*) from participant", Long.class));
+        assertEquals(credentials, jdbc.queryForObject("select count(*) from access_credential", Long.class));
+        assertEquals(0, jdbc.queryForObject("select count(*) from promise", Integer.class));
+        assertEquals(0, jdbc.queryForObject("select count(*) from validation_survey", Integer.class));
+    }
+
+    @Test
+    void resetStopsBeforeDatabaseDeletionIfStorageFails() {
+        UUID promise = insertHistoryPromise("keep on storage error", Instant.now().minusSeconds(3600), "AuthCompleted", "AuthCompleted");
+        UUID asset = UUID.randomUUID();
+        jdbc.update("insert into photo_asset(id, storage_key, content_type, byte_size, sha256_hash, received_at) values (?, ?, 'image/png', 1, ?, now())",
+                asset, "synthetic-reset-" + asset, "a".repeat(64));
+        var writer = new com.dodu.intervention.PhotoObjectWriter() {
+            public String write(String key, String type, byte[] data) { throw new UnsupportedOperationException(); }
+            public void delete(String key) { throw new IllegalStateException("synthetic storage failure"); }
+        };
+        var factory = new org.springframework.beans.factory.support.StaticListableBeanFactory(java.util.Map.of("writer", writer));
+        var reset = new com.dodu.operator.service.OperatorTestDataResetService(jdbc, factory.getBeanProvider(com.dodu.intervention.PhotoObjectWriter.class));
+        var tx = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> tx.execute(s -> reset.reset()));
+        assertEquals(1, jdbc.queryForObject("select count(*) from promise where id = ?", Integer.class, promise));
+        assertEquals(1, jdbc.queryForObject("select count(*) from photo_asset where id = ?", Integer.class, asset));
+        jdbc.update("delete from photo_asset where id = ?", asset);
+    }
+
+    @Test
+    void resetDeletesReferencedPhotoObjectsBeforeRemovingMetadata() {
+        UUID asset = UUID.randomUUID();
+        jdbc.update("insert into photo_asset(id, storage_key, content_type, byte_size, sha256_hash, received_at) values (?, ?, 'image/png', 1, ?, now())",
+                asset, "synthetic-reset-" + asset, "b".repeat(64));
+        var deleted = new java.util.concurrent.atomic.AtomicInteger();
+        var writer = new com.dodu.intervention.PhotoObjectWriter() {
+            public String write(String key, String type, byte[] data) { throw new UnsupportedOperationException(); }
+            public void delete(String key) {
+                assertEquals(1, jdbc.queryForObject("select count(*) from photo_asset where id = ?", Integer.class, asset));
+                deleted.incrementAndGet();
+            }
+        };
+        var factory = new org.springframework.beans.factory.support.StaticListableBeanFactory(java.util.Map.of("writer", writer));
+        var reset = new com.dodu.operator.service.OperatorTestDataResetService(jdbc, factory.getBeanProvider(com.dodu.intervention.PhotoObjectWriter.class));
+        var tx = new org.springframework.transaction.support.TransactionTemplate(context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
+        var result = tx.execute(s -> reset.reset());
+        assertEquals(1, deleted.get()); assertEquals(1, result.photos());
+        assertEquals(0, jdbc.queryForObject("select count(*) from photo_asset", Integer.class));
+        assertEquals(1, jdbc.queryForObject("select count(*) from participant where id = ?", Integer.class, participantId));
     }
 
     @Test
@@ -285,7 +394,7 @@ class PromiseControllerIntegrationTests {
                         .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].promiseId").value(expiredId.toString()))
-                .andExpect(jsonPath("$[0].lifecycleStatus").value("Scheduled"))
+                .andExpect(jsonPath("$[0].lifecycleStatus").value("AuthIncomplete"))
                 .andExpect(jsonPath("$[0].finalOutcome").value("AuthIncomplete"))
                 .andExpect(jsonPath("$[1].promiseId").value(cancelledId.toString()))
                 .andExpect(jsonPath("$[1].finalOutcome").value("Cancelled"))

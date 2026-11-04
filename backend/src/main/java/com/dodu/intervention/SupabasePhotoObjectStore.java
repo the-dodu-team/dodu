@@ -59,6 +59,7 @@ public final class SupabasePhotoObjectStore implements PhotoObjectReader, PhotoO
     @Override
     public void delete(String storageKey) {
         HttpResponse<byte[]> response = send("DELETE", storageKey, "application/json", null);
+        if (response.statusCode() == 404) return; // Already absent: a partial cleanup can be retried safely.
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IllegalStateException("Photo storage delete failed with HTTP " + response.statusCode());
         }

@@ -62,7 +62,7 @@ test('저장 시 5분·72시간 경계와 활성 약속·서버가 거절한 KST
   assert.equal(creationBlockCode(at(72 * 3600000), now, false, new Set()), null)
   assert.equal(creationBlockCode(at(72 * 3600000 + 1), now, false, new Set()), 'PROMISE_SCHEDULE_TOO_FAR')
   assert.equal(creationBlockCode(at(600000), now, true, new Set()), 'PROMISE_ACTIVE_EXISTS')
-  assert.equal(creationBlockCode(at(600000), now, false, new Set(['2026-11-05'])), 'PROMISE_DATE_ALREADY_USED')
+  assert.equal(creationBlockCode(at(600000), now, false, new Set(['2026-11-05'])), null)
   assert.equal(creationBlockCode(at(24 * 3600000), now, false, new Set(['2026-11-05'])), null)
 })
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }

@@ -8,6 +8,8 @@ import LivePhotoAuth from '../photo-auth/LivePhotoAuth'
 import PromiseAuthPreview from '../promise/PromiseAuthPreview'
 import { HistoryPage } from '../self-report/ReportScreens'
 import type { FinalPromiseRecord } from '../promise/promiseHistory'
+import { savedPromiseHistory } from '../promise/savedPromiseHistory'
+import type { SavedPromiseHistory } from '../promise/savedPromiseHistory'
 import type { ReportTarget } from '../self-report/selfReportModel'
 import LiveOnboardingFlow from '../onboarding/LiveOnboardingFlow'
 import PermissionRecoveryGate from '../onboarding/PermissionRecoveryGate'
@@ -48,6 +50,7 @@ export default function LiveParticipantApp() {
   const [participant, setParticipant] = useState<ParticipantState | null>(null)
   const [active, setActive] = useState<PromiseResponse | null>(null)
   const [history, setHistory] = useState<FinalPromiseRecord[]>([])
+  const [savedHistory, setSavedHistory] = useState<SavedPromiseHistory[]>([])
   const [reportTargets, setReportTargets] = useState<Record<string, ReportTarget>>({})
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const currentToken = session.token()
@@ -79,7 +82,7 @@ export default function LiveParticipantApp() {
     if (reason instanceof DOMException && reason.name === 'AbortError') return
     if (reason instanceof ParticipantPromiseApiError && reason.httpStatus === 401) {
       setOnboardingDismissed(false); session.clear(); setParticipant(null); setActive(null); setLoaded(false); setPending(null)
-      setHistory([]); setReportTargets({}); setHistoryLoaded(false); blockedDates.current.clear(); lastReadAt.current = 0
+      setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); blockedDates.current.clear(); lastReadAt.current = 0
     }
     if (reason instanceof ParticipantPromiseApiError && reason.code === 'STUDY_PERIOD_ENDED') setClosed(true)
     errorOrigin.current = origin
@@ -102,10 +105,11 @@ export default function LiveParticipantApp() {
       try {
         const rows = await createDoduApi(ownerToken!, import.meta.env.VITE_DODU_API_BASE_URL ?? '').listPromiseHistory()
         if (!mounted.current || version !== epoch.current || ownerToken !== session.token()) return
+        setSavedHistory(savedPromiseHistory(rows))
         setHistory(rows.flatMap(row => {
           const outcome = row.finalOutcome ?? row.lifecycleStatus
           if (!['AuthCompleted', 'AuthIncomplete'].includes(outcome)) return []
-          return [{ date: new Date(Date.parse(row.scheduledAt) + 9 * 3600000).toISOString().slice(0, 10),
+          return [{ id: row.promiseId, date: new Date(Date.parse(row.scheduledAt) + 9 * 3600000).toISOString().slice(0, 10),
             status: outcome === 'AuthCompleted' ? 'verified' as const : 'unverified' as const }]
         }))
         setHistoryLoaded(true)
@@ -150,6 +154,13 @@ export default function LiveParticipantApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, surveyId])
 
+  useEffect(() => {
+    if (screen === 'home' && active && now !== null && now >= Date.parse(active.scheduledAt) + 30 * 60000 &&
+        Date.now() - lastReadAt.current >= 30000) void refresh()
+    // Poll the server after the deadline; never finalize an accepted attempt in the browser.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, screen, active?.promiseId])
+
   async function login(code: string) {
     if (running.current) return
     running.current = true; const version = ++epoch.current
@@ -159,7 +170,7 @@ export default function LiveParticipantApp() {
       if (!mounted.current || version !== epoch.current) return
       setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
-      setActive(null); setHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
+      setActive(null); setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
       blockedDates.current.clear(); lastReadAt.current = 0
     } catch (reason) { if (mounted.current && version === epoch.current) fail(reason) }
     finally {
@@ -222,7 +233,7 @@ export default function LiveParticipantApp() {
     // Stop in-flight reads before removing the current browser's session only.
     epoch.current++; reader.current?.abort(); reader.current = null
     session.clear(); setParticipant(null); setActive(null); setPending(null)
-    setHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false); setError('')
+    setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false); setError('')
     setOnboardingDismissed(false); setSurveyId(null); setScreen('home')
     blockedDates.current.clear(); lastReadAt.current = 0
   }
@@ -261,12 +272,10 @@ export default function LiveParticipantApp() {
     promise={{ promiseId: active.promiseId, taskName: active.taskTitle, tool: active.toolType === 'BOOK' ? 'book' : 'computer', scheduledAt: active.scheduledAt }}
     getNow={clockNow} onClose={() => { home(); void refresh() }} />
   else if (screen === 'history') page = historyLoaded
-    ? <HistoryPage records={history} onBack={home} onCreate={() => setScreen('name')} />
-    : <ScreenState title="인증 기록" description="기록을 불러오지 못했어요." onBack={home} onRetry={() => { void refresh() }} />
+    ? <HistoryPage records={history} savedRecords={savedHistory} canCreate={!active && !pending} onBack={home} onCreate={() => setScreen('name')} />
+    : <ScreenState title="약속 기록" description="기록을 불러오지 못했어요." onBack={home} onRetry={() => { void refresh() }} />
   else if (screen === 'name') page = <PromiseTaskNamePage initialValue={taskName} onBack={home} onNext={value => { setTaskName(value); setScreen('time') }} />
   else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt}
-    getDateBlockedReason={date => blockedDates.current.has(date)
-      ? errorMessage(new ParticipantPromiseApiError('PROMISE_DATE_ALREADY_USED', 409)) : ''}
     onBack={value => { setError(''); setScheduledAt(value); setScreen('name') }}
     onNext={value => { setError(''); setScheduledAt(value); setScreen('tool') }} />
   else if (screen === 'tool') page = <PromiseToolPage initialValue={tool} onBack={() => setScreen('time')} onNext={value => { setTool(value); setScreen('confirm') }} />

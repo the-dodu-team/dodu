@@ -37,7 +37,7 @@ export default function WeeklyPromiseCard({
     <section className="weekly-promise-card" aria-labelledby="weekly-promise-title">
       <div className="home-card-heading">
         <h2 id="weekly-promise-title" className="weekly-promise-label">지난 약속</h2>
-        <button type="button" className="home-card-action" onClick={onViewAll} disabled={!historyReady || !onViewAll}>
+        <button type="button" className="home-card-action" onClick={onViewAll} disabled={!onViewAll}>
           전체 보기 <span aria-hidden="true">›</span>
         </button>
       </div>
