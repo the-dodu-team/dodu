@@ -2,11 +2,17 @@
 
 - 작성일: 2026-10-15 / 담당: 강민
 - 상태: **인수 범위 초안**. 엔드포인트·DTO·전송 방식의 확정 명세나 구현 완료 증거가 아니다.
-- 디자인: [최종 Draft 핸드오프](https://www.figma.com/design/T35RV2O1XmpFqDLlEH8UVl/?node-id=1-1662)
+- 현재 디자인: [261021 사용자 화면 흐름](https://www.figma.com/design/eNpggZfs3DbKD0ea3punYK/?node-id=56-8990). 현재 조회·반영·미확인 범위는 [화면 검증 기록](../dodu/FIGMA_261021_IMPLEMENTATION.md)을 따른다.
 - 기준: [공통 응답 계약](COMMON_API_CONTRACT.md), [시간 계약](TIME_CONTRACT.md), [접근 계약](../security/PARTICIPANT_ACCESS_CONTRACT.md), [승인 결정](../dodu/OPEN_DECISIONS.md).
 - 최신 운영정책: [Notion 정책 페이지](https://app.notion.com/p/3e780115466280188446daadeb64a950)의 `Service_Operation_Policy_v2.5_Baseline_LOCKED_20261013_UPDATED.md` 첨부. 과거 인수인계에 있던 유효하지 않은 페이지 ID는 기준으로 사용하지 않는다.
 
 ## 1. 화면·계약·개발 책임
+
+### 2026-11-05 실제 온보딩·로그아웃 연결
+
+- `PUT /api/participant/onboarding`: 인증된 현재 참가자의 최초 완료 시각 저장. 본문 없음. 공통 envelope로 `data.onboardingCompleted=true`, `data.expiresAt`, `serverTime` 반환. 교체·철회·만료는 401. 브라우저 권한 증명은 아니다.
+- `DELETE /api/participant/notification-subscription`: 현재 세션 소유 구독만 비활성화·토큰 제거. 성공 또는 세션 무효 401 후 FE 로컬 세션 정리. 일반 오류는 모달에서 재시도하며 로그아웃 완료로 표시하지 않는다. 참가자 철회 API와 구분한다.
+- 카메라 확인 → 서버 완료 저장 → 홈. 온보딩 닫기 → 현재 구독 해제·입장 화면. 새 API의 BE 배포 전에는 완료 저장 실패 안내가 나올 수 있다.
 
 UI 티켓은 mock 개발 범위다. API 계약 검토와 실제 연결 티켓을 구분하며, 표의 티켓 번호 순서 자체가 실행 순서는 아니다. 선후행은 Jira Blocks 관계를 따른다.
 

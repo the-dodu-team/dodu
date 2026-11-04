@@ -4,6 +4,7 @@ import { canOpenLiveSurvey, encodeLiveAnswers } from '../../api/liveSurveyApi'
 import type { LiveSurveyApi } from '../../api/liveSurveyApi'
 import { SurveyApiError } from '../../api/validationSurveyApi'
 import { SelfReportPage } from './ReportScreens'
+import ScreenState from '../../components/ScreenState'
 import { cleanAnswers, completeAnswers } from './selfReportModel'
 import type { ReportAnswers, ReportTarget } from './selfReportModel'
 
@@ -38,7 +39,7 @@ export function LiveSelfReportEntry({ api, onOpen }: { api: LiveSurveyApi; onOpe
     return () => { disposed = true; window.removeEventListener('focus', refresh) }
   }, [api, revision])
   if (failed) return <section aria-label="자기보고"><p role="alert">{failure}</p>
-    <button type="button" onClick={() => setRevision(value => value + 1)}>다시 시도</button></section>
+    <button className="report-primary" type="button" onClick={() => setRevision(value => value + 1)}>다시 시도</button></section>
   if (!id) return null
   return <section className="report-question" aria-label="자기보고">
     <h2 className="survey-title">지난 약속은 어떠셨나요?</h2>
@@ -97,16 +98,11 @@ export default function LiveSelfReport({ api, promiseId, target, onHome }: {
   const notice = phase === 'loading' ? '확인 중…'
     : phase === 'uncertain' ? '저장 결과 확인이 필요합니다. 다른 저장은 잠시 중단됩니다.'
     : phase === 'error' ? failure : null
+  if (notice) return <ScreenState title="자기보고" description={notice} loading={phase === 'loading'} onBack={onHome}
+    onRetry={phase === 'error' || phase === 'uncertain' ? () => setRevision(value => value + 1) : undefined} />
   return <>
-    {notice && <section className="report-question" aria-live="polite">
-      <p>{notice}</p>
-      {(phase === 'error' || phase === 'uncertain') &&
-        <button type="button" onClick={() => setRevision(value => value + 1)}>서버 상태 다시 확인</button>}
-      <button type="button" onClick={onHome}>홈으로 이동</button>
-    </section>}
     {(phase === 'closed' || (phase === 'ready' && !open)) &&
-      <main className="report-page"><h1 className="survey-title">지난 약속은 어떠셨나요?</h1>
-        <button type="button" className="report-primary" onClick={onHome}>홈으로 이동</button></main>}
+      <ScreenState title="자기보고" description="응답 가능 기간이 지났거나 이미 처리가 끝난 약속이에요." onBack={onHome} />}
     {row && open && phase !== 'closed' &&
       <SelfReportPage target={target} busy={phase !== 'ready'} onClose={onHome}
         onSubmit={answers => { void save(answers) }} onSkip={() => { void save() }} />}

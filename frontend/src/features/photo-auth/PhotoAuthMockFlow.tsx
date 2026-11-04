@@ -20,7 +20,7 @@ type Props = {
   interventionEndsAt?: number
 }
 
-function ToolPicture({ book, photo = false }: { book: boolean; photo?: boolean }) {
+export function ToolPicture({ book, photo = false }: { book: boolean; photo?: boolean }) {
   return <svg viewBox="0 0 120 100" className="photo-tool-picture" aria-hidden="true">
     {book ? <>
       <rect x="18" y="15" width="39" height="70" rx="3" fill="#ECEEF5" stroke="#A2A9BE" strokeWidth="3" />

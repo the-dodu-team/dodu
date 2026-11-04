@@ -3,29 +3,28 @@ import type { FinalPromiseRecord } from '../promise/promiseHistory'
 import { completeAnswers, emptyAnswers, recordDate, reportLabel } from './selfReportModel'
 import type { ReportAnswers, ReportTarget } from './selfReportModel'
 import './self-report.css'
+import ScreenHeader from '../../components/ScreenHeader'
+import chevronIcon from '../../assets/final-icons/chevron.svg'
 
 export function HistoryPage({ records, onBack, onCreate }: {
   records: FinalPromiseRecord[]; onBack: () => void; onCreate: () => void
 }) {
-  const title = useRef<HTMLHeadingElement>(null)
-  useEffect(() => { title.current?.focus() }, [])
+  const [visibleCount, setVisibleCount] = useState(5)
   const rows = [...new Map(records
     .filter(record => record.status === 'verified' || record.status === 'unverified')
     .map(record => [record.date, record])).values()]
     .sort((a, b) => b.date.localeCompare(a.date))
   return <main className="report-page">
-    <header className="report-header">
-      <button type="button" aria-label="뒤로" onClick={onBack}>←</button>
-      <h1 ref={title} tabIndex={-1}>인증 기록</h1>
-    </header>
+    <ScreenHeader title="인증 기록" onBack={onBack} />
     {rows.length ? <>
       <p className="history-label">최근 기록</p>
-      <ul className="history-list">{rows.map(record => <li key={record.date}>
+      <ul className="history-list">{rows.slice(0, visibleCount).map(record => <li key={record.date}>
         <span>{recordDate(record.date)}</span>
         <span className={`history-chip ${record.status}`}>{record.status === 'verified' ? '인증 완료' : '인증 미완료'}</span>
       </li>)}</ul>
-      {/* 최근 범위·페이지 방식은 미정이다. 현재 메모리의 기록 전체를 표시한다. */}
-      <button className="history-more" type="button" disabled>더 보기 <span aria-hidden="true">›</span></button>
+      {visibleCount < rows.length && <button className="history-more" type="button" onClick={() => setVisibleCount(count => count + 5)}>
+        더 보기 <img src={chevronIcon} alt="" />
+      </button>}
     </> : <div className="history-empty">
       <p>아직 인증 기록이 없어요</p>
       <p className="history-empty-description">첫 시작 약속을 만들고 인증하면<br />여기에 기록이 쌓여요</p>
@@ -68,7 +67,7 @@ export function SelfReportPage({ target, onClose, onSkip, onSubmit, busy = false
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => { heading.current?.focus() }, [])
   return <main className="report-page survey-page">
-    <header className="report-header"><button type="button" aria-label="닫기" onClick={onClose}>×</button></header>
+    <ScreenHeader title="" close onBack={onClose} />
     <h1 className="survey-title" ref={heading} tabIndex={-1}>지난 약속은 어떠셨나요?</h1>
     <p className="survey-target">{target ? reportLabel(target) : null}</p>
     <form onSubmit={event => { event.preventDefault(); if (!busy && completeAnswers(answers)) onSubmit(answers) }}>

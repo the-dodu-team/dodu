@@ -896,7 +896,7 @@ function HomePrototype({
   }
 
   if (screen === 'photo-auth' && api && promise?.promiseId) {
-    return <LivePhotoAuth api={api} promise={promise} onClose={() => setScreen('home')} />
+    return <LivePhotoAuth api={api} promise={{ ...promise, scheduledAt: `${promise.date}T${promise.startTime}:00+09:00` }} onClose={() => setScreen('home')} />
   }
 
   if (screen === 'photo-auth' && photo.session) {

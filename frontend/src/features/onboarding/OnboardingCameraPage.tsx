@@ -5,6 +5,7 @@ type OnboardingCameraPageProps = {
   isComplete?: boolean
   requestDisabled?: boolean
   requestBusy?: boolean
+  errorMessage?: string
   totalSteps: 3 | 4
   isDenied: boolean
   recoveryText: string
@@ -18,6 +19,7 @@ export default function OnboardingCameraPage({
   isComplete = false,
   requestDisabled = false,
   requestBusy = false,
+  errorMessage = '',
   totalSteps, isDenied, recoveryText, attempt, onRequest,
   onBack,
   onClose,
@@ -117,6 +119,7 @@ export default function OnboardingCameraPage({
             </section>
           )}
         </div>
+        {errorMessage && <p className="text-field-error" role="alert">{errorMessage}</p>}
         {isDenied && (
           <section className="onboarding-camera-guide" aria-label="권한 복구 안내">
             <p role="status" key={attempt}>{recoveryText}</p>
@@ -140,7 +143,7 @@ export default function OnboardingCameraPage({
               aria-hidden="true"
             />
           )}
-          {requestBusy ? '카메라 확인 중…' : isComplete ? '완료하기' : isDenied ? '권한 다시 확인하기' : '카메라 권한 허용하기'}
+          {requestBusy ? isComplete ? '저장 중…' : '카메라 확인 중…' : isComplete ? '완료하기' : isDenied ? '권한 다시 확인하기' : '카메라 권한 허용하기'}
         </button>
       </footer>
     </div>

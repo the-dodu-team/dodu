@@ -137,6 +137,49 @@ class ParticipantAuthIntegrationTest {
     }
 
     @Test
+    void onboardingCompletionPersistsAcrossSessionsAndPreservesFirstCompletionTime() {
+        String code = seedParticipant(accessEnd(30));
+        EnterResult entered = entryService.enter(code, DEVICE_A);
+        SessionContext context = authService.authenticate("Bearer " + entered.sessionToken());
+        new ParticipantOnboardingService(jdbc, Clock.fixed(NOW, ZoneOffset.UTC)).complete(context);
+        new ParticipantOnboardingService(jdbc, Clock.fixed(NOW.plusSeconds(60), ZoneOffset.UTC)).complete(context);
+        assertEquals(NOW, jdbc.sql("select onboarding_completed_at from participant")
+                .query(OffsetDateTime.class).single().toInstant());
+        EnterResult next = entryService.enter(code, DEVICE_B);
+        assertTrue(authService.authenticate("Bearer " + next.sessionToken()).participant().onboardingCompleted());
+    }
+
+    @Test
+    void replacedSessionCannotCompleteOnboardingUsingStaleContext() {
+        String code = seedParticipant(accessEnd(30));
+        EnterResult entered = entryService.enter(code, DEVICE_A);
+        SessionContext context = authService.authenticate("Bearer " + entered.sessionToken());
+        entryService.enter(code, DEVICE_B);
+        assertOnboardingRevoked(context);
+    }
+
+    @Test
+    void withdrawalAndAccessDeadlineAreRecheckedBeforeOnboardingWrite() {
+        String code = seedParticipant(accessEnd(30));
+        EnterResult entered = entryService.enter(code, DEVICE_A);
+        SessionContext context = authService.authenticate("Bearer " + entered.sessionToken());
+        jdbc.sql("update participant set withdrawn_at = now()").update();
+        assertOnboardingRevoked(context);
+        jdbc.sql("update participant set withdrawn_at = null").update();
+        jdbc.sql("update study_period set access_ends_at = :t")
+                .param("t", OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC)).update();
+        assertOnboardingRevoked(context);
+    }
+
+    private void assertOnboardingRevoked(SessionContext context) {
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> new ParticipantOnboardingService(jdbc, Clock.fixed(NOW, ZoneOffset.UTC)).complete(context));
+        assertEquals("ACCESS_REVOKED", error.code());
+        assertEquals(0, jdbc.sql("select count(*) from participant where onboarding_completed_at is not null")
+                .query(Integer.class).single());
+    }
+
+    @Test
     void entryFromAnotherDeviceReplacesTheOldTokenOnly() {
         String code = seedParticipant(accessEnd(30));
         EnterResult first = entryService.enter(code, DEVICE_A);
