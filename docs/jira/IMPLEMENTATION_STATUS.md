@@ -2,8 +2,8 @@
 
 ## 2026-11-04 / Vercel Linux 빌드 호환성 보강
 
-- 원인: Vercel Linux 환경에서 `rolldown`의 Windows 네이티브 바인딩만 설치되어 `@rolldown/binding-linux-x64-gnu`를 찾지 못함.
-- 조치: `frontend/package.json`에 Linux x64 GNU/MUSL 선택적 바인딩과 Node.js 22 엔진 범위를 추가하고 `package-lock.json`을 갱신했다.
+- 원인: Vercel Linux 환경에서 `rolldown`과 `lightningcss`의 Windows 네이티브 바인딩만 설치되어 Linux 바인딩을 찾지 못함.
+- 조치: `frontend/package.json`에 두 도구의 Linux x64 GNU/MUSL 선택적 바인딩과 Node.js 22 엔진 범위를 추가하고 `package-lock.json`을 갱신했다.
 - 검증: `npm run build --workspace frontend` 통과, `git diff --check` 통과. Vercel 재배포 결과 확인 필요.
 - 남은 범위: Vercel에서 최신 커밋으로 재배포 후 `Ready` 상태와 실제 사이트 접근 확인.
 
