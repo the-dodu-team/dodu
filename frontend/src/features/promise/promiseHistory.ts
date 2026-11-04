@@ -1,6 +1,7 @@
 import type { PreviewPromise } from './types'
 
 export type FinalPromiseRecord = {
+  id?: string
   date: string
   status: 'verified' | 'unverified'
 }

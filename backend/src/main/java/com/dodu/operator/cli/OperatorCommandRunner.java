@@ -46,6 +46,7 @@ public class OperatorCommandRunner implements ApplicationRunner {
 
     private final OperatorAccessService service;
     private final OperatorBatchEnrollmentService batches;
+    private final com.dodu.operator.service.OperatorTestDataResetService resetService;
     private final OperatorAccessRepository repository;
     private final Clock clock;
     private final ConfigurableApplicationContext context;
@@ -53,11 +54,13 @@ public class OperatorCommandRunner implements ApplicationRunner {
     public OperatorCommandRunner(
             OperatorAccessService service,
             OperatorBatchEnrollmentService batches,
+            com.dodu.operator.service.OperatorTestDataResetService resetService,
             OperatorAccessRepository repository,
             Clock clock,
             ConfigurableApplicationContext context) {
         this.service = service;
         this.batches = batches;
+        this.resetService = resetService;
         this.repository = repository;
         this.clock = clock;
         this.context = context;
@@ -76,6 +79,18 @@ public class OperatorCommandRunner implements ApplicationRunner {
         }
         String command = commands.get(0);
         String operatorRef = option(args, "operator");
+        if ("reset-test-data".equals(command)) {
+            if (!"keep-participants".equals(option(args, "scope"))) return usage("초기화 범위를 지정해 주세요.");
+            try {
+                var result = resetService.reset();
+                System.out.printf("RESET_OK promises=%d photos=%d rows=%d participantsKept=%d credentialsKept=%d%n",
+                        result.promises(), result.photos(), result.deletedRows(), result.participantsKept(), result.credentialsKept());
+                return EXIT_OK;
+            } catch (RuntimeException ignored) {
+                System.err.println("RESET_FAILED: DB changes rolled back. Check connectivity, active writes and Storage settings. Some photo deletions may have completed; metadata was kept for retry.");
+                return EXIT_FAILED;
+            }
+        }
         if ("enroll-batch".equals(command)) return executeBatch(args, operatorRef);
         UUID participantId;
         try {

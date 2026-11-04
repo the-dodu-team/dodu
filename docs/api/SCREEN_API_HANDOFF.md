@@ -10,7 +10,9 @@
 
 ### 2026-11-05 실제 온보딩·로그아웃 연결
 
-- 이력 표시 보완: history에 서버 시간 기준으로 포함된 마감 미제출 Scheduled/AuthAvailable은 `finalOutcome=AuthIncomplete`로 투영. Evaluating·Completed·TechFailed attempt가 있으면 시간만으로 미완료로 표시하지 않는다. GET은 DB 원장 상태를 변경하지 않는다. 로그아웃·기기 변경은 참가자 소유의 저장 약속을 삭제하지 않는다.
+- 최신 생성·전체 이력 기준: [동시 활성 1개·전체 이력·초기화 계약](SINGLE_ACTIVE_AND_TEST_RESET.md). 종료 후 같은 날 새 생성을 허용하고 전체 기록과 인증 집계를 분리한다.
+
+- 이력 표시 보완: 최신 활성 슬롯 구현은 active/history 조회·생성에서 서버 만료 정리를 수행해 안전한 미제출 종료를 AuthIncomplete로 저장한다. Evaluating·Completed·TechFailed attempt는 시간만으로 미완료 처리하지 않는다. 로그아웃·기기 변경은 저장 약속을 삭제하지 않는다.
 
 - 인앱 재안내 1회와 현재 기기 권한 복구 후속 구현: [API·상태·검증·배포 계약](INAPP_REMINDER_AND_PERMISSION_RECOVERY.md). 새 재안내 POST는 공통 envelope의 `data.show`를 반환하며 설문 상태를 종료하거나 시간을 연장하지 않는다.
 

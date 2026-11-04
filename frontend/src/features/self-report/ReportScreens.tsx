@@ -1,34 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FinalPromiseRecord } from '../promise/promiseHistory'
+import type { SavedPromiseHistory } from '../promise/savedPromiseHistory'
 import { completeAnswers, emptyAnswers, recordDate, reportLabel } from './selfReportModel'
 import type { ReportAnswers, ReportTarget } from './selfReportModel'
 import './self-report.css'
 import ScreenHeader from '../../components/ScreenHeader'
 import chevronIcon from '../../assets/final-icons/chevron.svg'
 
-export function HistoryPage({ records, onBack, onCreate }: {
-  records: FinalPromiseRecord[]; onBack: () => void; onCreate: () => void
+export function HistoryPage({ records, savedRecords, onBack, onCreate, canCreate = true }: {
+  records: FinalPromiseRecord[]; savedRecords?: SavedPromiseHistory[]; onBack: () => void; onCreate: () => void; canCreate?: boolean
 }) {
   const [visibleCount, setVisibleCount] = useState(5)
-  const rows = [...new Map(records
-    .filter(record => record.status === 'verified' || record.status === 'unverified')
-    .map(record => [record.date, record])).values()]
-    .sort((a, b) => b.date.localeCompare(a.date))
+  const rows = (savedRecords ?? records.map((record, index) => ({ ...record, id: record.id ?? `legacy-${index}`, taskName: '', scheduledAt: record.date })))
+    .slice().sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))
+  const labels = { verified: '인증 완료', unverified: '인증 미완료', cancelled: '취소', technical: '기술 문제', withdrawn: '참여 철회', unknown: '결과 확인 필요' }
   return <main className="report-page">
-    <ScreenHeader title="인증 기록" onBack={onBack} />
+    <ScreenHeader title="약속 기록" onBack={onBack} />
     {rows.length ? <>
       <p className="history-label">최근 기록</p>
-      <ul className="history-list">{rows.slice(0, visibleCount).map(record => <li key={record.date}>
-        <span>{recordDate(record.date)}</span>
-        <span className={`history-chip ${record.status}`}>{record.status === 'verified' ? '인증 완료' : '인증 미완료'}</span>
+      <ul className="history-list">{rows.slice(0, visibleCount).map(record => <li key={record.id}>
+        <span className="history-record-summary">{recordDate(record.date)}{record.taskName && <strong>{record.taskName}</strong>}</span>
+        <span className={`history-chip ${record.status}`}>{labels[record.status]}</span>
       </li>)}</ul>
       {visibleCount < rows.length && <button className="history-more" type="button" onClick={() => setVisibleCount(count => count + 5)}>
         더 보기 <img src={chevronIcon} alt="" />
       </button>}
     </> : <div className="history-empty">
-      <p>아직 인증 기록이 없어요</p>
+      <p>아직 약속 기록이 없어요</p>
       <p className="history-empty-description">첫 시작 약속을 만들고 인증하면<br />여기에 기록이 쌓여요</p>
-      <button className="report-primary" type="button" onClick={onCreate}>약속 만들기</button>
+      <button className="report-primary" type="button" disabled={!canCreate} onClick={onCreate}>약속 만들기</button>
     </div>}
   </main>
 }

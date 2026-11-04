@@ -14,6 +14,18 @@ function load(relative) {
 const { photoPresentation, photoCanSubmit } = load('../src/features/photo-auth/livePhotoPresentation.ts')
 const start = Date.parse('2026-11-05T10:00:00+09:00'), end = start + 30 * 60000
 
+test('전체 약속 이력은 같은 날짜 여러 건과 기술 종료·취소를 구분해 보존한다', () => {
+  const { savedPromiseHistory } = load('../src/features/promise/savedPromiseHistory.ts')
+  const rows = ['AuthCompleted', 'AuthIncomplete', 'TechFailed', 'Cancelled', 'Withdrawn'].map((finalOutcome, i) => ({
+    promiseId: 'p' + i, taskTitle: 'task' + i, scheduledAt: '2026-11-05T01:00:00Z', toolType: 'BOOK', version: 0,
+    lifecycleStatus: 'Closed', finalOutcome,
+  }))
+  const result = savedPromiseHistory(rows)
+  assert.equal(result.length, 5)
+  assert.deepEqual(result.map(row => row.status), ['verified', 'unverified', 'technical', 'cancelled', 'withdrawn'])
+  assert.equal(new Set(result.map(row => row.id)).size, 5)
+})
+
 test('마감 전 접수한 사진은 마감 후에도 판정 중으로 표시하고 재제출을 막는다', () => {
   for (const now of [start, end - 1, end, end + 3600000]) {
     assert.equal(photoPresentation('Evaluating', true, now, start), 'evaluating')

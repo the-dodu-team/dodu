@@ -32,11 +32,13 @@ public class PromiseController {
     private final Clock clock;
     private final PromiseRequestValidator validator = new PromiseRequestValidator();
     private final ParticipantAuthService authService;
+    private final PromiseLifecycleService lifecycle;
 
-    public PromiseController(JdbcTemplate jdbc, Clock clock,  ParticipantAuthService authService) {
+    public PromiseController(JdbcTemplate jdbc, Clock clock, ParticipantAuthService authService, PromiseLifecycleService lifecycle) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.authService = authService;
+        this.lifecycle = lifecycle;
     }
 
     @Operation(summary = "약속 생성")
@@ -46,6 +48,7 @@ public class PromiseController {
                                   @RequestHeader("Idempotency-Key") String idempotencyKey,
                                   @RequestBody PromiseRequest request) {
         UUID participantId = participantFromBearer(authorization);
+        lifecycle.reconcile(participantId);
         String key = PromiseIdempotencyKeyPolicy.validate(idempotencyKey);
         String fingerprint = PromiseIdempotencyKeyPolicy.fingerprint(request);
         CreationRequest existing = findCreationRequest(participantId, key);
@@ -87,14 +90,12 @@ public class PromiseController {
         if (jdbc.queryForObject("select count(*) from promise where participant_id = ? and lifecycle_status in ('Scheduled','AuthAvailable','Evaluating')", Long.class, participantId) > 0)
             throw error(HttpStatus.CONFLICT, "PROMISE_ACTIVE_EXISTS");
         var date = valid.scheduledAt().atZone(KST).toLocalDate();
-        if (jdbc.queryForObject("select count(*) from promise_date_usage where participant_id = ? and scheduled_date_kst = ?", Long.class, participantId, date) > 0)
-            throw error(HttpStatus.CONFLICT, "PROMISE_DATE_ALREADY_USED");
         UUID policyId = jdbc.queryForObject("select id from policy_version where effective_from <= ? order by effective_from desc limit 1", UUID.class, timestamp(now));
         if (policyId == null) throw error(HttpStatus.SERVICE_UNAVAILABLE, "POLICY_UNAVAILABLE");
         UUID promiseId = UUID.randomUUID();
         jdbc.update("insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst, tool_type, creation_type, lifecycle_status, auth_window_ends_at) values (?, ?, ?, ?, ?, ?, ?, 'NORMAL', 'Scheduled', ?)",
                 promiseId, participantId, policyId, valid.taskTitle(), timestamp(valid.scheduledAt()), date, valid.toolType().name(), timestamp(valid.scheduledAt().plusSeconds(1800)));
-        jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?)", participantId, date, timestamp(now));
+        jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?) on conflict (participant_id, scheduled_date_kst) do nothing", participantId, date, timestamp(now));
         jdbc.update("update promise_creation_request set promise_id = ? where participant_id = ? and idempotency_key = ?",
                 promiseId, participantId, key);
         return new PromiseResponse(promiseId, valid.taskTitle(), valid.toolType(), valid.scheduledAt(), 0);
@@ -126,7 +127,7 @@ public class PromiseController {
         return jdbc.query("select id, task_title, tool_type, scheduled_at, row_version from promise "
                         + "where id = ? and participant_id = ?",
                 rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")),
-                        rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")),
+                        rs.getString("task_title"), storedTool(rs.getString("tool_type")),
                         rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version")) : null,
                 promiseId, participantId);
     }
@@ -135,14 +136,16 @@ public class PromiseController {
     @GetMapping("/active")
     public PromiseResponse active(@RequestHeader("Authorization") String authorization) {
         UUID participantId = participantFromBearer(authorization);
+        lifecycle.reconcile(participantId);
         return jdbc.query("select id, task_title, tool_type, scheduled_at, row_version from promise where participant_id = ? and lifecycle_status in ('Scheduled','AuthAvailable','Evaluating') order by scheduled_at limit 1",
-                rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")), rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")), rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version")) : null, participantId);
+                rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")), rs.getString("task_title"), storedTool(rs.getString("tool_type")), rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version")) : null, participantId);
     }
 
     @Operation(summary = "약속 이력 조회")
     @GetMapping("/history")
     public List<PromiseHistoryResponse> history(@RequestHeader("Authorization") String authorization) {
         UUID participantId = participantFromBearer(authorization);
+        lifecycle.reconcile(participantId);
         Instant now = clock.instant();
         return jdbc.query("""
                         select id, task_title, tool_type, scheduled_at, row_version, lifecycle_status, final_outcome
@@ -159,7 +162,7 @@ public class PromiseController {
                 (rs, rowNum) -> new PromiseHistoryResponse(
                         rs.getObject("id", UUID.class),
                         rs.getString("task_title"),
-                        PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")),
+                        storedTool(rs.getString("tool_type")),
                         rs.getTimestamp("scheduled_at").toInstant(),
                         rs.getLong("row_version"),
                         rs.getString("lifecycle_status"),
@@ -175,7 +178,7 @@ public class PromiseController {
         UUID participantId = participantFromBearer(authorization);
         PromiseRow current = jdbc.query("select task_title, tool_type, scheduled_at, row_version, schedule_version, lifecycle_status "
                         + "from promise where id = ? and participant_id = ? for update",
-                rs -> rs.next() ? new PromiseRow(rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")),
+                rs -> rs.next() ? new PromiseRow(rs.getString("task_title"), storedTool(rs.getString("tool_type")),
                         rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version"), rs.getInt("schedule_version"), rs.getString("lifecycle_status")) : null,
                 promiseId, participantId);
         if (current == null) throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
@@ -188,11 +191,8 @@ public class PromiseController {
         var valid = validator.validate(new PromiseRequestValidator.Request(current.taskTitle(), current.toolType(), request.scheduledAt()), now, study.interventionEndsAt());
         var currentDate = current.scheduledAt().atZone(KST).toLocalDate();
         var nextDate = valid.scheduledAt().atZone(KST).toLocalDate();
-        if (!nextDate.equals(currentDate) &&
-                jdbc.queryForObject("select count(*) from promise_date_usage where participant_id = ? and scheduled_date_kst = ?", Long.class, participantId, nextDate) > 0)
-            throw error(HttpStatus.CONFLICT, "PROMISE_DATE_ALREADY_USED");
         if (!nextDate.equals(currentDate)) {
-            jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?)",
+            jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?) on conflict (participant_id, scheduled_date_kst) do nothing",
                     participantId, nextDate, timestamp(now));
         }
         jdbc.update("insert into promise_schedule_revision(promise_id, version, previous_scheduled_at, new_scheduled_at, previous_date_kst, new_date_kst, changed_at) values (?, ?, ?, ?, ?, ?, ?)",
@@ -209,7 +209,7 @@ public class PromiseController {
                                   @PathVariable UUID promiseId, @RequestBody VersionRequest request) {
         UUID participantId = participantFromBearer(authorization);
         PromiseRow current = jdbc.query("select task_title, tool_type, scheduled_at, row_version, schedule_version, lifecycle_status from promise where id = ? and participant_id = ? for update",
-                rs -> rs.next() ? new PromiseRow(rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")), rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version"), rs.getInt("schedule_version"), rs.getString("lifecycle_status")) : null,
+                rs -> rs.next() ? new PromiseRow(rs.getString("task_title"), storedTool(rs.getString("tool_type")), rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version"), rs.getInt("schedule_version"), rs.getString("lifecycle_status")) : null,
                 promiseId, participantId);
         if (current == null) throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND");
         if (current.rowVersion() != request.expectedVersion()) throw error(HttpStatus.CONFLICT, "PROMISE_VERSION_CONFLICT");
@@ -222,6 +222,14 @@ public class PromiseController {
     private static ResponseStatusException error(HttpStatus status, String code) { return new ResponseStatusException(status, code); }
 
     private static Timestamp timestamp(Instant instant) { return Timestamp.from(instant); }
+
+    private static PromiseRequestValidator.ToolType storedTool(String value) {
+        return switch (value.toUpperCase(java.util.Locale.ROOT)) {
+            case "COMPUTER", "LAPTOP" -> PromiseRequestValidator.ToolType.COMPUTER;
+            case "BOOK" -> PromiseRequestValidator.ToolType.BOOK;
+            default -> throw error(HttpStatus.SERVICE_UNAVAILABLE, "PROMISE_TOOL_UNAVAILABLE");
+        };
+    }
 
     // Only expired unanswered rows pass the history query above. This is a read projection,
     // not a mutation of the promise or a claim that actual work did not start.
