@@ -1,6 +1,8 @@
 package com.dodu.promise;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,12 +50,40 @@ class PromiseControllerIntegrationTests {
 
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private com.dodu.participant.service.ParticipantEntryService entryService;
 
     private MockMvc mockMvc;
     private String authorization;
     private String scheduledAt;
     private UUID participantId;
     private UUID policyId;
+
+    @Test
+    void sameCodeRetainsSavedPromiseAfterLogoutAndSessionReplacement() throws Exception {
+        Instant now = Instant.now();
+        jdbc.update("update study_period set access_ends_at = ? where id = (select study_period_id from participant where id = ?)",
+                timestamp(now.plusSeconds(172800)), participantId);
+        String code = com.dodu.participant.domain.AccessCode.generate(new SecureRandom());
+        jdbc.update("insert into access_credential(participant_id, secret_hash, issued_at) values (?, ?, ?)",
+                participantId, secretHasher.hash(code), timestamp(now));
+        String device = "synthetic-device-aaaaaaaaaaaa";
+        var first = entryService.enter(code, device);
+        authorization = "Bearer " + first.sessionToken();
+        String body = "{\"taskTitle\":\"reentry task\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
+        String id = extractPromiseId(createWithKey(body, "reentry-" + UUID.randomUUID()));
+        for (String nextDevice : new String[] {device, "synthetic-device-bbbbbbbbbbbb"}) {
+            mockMvc.perform(delete("/api/participant/notification-subscription").header("Authorization", authorization))
+                    .andExpect(status().isOk());
+            var entered = entryService.enter(code, nextDevice);
+            authorization = "Bearer " + entered.sessionToken();
+            mockMvc.perform(get("/api/promises/active").header("Authorization", authorization))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.promiseId").value(id))
+                    .andExpect(jsonPath("$.taskTitle").value("reentry task"));
+            assertEquals(1, jdbc.queryForObject("select count(*) from promise where participant_id = ?", Integer.class, participantId));
+            assertEquals("Scheduled", jdbc.queryForObject("select lifecycle_status from promise where id = ?", String.class, UUID.fromString(id)));
+        }
+    }
 
     @BeforeEach
     void setUp() {
@@ -256,10 +286,25 @@ class PromiseControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].promiseId").value(expiredId.toString()))
                 .andExpect(jsonPath("$[0].lifecycleStatus").value("Scheduled"))
+                .andExpect(jsonPath("$[0].finalOutcome").value("AuthIncomplete"))
                 .andExpect(jsonPath("$[1].promiseId").value(cancelledId.toString()))
                 .andExpect(jsonPath("$[1].finalOutcome").value("Cancelled"))
                 .andExpect(jsonPath("$[2].promiseId").value(verifiedId.toString()))
                 .andExpect(jsonPath("$[2].lifecycleStatus").value("AuthCompleted"));
+    }
+
+    @Test
+    void expiredScheduledHistoryDoesNotMisclassifyAcceptedOrTechnicalAttempts() throws Exception {
+        Instant now = Instant.now();
+        for (String processing : new String[] {"Evaluating", "Completed", "TechFailed"}) {
+            UUID id = insertHistoryPromise("excluded " + processing, now.minusSeconds(3600), "Scheduled", null);
+            jdbc.update("insert into auth_attempt(promise_id, client_request_id, request_fingerprint, tool_type, processing_status, request_received_at, valid_received_at) values (?, ?, ?, 'BOOK', ?, ?, ?)",
+                    id, UUID.randomUUID(), "synthetic-" + processing, processing,
+                    timestamp(now.minusSeconds(3500)), timestamp(now.minusSeconds(3500)));
+        }
+        mockMvc.perform(get("/api/promises/history").header("Authorization", authorization))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        assertEquals(3, jdbc.queryForObject("select count(*) from promise where participant_id = ? and lifecycle_status = 'Scheduled'", Integer.class, participantId));
     }
 
     private UUID insertHistoryPromise(String title, Instant scheduled, String lifecycle, String outcome) {
