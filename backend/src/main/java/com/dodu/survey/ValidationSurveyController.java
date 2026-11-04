@@ -48,16 +48,18 @@ public class ValidationSurveyController {
                 update validation_survey
                    set lifecycle_status = 'Prompted', prompted_at = coalesce(prompted_at, ?)
                  where promise_id = ? and lifecycle_status = 'Pending'
+                   and exists (select 1 from promise p where p.id = promise_id and p.participant_id = ?)
                    and available_at is not null and expires_at is not null
                    and ? >= available_at and ? < expires_at
-                """, java.sql.Timestamp.from(now), promiseId, java.sql.Timestamp.from(now), java.sql.Timestamp.from(now));
+                """, java.sql.Timestamp.from(now), promiseId, participantId, java.sql.Timestamp.from(now), java.sql.Timestamp.from(now));
         jdbc.update("""
                 update validation_survey
                    set lifecycle_status = 'Expired'
                  where promise_id = ?
+                   and exists (select 1 from promise p where p.id = promise_id and p.participant_id = ?)
                    and lifecycle_status in ('Pending', 'Prompted', 'Reminded')
                    and expires_at is not null and expires_at <= ?
-                """, promiseId, java.sql.Timestamp.from(now));
+                """, promiseId, participantId, java.sql.Timestamp.from(now));
         return jdbc.query("""
                 select vs.id, vs.questionnaire_version, vs.lifecycle_status, vs.eligibility_status,
                        vs.actual_started, vs.start_order, vs.start_delay_bucket, vs.no_start_reason,
@@ -121,6 +123,9 @@ public class ValidationSurveyController {
                 try (var rs = statement.executeQuery()) {
                     if (!rs.next()) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
                     var eligibility = policy.eligibility(rs.getString("eligibility_status"));
+                    if (!java.util.Set.of("Pending", "Prompted", "Reminded").contains(rs.getString("lifecycle_status"))) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "survey is already closed");
+                    }
                     Instant availableAt = rs.getTimestamp("available_at") == null ? null : rs.getTimestamp("available_at").toInstant();
                     Instant expiresAt = rs.getTimestamp("expires_at") == null ? null : rs.getTimestamp("expires_at").toInstant();
                     if (!policy.canRespond(eligibility, availableAt, expiresAt, now)) {

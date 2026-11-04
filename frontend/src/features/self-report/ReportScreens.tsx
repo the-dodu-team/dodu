@@ -98,8 +98,8 @@ export function SelfReportPage({ target, onClose, onSkip, onSubmit, busy = false
   </main>
 }
 
-export function ReportReminder({ target, onWrite, onSkip, onDismiss }: {
-  target: ReportTarget; onWrite: () => void; onSkip: () => void; onDismiss: () => void
+export function ReportReminder({ target, onWrite, onSkip, onDismiss, busy = false, error = '' }: {
+  target: ReportTarget; onWrite: () => void; onSkip: () => void; onDismiss: () => void; busy?: boolean; error?: string
 }) {
   const dialog = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -129,8 +129,9 @@ export function ReportReminder({ target, onWrite, onSkip, onDismiss }: {
       <p className="report-sheet-description">몇 가지 질문에 답해 주세요.<br />
         건너뛰면 이 자기보고에는 다시 응답할 수 없어요.<br />
         다음 약속 만들기에는 영향이 없어요.</p>
-      <button className="report-primary" type="button" onClick={onWrite}>지금 작성하기</button>
-      <button className="report-text" type="button" onClick={onSkip}>건너뛰기</button>
+      {error && <p className="text-field-error" role="alert">{error}</p>}
+      <button className="report-primary" type="button" disabled={busy} onClick={onWrite}>지금 작성하기</button>
+      <button className="report-text" type="button" disabled={busy} onClick={onSkip}>건너뛰기</button>
     </div>
   </div>
 }

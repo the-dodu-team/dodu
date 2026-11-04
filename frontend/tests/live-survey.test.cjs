@@ -18,6 +18,22 @@ const row = { id: 'survey', questionnaireVersion: 'v1', lifecycleStatus: 'Prompt
   eligibilityStatus: 'AuthCompleted', actualStarted: null, startOrder: null,
   startDelayBucket: null, noStartReason: null, availableAt: '2026-11-01T00:00:00Z',
   expiresAt: '2026-11-02T00:00:00Z', submittedAt: null }
+
+test('인앱 재안내는 인증된 별도 POST로 확인하며 잘못된 응답이나 교체된 세션을 거절한다', async () => {
+  let token = 'test-only', response = { status: 'success', data: { show: true } }
+  const api = createLiveSurveyApi(() => token, async (url, init) => {
+    assert.equal(url, '/api/promises/p/validation-survey/inapp-reminder')
+    assert.equal(init.method, 'POST'); assert.equal(init.body, undefined)
+    return Response.json(response)
+  })
+  assert.equal(await api.claimReminder('p'), true)
+  response = { status: 'success', data: { show: false } }
+  assert.equal(await api.claimReminder('p'), false)
+  response = { status: 'success', data: {} }
+  await assert.rejects(api.claimReminder('p'), { kind: 'invalid-response' })
+  const stale = createLiveSurveyApi(() => token, async () => { token = 'replacement'; return Response.json({ status: 'success', data: { show: true } }) })
+  await assert.rejects(stale.claimReminder('p'), { kind: 'stale' })
+})
 test('실제 알림 경로에서 자기보고 약속 ID만 중복 제거한다', async () => {
   const api = createLiveSurveyApi(() => 'test-only', async (url, init) => {
     assert.equal(url, '/api/participant/notifications')

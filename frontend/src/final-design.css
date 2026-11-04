@@ -1,4 +1,7 @@
 :root { --dodu-primary: #5f43ff; --dodu-ink: #161a29; --dodu-muted: #6b7285; --dodu-subtle: #eef0f5; --dodu-danger: #c33335; --dodu-surface: #fff; }
+.permission-recovery-guide { padding:20px; border-radius:24px; background:#fff; text-align:left; font-size:14px; line-height:20px; }
+.permission-recovery-page > .report-primary { width:100%; }
+.report-sheet:focus { outline:none; }
 .screen-page { display:flex; flex-direction:column; width:100%; max-width:480px; min-height:100dvh; margin:0 auto; padding:max(0px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom)); background:linear-gradient(#f4f4fa,#f7f7fb); color:var(--dodu-ink); }
 .screen-header { display:flex; align-items:center; gap:0; min-height:48px; flex-shrink:0; }
 .screen-header h1 { margin:0; font-size:20px; line-height:28px; font-weight:600; letter-spacing:-.015em; }
