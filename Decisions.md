@@ -1,5 +1,13 @@
 # 개발 결정 기록
 
+## DEV-20261030-05 Push 발송 분리·사전 차단·FCM 연동 경계
+
+- 배경: Push 외부 호출이 DB 트랜잭션 안에 있었고, 철회·취소·만료된 약속에도 예약된 Push가 나갈 수 있었으며 실제 provider가 없었다.
+- 선택: 외부 호출을 트랜잭션 밖으로 분리하고, 발송 직전에 참가자·약속·인증 창·설문 상태를 다시 검사해 사유와 함께 `SUPPRESSED`로 기록한다. FCM(firebase-admin)은 `dodu.push.fcm.enabled`로 켜고 기본은 꺼 둔다. 토큰은 `notification_subscription.push_token`에 저장한다.
+- 근거: 외부 호출이 트랜잭션을 점유하면 DB 락이 길어지고, 발송 시점의 상태가 예약 시점과 다를 수 있다. 토큰 만료·잘못된 토큰은 재시도해도 성공하지 않는다.
+- 대안: 트랜잭션 안 발송 유지, 예약 시점 검사만으로 충분하다고 보는 방식, 토큰 암호화 선적용(N-01로 이월)은 선택하지 않았다.
+- 영향: 중복 발송이 가능한 at-least-once 방식이며 단일 인스턴스를 전제한다. `UNREGISTERED`·`SENDER_ID_MISMATCH`는 구독을 비활성화하고 `INVALID_ARGUMENT`는 재시도하지 않는다. 키 파일은 저장소에 두지 않는다.
+- 검증: `FcmPushNotificationSenderTests`, `NotificationDeliveryServiceIntegrationTests`, dry-run 수동 확인(`FAILED`/`INVALID_ARGUMENT`, attempt_count 1), 전체 `npm run verify`.
 ## DEV-20261105-03 — 배포 환경의 실제 약속 사진 인증 진입
 
 - 배경: 실제 약속이 있어도 사진 인증 버튼이 비활성화됐다. 버튼과 클릭 처리에 남아 있던 `import.meta.env.DEV` 제한이 배포 환경의 실제 API 연결에도 적용되고 있었다.

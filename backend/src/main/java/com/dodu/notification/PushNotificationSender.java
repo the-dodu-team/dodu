@@ -10,7 +10,10 @@ public interface PushNotificationSender {
         public static PushSendResult unconfigured() {
             return new PushSendResult(Status.UNCONFIGURED, null, "PUSH_PROVIDER_UNCONFIGURED");
         }
+        public static PushSendResult undeliverable(String failureCode) {
+            return new PushSendResult(Status.UNDELIVERABLE, null, failureCode);
+        }
     }
 
-    enum Status { SENT, FAILED, UNCONFIGURED }
+    enum Status { SENT, FAILED, UNDELIVERABLE, UNCONFIGURED }
 }
