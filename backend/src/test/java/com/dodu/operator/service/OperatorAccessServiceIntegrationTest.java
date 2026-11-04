@@ -33,6 +33,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.junit.jupiter.Container;
@@ -59,6 +60,7 @@ class OperatorAccessServiceIntegrationTest {
     private static SecretHasher hasher;
     private static OperatorAccessService operatorService;
     private static ParticipantEntryService entryService;
+    private static OperatorBatchEnrollmentService batches;
 
     @BeforeAll
     static void setUp() {
@@ -79,6 +81,7 @@ class OperatorAccessServiceIntegrationTest {
         operatorService = new OperatorAccessService(
                 new OperatorAccessRepository(jdbc), accessRepository, hasher, random, clock, tm);
         entryService = new ParticipantEntryService(accessRepository, hasher, random, clock, tm);
+        batches = new OperatorBatchEnrollmentService(new JdbcTemplate(dataSource), operatorService, clock, tm);
     }
 
     @BeforeEach
@@ -88,6 +91,90 @@ class OperatorAccessServiceIntegrationTest {
     }
 
     // ---------- 최초 발급 ----------
+
+    @Test
+    void enrollsThirtyIndependentParticipantsWithHashedCredentialsAndAudit() {
+        seedBatchStudy("batch-study");
+        var result = batches.enroll("batch-study", "BATCH", 30, OPERATOR);
+        assertEquals(30, result.size());
+        assertEquals(30, result.stream().map(row -> row.credential().code()).distinct().count());
+        assertEquals(30, count("select count(*) from participant"));
+        assertEquals(30, count("select count(*) from access_credential where revoked_at is null"));
+        assertEquals(30, count("select count(*) from operator_audit_log where action_type = 'ISSUE_CREDENTIAL'"));
+        for (var row : result) {
+            assertFalse(row.toString().contains(row.credential().code()));
+            String digest = jdbc.sql("select secret_hash from access_credential where participant_id = :id")
+                    .param("id", row.participantId()).query(String.class).single();
+            assertTrue(digest.equals(hasher.hash(AccessCode.normalize(row.credential().code()).orElseThrow())));
+            assertEquals(43, entryService.enter(row.credential().code(), DEVICE_A).sessionToken().length());
+        }
+    }
+
+    @Test
+    void repeatedBatchDoesNotReplaceCredentialsOrSessions() {
+        seedBatchStudy("batch-study");
+        var first = batches.enroll("batch-study", "BATCH", 30, OPERATOR);
+        entryService.enter(first.getFirst().credential().code(), DEVICE_A);
+        var second = batches.enroll("batch-study", "BATCH", 30, OPERATOR);
+        assertTrue(second.stream().allMatch(row -> row.credential() == null));
+        assertEquals(first.stream().map(row -> row.participantId()).toList(),
+                second.stream().map(row -> row.participantId()).toList());
+        assertEquals(30, count("select count(*) from access_credential"));
+        assertEquals(1, count("select count(*) from participant_session where lifecycle_status = 'Active'"));
+        operatorService.withdraw(first.getFirst().participantId(), NOW, OPERATOR);
+        batches.enroll("batch-study", "BATCH", 30, OPERATOR);
+        assertEquals(1, count("select count(*) from participant where lifecycle_status = 'Withdrawn'"));
+        assertEquals(29, count("select count(*) from access_credential where revoked_at is null"));
+    }
+
+    @Test
+    void batchRollsBackAllNewRowsWhenPrefixConflictsWithAnotherStudy() {
+        UUID other = seedBatchStudy("other-study");
+        seedBatchStudy("batch-study");
+        jdbc.sql("insert into participant(study_period_id, public_code, lifecycle_status, enrolled_at) values (:study, 'ROLLBACK-002', 'Active', now())")
+                .param("study", other).update();
+        assertThrows(IllegalArgumentException.class,
+                () -> batches.enroll("batch-study", "ROLLBACK", 3, OPERATOR));
+        assertEquals(1, count("select count(*) from participant"));
+        assertEquals(0, count("select count(*) from access_credential"));
+        assertEquals(0, count("select count(*) from operator_audit_log"));
+    }
+
+    @Test
+    void batchRejectsMissingAndEndedStudyOrInvalidArguments() {
+        seedBatchStudy("batch-study");
+        assertThrows(IllegalArgumentException.class, () -> batches.enroll("missing", "BATCH", 30, OPERATOR));
+        assertThrows(IllegalArgumentException.class, () -> batches.enroll("batch-study", "BATCH", 0, OPERATOR));
+        assertThrows(IllegalArgumentException.class, () -> batches.enroll("batch-study", "BATCH", 30, ""));
+        jdbc.sql("update study_period set intervention_ends_at = :now")
+                .param("now", OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC)).update();
+        assertThrows(IllegalArgumentException.class, () -> batches.enroll("batch-study", "BATCH", 30, OPERATOR));
+        assertEquals(0, count("select count(*) from participant"));
+    }
+
+    @Test
+    void concurrentBatchesIssueOnlyOneSetOfCredentials() throws Exception {
+        seedBatchStudy("batch-study");
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var start = new CountDownLatch(1);
+            var tasks = new ArrayList<Future<List<OperatorBatchEnrollmentService.Enrollment>>>();
+            for (int i = 0; i < 2; i++) {
+                tasks.add(pool.submit(() -> { start.await(); return batches.enroll("batch-study", "BATCH", 3, OPERATOR); }));
+            }
+            start.countDown();
+            long issued = 0;
+            for (var task : tasks) issued += task.get().stream().filter(row -> row.credential() != null).count();
+            assertEquals(3, issued);
+        }
+        assertEquals(3, count("select count(*) from participant"));
+        assertEquals(3, count("select count(*) from access_credential"));
+    }
+
+    private UUID seedBatchStudy(String code) {
+        return jdbc.sql("insert into study_period(code, intervention_ends_at, access_ends_at) values (:code, :end, :end) returning id")
+                .param("code", code).param("end", OffsetDateTime.ofInstant(NOW.plusSeconds(86400), ZoneOffset.UTC))
+                .query(UUID.class).single();
+    }
 
     @Test
     void issuedCodeAllowsEntryAndStoresOnlyHash() {

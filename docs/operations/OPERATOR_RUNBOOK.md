@@ -50,7 +50,24 @@ SQL을 재실행해도 기간 연장·참가자 초기화·자격 재발급은 �
 java -jar dodu-backend-<버전>.jar --spring.profiles.active=operator <명령> <인자>
 ```
 
-### 공통 인자
+### 참가자 30명 일괄 등록·발급
+
+기존 행동검증 기간에 추가 참가자를 연결한다. 운영 기간을 새로 만들거나 기간을 연장하지 않는다.
+
+```powershell
+powershell -NoProfile -File scripts/issue-participant.ps1 -Count 30
+```
+
+- 기본 기간: `technical-smoke-20261104` (현재 기술 검증용 기간)
+- 기본 식별자: `BATCH-20261105-001`부터 `BATCH-20261105-030`
+- 다른 승인된 운영 기간에는 `-StudyCode <code> -Prefix <label>`을 명시한다.
+- 참가자 UUID를 직접 입력하지 않고 등록부터 발급까지 한 트랜잭션으로 실행한다.
+- DB 정보·pepper는 숨김 입력하고 발급 원문은 운영자 창에만 한 번 표시한다. 스크립트는 코드 목록을 파일로 저장하지 않는다.
+- 같은 기간·prefix로 재실행하면 기존 참가자는 건너뛴다. 기존 코드·세션·철회 상태를 변경하지 않는다. 다른 기간과 prefix가 충돌하면 신규 작업 전체를 롤백한다.
+- 이미 발급된 코드는 재실행으로 복원할 수 없다. 분실 시 해당 참가자만 명시적으로 재발급한다.
+- 내부 CLI: `enroll-batch --study-code=<code> --prefix=<label> --count=30 --operator=<name>` (회당 1~100명)
+
+### 단일 참가자 공통 인자
 
 | 인자 | 필수 | 설명 |
 |---|---|---|

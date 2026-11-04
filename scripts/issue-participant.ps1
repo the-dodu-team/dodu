@@ -1,3 +1,8 @@
+param(
+    [ValidateRange(1, 100)][int]$Count = 1,
+    [string]$StudyCode = 'technical-smoke-20261104',
+    [string]$Prefix = 'BATCH-20261105'
+)
 $ErrorActionPreference = 'Stop'
 $doduRoot = Split-Path $PSScriptRoot -Parent
 $doduJar = Join-Path $doduRoot 'backend\target\dodu-backend-0.0.1-SNAPSHOT.jar'
@@ -24,9 +29,18 @@ try {
     $env:DODU_DB_USERNAME = Read-Host 'DB username'
     $env:DODU_DB_PASSWORD = Read-DoduSecret 'DB password'
     $env:DODU_ACCESS_CODE_PEPPER = Read-DoduSecret 'Render DODU_ACCESS_CODE_PEPPER'
-    $doduParticipant = [Guid]::Parse((Read-Host 'Participant UUID from Supabase'))
+    if ($Count -eq 1) {
+        $doduParticipant = [Guid]::Parse((Read-Host 'Participant UUID from Supabase'))
+    } else {
+        Write-Host "Batch: $Count participants, study: $StudyCode, labels: $Prefix-001 onwards. Existing labels are skipped."
+    }
     $doduOperator = Read-Host 'Operator name'
-    & $doduJava -jar $doduJar --spring.profiles.active=operator issue "--participant=$doduParticipant" "--operator=$doduOperator" '--logging.level.root=ERROR' '--logging.level.org.springframework.web=OFF'
+    $doduOptions = @('--spring.profiles.active=operator', '--logging.level.root=ERROR', '--logging.level.org.springframework.web=OFF')
+    if ($Count -eq 1) {
+        & $doduJava -jar $doduJar @doduOptions issue "--participant=$doduParticipant" "--operator=$doduOperator"
+    } else {
+        & $doduJava -jar $doduJar @doduOptions enroll-batch "--study-code=$StudyCode" "--prefix=$Prefix" "--count=$Count" "--operator=$doduOperator"
+    }
     if ($LASTEXITCODE -ne 0) { throw 'Issuance failed. Keep credentials private when reviewing the error.' }
 } finally {
     foreach ($doduName in $doduNames) { [Environment]::SetEnvironmentVariable($doduName, $doduPrevious[$doduName], 'Process') }
