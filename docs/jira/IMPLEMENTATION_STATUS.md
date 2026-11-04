@@ -1,5 +1,13 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-04 / SCRUM-83 Supabase 활성화 시 서버 기동 오류
+
+- 범위: `SupabasePhotoObjectStore`의 운영 생성자에 `@Autowired`를 추가하여 Spring 생성자 선택을 명시했다.
+- 근거: Render 런타임 로그의 `No default constructor found`와 동일한 오류를 새 Spring 컨텍스트 테스트에서 수정 전에 재현했다.
+- 검증: `SupabasePhotoObjectStoreContextTests`는 provider 활성화 시 읽기·쓰기 빈이 같은 객체인지, `none`일 때 자격정보 없이 시작하는지 확인한다. 실제 자격정보·사진·DB를 사용하지 않는다.
+- 실행 결과: `mvnw.cmd -Dtest=SupabasePhotoObjectStoreContextTests,SupabasePhotoObjectStoreTests test` 4건 통과, `mvnw.cmd -DskipTests package` 성공, `npm run security:scan` 및 `git diff --check` 통과. 이번 변경에서 전체 DB 통합 테스트는 재실행하지 않았다.
+- 남은 작업: 수정 커밋으로 Render 수동 배포 후 기동·CORS·실사진 업로드/삭제 확인. 외부 통합 검증 전 SCRUM-83은 진행 중으로 유지한다.
+
 ## 2026-11-04 / Vercel Linux 빌드 호환성 보강
 
 - 원인: Vercel Linux 환경에서 `rolldown`과 `lightningcss`의 Windows 네이티브 바인딩만 설치되어 Linux 바인딩을 찾지 못함.

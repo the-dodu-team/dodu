@@ -51,6 +51,16 @@ Import 화면에서:
 
 Supabase Storage를 아직 연결하지 않을 때는 사진 기능을 검증하지 않는다. Storage 입력을 완료한 뒤 `DODU_PHOTO_STORAGE_PROVIDER=supabase`로 변경하고 재배포한다.
 
+### Supabase 활성화 후 기동 실패
+
+`SupabasePhotoObjectStore: No default constructor found`는 자격정보 오류가 아니라 Spring 생성자 선택 오류다. 환경변수 주입 생성자를 명시한 수정 커밋 이후 버전을 `Manual Deploy → Deploy latest commit`으로 배포한다. `supabase` 설정과 기존 자격정보는 유지한다.
+
+- 배포 후 `/api/health` HTTP 200 확인
+- 실제 프런트 출처를 사용한 CORS preflight 허용 여부 확인
+- 실제 사진 업로드·읽기·삭제 검증은 별도로 진행
+
+객체 저장소 단위 테스트는 HTTP 호출을 직접 검증하며, `SupabasePhotoObjectStoreContextTests`는 `supabase` 설정에서 Spring 빈 생성과 읽기·쓰기 인터페이스 연결을 검증한다. 외부 Supabase 자격정보나 실제 사진은 테스트에 사용하지 않는다.
+
 ## 저장소에 포함하지 않는 것
 
 - Supabase·Push·AI 운영 자격정보

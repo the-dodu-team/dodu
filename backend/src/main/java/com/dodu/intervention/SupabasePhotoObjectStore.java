@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** Supabase Storage adapter using its S3-compatible object HTTP API. */
@@ -19,6 +20,7 @@ public final class SupabasePhotoObjectStore implements PhotoObjectReader, PhotoO
     private final String bucket;
     private final String serviceRoleKey;
 
+    @Autowired
     public SupabasePhotoObjectStore(
             org.springframework.core.env.Environment environment) {
         this(

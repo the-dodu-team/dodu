@@ -1,5 +1,14 @@
 # 개발 결정 기록
 
+## DEV-20261104-03 — Supabase 저장소 Spring 생성자 선택 수정
+
+- 배경: Render에서 provider를 `supabase`로 활성화하자 `No default constructor found`로 서버가 기동되지 않았다. 환경변수용·HTTP 테스트용 생성자가 공존하여 Spring이 사용할 생성자를 선택하지 못했다.
+- 선택: 환경변수를 받는 운영 생성자에 `@Autowired`를 지정한다.
+- 근거: 테스트용 HttpClient 주입 구조를 보존하면서 실제 운영과 동일한 빈 생성 경로를 명시한다.
+- 대안: 기본 생성자 추가는 필수 환경설정 검증을 우회할 수 있어 제외했다.
+- 영향: 저장소 provider와 읽기·쓰기 인터페이스 연결은 유지한다. 자격정보 교체나 버킷 재생성은 필요하지 않다.
+- 검증: 수정 전 Spring 컨텍스트 테스트에서 Render와 같은 오류 재현. 수정 후 컨텍스트·객체 HTTP 테스트 실행 결과는 구현 상태 문서에 기록한다. 실제 Supabase 업로드·삭제와 배포 검증은 별도다.
+
 ## DEV-20261104-02 — Vercel Linux 빌드용 Rolldown 선택적 바인딩
 
 - 배경: Vercel의 Linux 빌드에서 Windows lockfile에 기록된 `rolldown`·`lightningcss` 네이티브 바인딩만 설치되어 `npm run build`가 실패했다.
