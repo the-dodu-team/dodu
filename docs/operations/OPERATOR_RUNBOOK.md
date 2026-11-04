@@ -22,12 +22,27 @@
 | 이름 | 설명 |
 |---|---|
 | `DODU_ACCESS_CODE_PEPPER` | 코드 해시용 서버 비밀 값(32바이트 이상). **실행 중인 서버와 반드시 같은 값**이어야 합니다 |
-| `DODU_DB_HOST` 계열 | DB 접속 정보. 로컬은 `DODU_DB_PORT`, `DODU_DB_NAME`, `DODU_DB_USERNAME`, `DODU_DB_PASSWORD` |
+| `DODU_DB_URL` | 사용자명·비밀번호 없는 JDBC URL. 예: `jdbc:postgresql://[POOLER_HOST]:5432/postgres` |
+| `DODU_DB_USERNAME`, `DODU_DB_PASSWORD` | Session pooler 사용자명과 DB 비밀번호 |
 
 > pepper가 서버와 다르면 발급은 성공으로 보이지만, 그 코드로 입장할 수 없습니다.
 > 코드를 전달하기 전에 서버와 같은 pepper를 쓰고 있는지 먼저 확인하세요.
 
 ## 3. 실행 방법
+
+### Render Free 환경에서 로컬 발급
+
+Render Free는 Shell을 제공하지 않으므로 로컬 JAR로 운영 명령을 실행한다.
+
+1. 기술 검증용 초기 데이터가 없으면 Supabase SQL Editor에서 `scripts/prepare-smoke-participant.sql`을 실행한다. 검증용 참가자 1명과 7일 개입·추가 2일 접근 기간을 만든다. 실제 행동검증 일정으로 사용하지 않는다.
+2. SQL 결과의 `participant_id`를 준비한다. `TECH-SMOKE-001`은 업무용 식별 코드이며 로그인 코드가 아니다.
+3. 프로젝트 루트에서 `powershell -NoProfile -File scripts/issue-participant.ps1`을 실행한다.
+4. Render와 동일한 DB URL·사용자명·DB 비밀번호·pepper, 참가자 UUID와 운영자 이름을 로컬 창에 입력한다. 비밀번호와 pepper는 화면에 표시되지 않으며 스크립트는 파일로 저장하지 않는다.
+5. 발급된 접근 코드를 프런트 입장 화면에 입력한다. 원문은 해당 창에서 한 번 표시되므로 공유 화면·녹화·터미널 전사 기록은 사용하지 않는다.
+
+SQL을 재실행해도 기간 연장·참가자 초기화·자격 재발급은 하지 않는다. 기존 검증용 기간이 종료되면 새 검증 일정과 식별자를 별도로 정한다. 정책 `v2.5.2` 행이 이미 있으면 기존 값을 변경하지 않는다.
+
+발급 도구 구문 검사와 격리 DB의 초기 데이터 생성 검증은 실제 운영 DB 발급 성공을 의미하지 않는다. 로컬 운영 도구에는 Supabase Storage 자격정보를 넣을 필요가 없다.
 
 `operator` 프로필로 jar를 실행하고, 명령과 인자를 뒤에 붙입니다.
 

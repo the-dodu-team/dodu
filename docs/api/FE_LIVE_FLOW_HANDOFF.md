@@ -6,6 +6,7 @@
 
 | 화면 동작 | API | FE 처리 |
 |---|---|---|
+| 참가자 입장 | `POST /api/participant/sessions` | CLI 발급 코드를 제출하고 공통 envelope의 `data.sessionToken` 저장. 구형 `/api/access/enter`는 사용하지 않음 |
 | 약속 생성 | `POST /api/promises` | `Idempotency-Key` 생성 후 서버 응답으로 상태 갱신 |
 | 약속 시간 수정 | `PATCH /api/promises/{promiseId}/schedule` | 서버 `version`을 `expectedVersion`으로 전달 |
 | 약속 취소 | `POST /api/promises/{promiseId}/cancel` | 서버 성공 후 로컬 약속 제거 |

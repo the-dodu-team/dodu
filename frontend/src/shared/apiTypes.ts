@@ -19,9 +19,9 @@ export type ApiErrorEnvelope = {
 }
 
 export type AccessResponse = {
-  accessToken: string
-  participantId: string
-  accessEndsAt: string | null
+  sessionToken: string
+  expiresAt: string
+  onboardingCompleted: boolean
 }
 
 export type PromiseRecord = {

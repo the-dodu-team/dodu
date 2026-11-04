@@ -108,17 +108,16 @@ export function createDoduApi(token: string, baseUrl = '') {
 export function createDoduAccessApi(baseUrl = '') {
   return {
     enter: async (code: string, deviceKey: string): Promise<AccessResponse> => {
-      const response = await fetch(`${baseUrl}/api/access/enter`, {
+      const response = await fetch(`${baseUrl}/api/participant/sessions`, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, deviceKey }),
       })
-      const body = await response.json() as AccessResponse | { code?: string }
-      if (!response.ok) {
-        const codeValue = 'code' in body && body.code ? body.code : 'ACCESS_REQUIRED'
-        throw new Error(codeValue)
+      const body = await response.json() as ApiEnvelope<AccessResponse> | ApiErrorEnvelope
+      if (!response.ok || body.status === 'error') {
+        throw new DoduApiError(body as ApiErrorEnvelope, response.status)
       }
-      return body as AccessResponse
+      return (body as ApiEnvelope<AccessResponse>).data
     },
   }
 }

@@ -1,5 +1,13 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-04 / 참가자 초기 데이터·로컬 발급 준비 및 FE 입장 API 수정
+
+- 원격 읽기 검증: Render `/api/health` 200, `https://dodu-two.vercel.app` 출처의 입장 preflight 200 및 일치하는 허용 출처 확인.
+- 사용자 확인: 운영 DB의 `study_period`, `participant`, `policy_version` 모두 0건.
+- 구현: 기술 검증용 7일 개입·9일 접근 기간과 참가자 1명 생성 SQL, 비밀값 숨김 입력 로컬 발급 스크립트 추가. FE를 `/api/participant/sessions` 및 공통 응답 `data.sessionToken`으로 연결하여 운영 CLI와 입장 해시 계약을 일치시킴.
+- 검증: FE API 테스트·빌드, 보안 스캔, PowerShell 구문 검사 통과. 격리 PostgreSQL 16에서 Flyway V1~V9 SQL 적용 및 초기 SQL 두 번 실행 후 기간·참가자·정책 각 1건 유지.
+- 미실행: 실제 Supabase 초기 데이터 SQL, 운영 접근 코드 발급, 실사진 업로드·삭제 및 AI 판정. 실제 DB 자격정보·pepper는 로컬 실행 환경에 없으며 사용자 입력 필요. 전체 DB 통합 테스트는 이번 변경에서 재실행하지 않음.
+
 ## 2026-11-04 / SCRUM-83 Supabase 활성화 시 서버 기동 오류
 
 - 범위: `SupabasePhotoObjectStore`의 운영 생성자에 `@Autowired`를 추가하여 Spring 생성자 선택을 명시했다.

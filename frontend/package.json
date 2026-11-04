@@ -11,7 +11,7 @@
     "test:home": "node tests/home-history.test.cjs",
     "test:photo": "node tests/photo-auth.test.cjs && node tests/photo-compression.test.cjs",
     "test:platform": "node tests/platform-adapters.test.cjs",
-    "test:api": "node tests/api-contract.test.cjs",
+    "test:api": "node tests/api-contract.test.cjs && node tests/participant-entry.test.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

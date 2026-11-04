@@ -279,11 +279,12 @@ function LiveParticipantEntry() {
       const sessions = new ParticipantSessionStore(storage)
       const deviceKey = await sessions.getOrCreateDeviceKey()
       const response = await createDoduAccessApi(import.meta.env.VITE_DODU_API_BASE_URL).enter(code, deviceKey)
-      await sessions.saveToken(response.accessToken)
+      await sessions.saveToken(response.sessionToken)
       window.location.reload()
     } catch (error) {
-      const codeValue = error instanceof Error ? error.message : 'ACCESS_REQUIRED'
-      setErrorMessage(codeValue === 'ACCESS_REQUIRED' ? '접근 코드를 확인해 주세요.' : '입장할 수 없습니다. 잠시 후 다시 시도해 주세요.')
+      const codeValue = error instanceof DoduApiError ? error.response.error.code
+        : error instanceof Error ? error.message : 'ACCESS_REQUIRED'
+      setErrorMessage(['ACCESS_REQUIRED', 'ACCESS_CODE_INVALID'].includes(codeValue) ? '접근 코드를 확인해 주세요.' : '입장할 수 없습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
       setIsSubmitting(false)
     }
