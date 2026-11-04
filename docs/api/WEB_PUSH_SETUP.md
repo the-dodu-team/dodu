@@ -1,5 +1,21 @@
 # 웹 푸시 연결·검증
 
+## Render 발송 진단
+
+최신 백엔드 배포 후 Render `dodu-api → Logs`에서 `DODU_FCM_CONFIG`와 `DODU_DEVICE_PUSH`를 검색한다. 운영 로그는 현재 에이전트가 직접 읽지 못했으며 아래 표는 코드의 진단 계약이다.
+
+| 표시 | 의미 |
+|---|---|
+| `DODU_FCM_CONFIG enabled=false` | 서버 FCM 발송 비활성. 설정·배포 버전 확인 |
+| `dryRun=true` 또는 `stage=VALIDATED` | 시험 검증만 수행, 실제 기기로 발송하지 않음 |
+| `stage=COMMITTED targets=0` / `code=NO_ACTIVE_SUBSCRIPTION` | 전환 전에 등록된 기존 기기 토큰 없음 |
+| `stage=ATTEMPT` | 외부 FCM 호출 시도. 접수 성공·수신의 증거 아님 |
+| `stage=FCM_ACCEPTED` | 실제 발송 모드에서 FCM 접수 성공. 휴대폰 표시·열람 증거 아님 |
+| `stage=FCM_REJECTED code=...` | FCM 오류 코드. `SENDER_ID_MISMATCH`는 프로젝트 불일치, `UNREGISTERED`는 등록 해제 토큰 등 확인 |
+| `stage=FAILED code=EXECUTOR_REJECTED` / `SEND_FAILED` | 실행기 또는 일반 발송 실패 |
+
+전환 한 번의 단계는 무작위 `trace`로 연결한다. 참가자·세션 ID·토큰·키·응답 본문·예외 원문은 기록하지 않는다. 마커가 전혀 없으면 과거 배포·설정 미반영·해당 로그 시간대·기기 전환 경로 미진입부터 확인한다. 별도 재시도·영구 발송 원장 추가가 아니다.
+
 근거: 서비스 정책 §3·§7·§10, D02·D07·D10·D12. 발송 성공은 수신·열람 증거가 아니다.
 
 ## 배포 설정
