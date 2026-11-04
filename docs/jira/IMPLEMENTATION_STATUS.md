@@ -5,7 +5,7 @@
 - 대응 범위: FE 사진 인증 업로드 전처리. `frontend/src/features/photo-auth/compressPhoto.ts`에서 JPEG/PNG를 긴 변 1920px, 최대 5 MiB 목표의 JPEG로 변환한다.
 - 연결: `LivePhotoAuth`가 압축 완료 파일만 `POST /api/promises/{id}/photo-attempts`로 전송한다. 압축 실패 시 원본을 전송하지 않는다.
 - 서버 보호: Spring multipart 파일 6 MB, 요청 7 MB 한도를 설정했다.
-- 검증: `npm run test:photo --workspace frontend`, `npm run build --workspace frontend`, `npm run lint --workspace frontend` 통과. `npm run verify`는 보안 검사·FE 검사·빌드까지 통과했으나, Docker Desktop 엔진을 찾지 못해 Testcontainers 기반 BE 통합 테스트 41건이 실행되지 않아 종료 코드 1이다.
+- 검증: `npm run test:photo --workspace frontend`, `npm run build --workspace frontend`, `npm run lint --workspace frontend` 통과. Docker 실행 후 `npm run verify`도 통과했으며, 보안 스캔·FE 테스트/빌드·BE 233건·패키지 빌드를 확인했다. FE lint에는 기존 `LiveParticipantPanel.tsx` 경고 1건이 남아 있다.
 - 남은 범위: 실제 모바일 브라우저·기기별 압축 확인, Supabase 저장소 및 AI worker 연결 후 실사진 통합 QA.
 
 ## 2026-11-02 / FE 실제 API 흐름·검증 보강
