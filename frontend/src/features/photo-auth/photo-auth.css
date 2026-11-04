@@ -10,6 +10,11 @@
 .photo-header { display: flex; align-items: center; gap: 8px; min-height: 48px; padding-top: env(safe-area-inset-top, 0px); }
 .photo-header h1 { font-size: 20px; font-weight: 600; margin: 0; line-height: 28px; }
 .photo-close { display: grid; place-items: center; width: 44px; height: 44px; border: 0; background: transparent; margin-left: -10px; }
+.live-photo-page { min-height: 100dvh; background: linear-gradient(#F4F4FA, #F7F7FB); }
+.live-photo-page .photo-close { padding: 0; flex-shrink: 0; border-radius: 0; color: #161a29; }
+.live-photo-content { margin-top: 40px; border: 0; background: transparent; }
+.live-photo-preview { width: 100%; height: 100%; object-fit: contain; }
+.live-photo-size { margin: 0; text-align: center; color: #737c91; font-size: 12px; }
 .photo-content { display: flex; flex-direction: column; gap: 16px; margin: 16px 0 24px; padding: 0; width: 100%; max-width: none; min-width: 0; }
 .photo-time-chip { display: flex; align-items: center; gap: 4px; width: fit-content; max-width: 100%; box-sizing: border-box; border-radius: 100px; padding: 6px 12px 6px 10px; background: #EBE8FF; color: #6344FF; font-size: 14px; font-weight: 600; margin: 0; min-height: 32px; }
 .photo-time-chip span { font-size: 20px; line-height: 20px; }

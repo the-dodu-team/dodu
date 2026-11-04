@@ -1,6 +1,7 @@
 package com.dodu.survey;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -92,6 +93,35 @@ class ValidationSurveyControllerIntegrationTests {
         mockMvc.perform(get("/api/promises/" + promiseId + "/validation-survey")
                         .header("Authorization", "Bearer " + otherToken))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void submitPersistsTimestampsAndReturnsSubmittedSurvey() throws Exception {
+        mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey")
+                        .header("Authorization", authorization)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"actualStarted\":true,\"startOrder\":\"after\",\"startDelayBucket\":\"within5\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lifecycleStatus").value("Submitted"))
+                .andExpect(jsonPath("$.actualStarted").value(true))
+                .andExpect(jsonPath("$.submittedAt").isNotEmpty());
+        mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey")
+                        .header("Authorization", authorization)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"actualStarted\":false}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void skipPersistsTimestampAndIsVisibleOnRead() throws Exception {
+        mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey/skip")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lifecycleStatus").value("Skipped"));
+        mockMvc.perform(get("/api/promises/" + promiseId + "/validation-survey")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lifecycleStatus").value("Skipped"));
     }
 
     @TestConfiguration(proxyBeanMethods = false)

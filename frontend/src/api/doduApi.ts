@@ -12,9 +12,15 @@ export class DoduApiError extends Error {
   readonly response: ApiErrorEnvelope
   readonly httpStatus: number
 
-  constructor(response: ApiErrorEnvelope, httpStatus: number) {
-    super(response.error.message)
-    this.response = response
+  constructor(body: unknown, httpStatus: number) {
+    const object = body && typeof body === 'object' ? body as Record<string, unknown> : {}
+    const error = object.error && typeof object.error === 'object'
+      ? object.error as Record<string, unknown> : object
+    const code = typeof error.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)
+      ? error.code : 'API_REQUEST_FAILED'
+    const message = '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.'
+    super(message)
+    this.response = { status: 'error', error: { type: 'TECHNICAL', code, message }, serverTime: '' }
     this.httpStatus = httpStatus
     this.name = 'DoduApiError'
   }
@@ -39,7 +45,9 @@ export async function fetchDoduJson<T>(url: string, init: RequestInit = {}, time
       (async () => {
         const response = await fetch(url, { ...init, signal: controller.signal })
         const text = await response.text()
-        const body = (text.trim() ? JSON.parse(text) : null) as T
+        let body: T | null = null
+        try { body = text.trim() ? JSON.parse(text) as T : null }
+        catch { throw new DoduApiError(null, response.status) }
         return { response, body }
       })(),
       new Promise<never>((_, reject) => {
@@ -66,10 +74,11 @@ export function createDoduApi(token: string, baseUrl = '') {
         ...init.headers,
       },
     })
-    if (!response.ok || body.status === 'error') {
+    if (!response.ok || body?.status === 'error') {
       throw new DoduApiError(body as ApiErrorEnvelope, response.status)
     }
-    return (body as ApiEnvelope<T>).data
+    return (body as ApiEnvelope<T> | null)?.status === 'success'
+      ? (body as ApiEnvelope<T>).data : body as T
   }
 
   async function requestRaw<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -85,7 +94,8 @@ export function createDoduApi(token: string, baseUrl = '') {
     if (!response.ok || (body as ApiErrorEnvelope | null)?.status === 'error') {
       throw new DoduApiError(body as ApiErrorEnvelope, response.status)
     }
-    return body as T
+    const success = body as { status?: string; data?: T } | null
+    return success?.status === 'success' ? success.data as T : body as T
   }
 
   return {
@@ -108,7 +118,7 @@ export function createDoduApi(token: string, baseUrl = '') {
       requestRaw<PromiseRecord>(`/api/promises/${promiseId}/cancel`, {
         method: 'POST', body: JSON.stringify({ expectedVersion }),
       }),
-    submitPhoto: (promiseId: string, photo: File, toolType: 'COMPUTER' | 'BOOK', clientRequestId = crypto.randomUUID()) => {
+    submitPhoto: (promiseId: string, photo: File, toolType: 'COMPUTER' | 'BOOK', clientRequestId: string = crypto.randomUUID()) => {
       const form = new FormData()
       form.set('clientRequestId', clientRequestId)
       form.set('toolType', toolType)
@@ -138,6 +148,18 @@ export function createDoduApi(token: string, baseUrl = '') {
   }
 }
 
+// Adapt the new participant/survey clients to the separately hosted API too.
+export function createBackendFetch(baseUrl: string): typeof fetch {
+  return async (input, init) => {
+    const url = typeof input === 'string' && input.startsWith('/api/')
+      ? `${baseUrl.replace(/\/$/, '')}${input}` : input
+    const { response, body } = await fetchDoduJson<unknown>(String(url), init)
+    return new Response(response.status === 204 ? null : JSON.stringify(body), {
+      status: response.status, statusText: response.statusText, headers: response.headers,
+    })
+  }
+}
+
 export function createDoduAccessApi(baseUrl = '') {
   return {
     enter: async (code: string, deviceKey: string): Promise<AccessResponse> => {
@@ -146,7 +168,7 @@ export function createDoduAccessApi(baseUrl = '') {
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, deviceKey }),
       })
-      if (!response.ok || body.status === 'error') {
+      if (!response.ok || body?.status === 'error') {
         throw new DoduApiError(body as ApiErrorEnvelope, response.status)
       }
       return (body as ApiEnvelope<AccessResponse>).data

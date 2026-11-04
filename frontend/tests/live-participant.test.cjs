@@ -11,6 +11,18 @@ function load(file) {
 const { createLiveSession } = load('../src/features/live/liveSession.ts')
 const { createParticipantPromiseApi } = load('../src/api/participantPromiseApi.ts')
 function storage() { const data = new Map(); return { getItem: k => data.get(k) ?? null, setItem: (k,v) => data.set(k,v), removeItem: k => data.delete(k) } }
+
+test('기존 배포 세션·기기 키를 복원하고 로그아웃 때 구형 토큰도 지운다', () => {
+  const tab = storage(), device = storage()
+  device.setItem('dodu.participant.session-token', 'synthetic-legacy-session')
+  device.setItem('dodu.participant.device-key', 'synthetic-legacy-device')
+  const session = createLiveSession(tab, device)
+  assert.equal(session.token(), 'synthetic-legacy-session')
+  assert.equal(session.device(), 'synthetic-legacy-device')
+  session.clear()
+  assert.equal(session.token(), null)
+  assert.equal(device.getItem('dodu.participant.session-token'), null)
+})
 test('기기 키·현재 탭 세션·결과 불명 요청은 재생성 후 복원하고 참가자 코드는 보관하지 않는다', () => {
   const tab = storage(), device = storage(); const first = createLiveSession(tab,device)
   const key = first.device(); first.enter('test-token')

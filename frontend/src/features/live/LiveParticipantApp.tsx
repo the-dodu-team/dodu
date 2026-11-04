@@ -1,8 +1,13 @@
 import { focusScreenHeading } from '../promise/focusScreenHeading'
 import LiveSelfReport, { LiveSelfReportEntry } from '../self-report/LiveSelfReport'
 import { createLiveSurveyApi } from '../../api/liveSurveyApi'
+import { createBackendFetch, createDoduApi } from '../../api/doduApi'
+import LivePhotoAuth from '../photo-auth/LivePhotoAuth'
+import PromiseAuthPreview from '../promise/PromiseAuthPreview'
+import { HistoryPage } from '../self-report/ReportScreens'
+import type { FinalPromiseRecord } from '../promise/promiseHistory'
 import LiveOnboardingFlow from '../onboarding/LiveOnboardingFlow'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createParticipantPromiseApi, ParticipantPromiseApiError } from '../../api/participantPromiseApi'
 import type { ParticipantState, PromiseResponse } from '../../api/participantPromiseApi'
 import ParticipantEntryPage from '../access/ParticipantEntryPage'
@@ -21,7 +26,7 @@ import { createLiveSession } from './liveSession'
 import type { PendingWrite } from './liveSession'
 import '../home/home-states.css'
 
-type Screen = 'home' | 'name' | 'time' | 'tool' | 'confirm' | 'manage' | 'edit'
+type Screen = 'home' | 'name' | 'time' | 'tool' | 'confirm' | 'manage' | 'edit' | 'photo' | 'history'
 function asDisplay(row: PromiseResponse): PreviewPromise {
   const kst = new Date(Date.parse(row.scheduledAt) + 9 * 3600000).toISOString()
   // 표시 컴포넌트의 입력 형식이다. 실제 인증 상태를 계산하거나 저장하지 않는다.
@@ -40,11 +45,16 @@ function errorMessage(error: unknown) {
 
 export default function LiveParticipantApp() {
   const [session] = useState(() => createLiveSession(sessionStorage, localStorage))
-  const [api] = useState(() => createParticipantPromiseApi({ getToken: session.token }))
-  const [surveyApi] = useState(() => createLiveSurveyApi(session.token))
+  const [backendFetch] = useState(() => createBackendFetch(import.meta.env.VITE_DODU_API_BASE_URL ?? ''))
+  const [api] = useState(() => createParticipantPromiseApi({ getToken: session.token, fetcher: backendFetch }))
+  const [surveyApi] = useState(() => createLiveSurveyApi(session.token, backendFetch))
   const [surveyId, setSurveyId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('self-report'))
   const [participant, setParticipant] = useState<ParticipantState | null>(null)
   const [active, setActive] = useState<PromiseResponse | null>(null)
+  const [history, setHistory] = useState<FinalPromiseRecord[]>([])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+  const currentToken = session.token()
+  const dataApi = useMemo(() => createDoduApi(currentToken ?? '', import.meta.env.VITE_DODU_API_BASE_URL ?? ''), [currentToken])
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
@@ -85,6 +95,17 @@ export default function LiveParticipantApp() {
       const promise = await api.active(abort.signal)
       if (!mounted.current || version !== epoch.current) return
       setParticipant(me.data); setActive(promise.data); setLoaded(true)
+      try {
+        const rows = await dataApi.listPromiseHistory()
+        if (!mounted.current || version !== epoch.current) return
+        setHistory(rows.flatMap(row => {
+          const outcome = row.finalOutcome ?? row.lifecycleStatus
+          if (!['AuthCompleted', 'AuthIncomplete'].includes(outcome)) return []
+          return [{ date: new Date(Date.parse(row.scheduledAt) + 9 * 3600000).toISOString().slice(0, 10),
+            status: outcome === 'AuthCompleted' ? 'verified' as const : 'unverified' as const }]
+        }))
+        setHistoryLoaded(true)
+      } catch { if (mounted.current && version === epoch.current) setHistoryLoaded(false) }
       if (me.serverTime) setServerClock({ value: Date.parse(me.serverTime), measured: performance.now() })
       const unresolved = session.pending()
       // 수정 응답을 잃은 경우 같은 약속의 갱신 버전·시간을 확인한다.
@@ -173,6 +194,12 @@ export default function LiveParticipantApp() {
   else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow onClose={() => { setOnboardingDismissed(true); setScreen('home') }} />
   else if (surveyId) page = <LiveSelfReport key={surveyId} api={surveyApi} promiseId={surveyId}
     target={null} onHome={home} />
+  else if (screen === 'photo' && active) page = <LivePhotoAuth api={dataApi}
+    promise={{ promiseId: active.promiseId, taskName: active.taskTitle, tool: active.toolType === 'BOOK' ? 'book' : 'computer' }}
+    onClose={() => { home(); void refresh() }} />
+  else if (screen === 'history') page = historyLoaded
+    ? <HistoryPage records={history} onBack={home} onCreate={() => setScreen('name')} />
+    : <main><h1>지난 약속</h1><p role="status">기록을 불러오지 못했어요.</p><button onClick={() => { void refresh() }}>다시 확인</button><button onClick={home}>닫기</button></main>
   else if (screen === 'name') page = <PromiseTaskNamePage initialValue={taskName} onBack={home} onNext={value => { setTaskName(value); setScreen('time') }} />
   else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt} onBack={value => { setScheduledAt(value); setScreen('name') }} onNext={value => { setScheduledAt(value); setScreen('tool') }} />
   else if (screen === 'tool') page = <PromiseToolPage initialValue={tool} onBack={() => setScreen('time')} onNext={value => { setTool(value); setScreen('confirm') }} />
@@ -188,8 +215,9 @@ export default function LiveParticipantApp() {
     <TodayPromiseCard promise={active ? { taskName: active.taskTitle, isToday: new Date(Date.parse(active.scheduledAt) + 9 * 3600000).toISOString().slice(0, 10) === new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10), startTimeLabel: formatPromiseDateTime(Date.parse(active.scheduledAt)), toolLabel: active.toolType === 'BOOK' ? '책' : '컴퓨터' } : null}
       canCreate={!pending} canEdit={modifyAllowed} onEdit={() => setScreen('manage')} onCreate={() => { setTaskName(''); setScheduledAt(''); setTool('computer'); setScreen('name') }} />
     <LiveSelfReportEntry api={surveyApi} onOpen={setSurveyId} />
-    {/* 이력 API 연결 전에는 빈 배열을 조회된 기록으로 취급하지 않는다. */}
-    <WeeklyPromiseCard todayKey={new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10)} historyState="unavailable" />
+    {active && <PromiseAuthPreview promise={asDisplay(active)} isLive onVerify={() => setScreen('photo')} />}
+    <WeeklyPromiseCard todayKey={new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10)}
+      records={history} historyState={historyLoaded ? 'ready' : 'unavailable'} onViewAll={() => setScreen('history')} />
   </main></div>
   return <>
     {(pending || (error && Boolean(session.token()))) && <aside style={{ padding: 16 }} aria-label="요청 상태">

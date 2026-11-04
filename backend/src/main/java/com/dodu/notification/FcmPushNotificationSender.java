@@ -98,7 +98,7 @@ public class FcmPushNotificationSender implements PushNotificationSender {
     private static String title(NotificationSchedulePolicy.NotificationType type) {
         return switch (type) {
             case START -> "약속한 시간이에요";
-            case REMINDER_10, REMINDER_20 -> "아직 시작 전이에요";
+            case REMINDER_10, REMINDER_20 -> "약속을 확인해 주세요";
             case SURVEY_REMINDER -> "오늘의 시작 경험을 알려주세요";
         };
     }

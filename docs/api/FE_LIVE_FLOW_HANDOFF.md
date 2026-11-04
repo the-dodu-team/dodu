@@ -30,3 +30,12 @@
 
 민감한 사진 원문, 접근 코드, API 자격정보는 이 문서와 테스트 출력에 기록하지 않는다.
 | 약속 이력 | `GET /api/promises/history` | 로그인 시 서버 이력을 조회해 주간 지난 약속과 이력 화면에 표시. 취소·철회 결과는 인증 이력에서 제외 |
+# 2026-11-05 통합 앱 진입점 보완
+
+- 운영 진입점은 `main.tsx` → `LiveParticipantApp`이며, 서버의 `onboardingCompleted=false`이면 `LiveOnboardingFlow`를 표시한다. 닫기는 현재 화면에서만 안내를 숨기며 서버 완료나 Push 구독 완료로 기록하지 않는다.
+- 참가자·자기보고 클라이언트도 `VITE_DODU_API_BASE_URL`을 사용한다. 상대 API 경로가 Vercel 정적 화면으로 잘못 향하지 않도록 공통 전송 어댑터를 주입한다.
+- 기존 브라우저 저장소의 세션과 기기 식별자를 복원한다. 만료·철회 시 구형 토큰도 제거한다.
+- 사진 화면은 처음 진입할 때 시도 목록을 조회하고 `Evaluating`이면 제출을 잠근 채 3초 간격으로 조회한다. 닫아도 서버 판정은 취소되지 않는다. 쓰기는 자동 재전송하지 않고 결과 불명 요청은 동일 멱등 식별자를 유지한다.
+- 오류 응답은 공통 envelope·기존 `{code}`·빈 본문에 대응한다. 원시 예외·provider 응답을 화면에 표시하지 않는다. 정당한 인증·소유권·상태 충돌의 HTTP 오류까지 성공으로 바꾸지는 않는다.
+- 신규 PR 테스트: `npm run test:integration-ui --workspace frontend`. 전체 검증: `npm run verify`.
+

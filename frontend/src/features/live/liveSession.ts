@@ -9,11 +9,11 @@ export function createLiveSession(storage: Storage, deviceStorage: Storage) {
   const pendingKey = 'dodu.live.pending.v1'
   const deviceKey = 'dodu.live.device.v1'
   return {
-    token: () => storage.getItem(tokenKey),
-    enter(token: string) { storage.setItem(tokenKey, token); storage.removeItem(pendingKey) },
-    clear() { storage.removeItem(tokenKey); storage.removeItem(pendingKey) },
+    token: () => storage.getItem(tokenKey) ?? deviceStorage.getItem('dodu.participant.session-token'),
+    enter(token: string) { storage.setItem(tokenKey, token); storage.removeItem(pendingKey); deviceStorage.removeItem('dodu.participant.session-token') },
+    clear() { storage.removeItem(tokenKey); storage.removeItem(pendingKey); deviceStorage.removeItem('dodu.participant.session-token') },
     device() {
-      let value = deviceStorage.getItem(deviceKey)
+      let value = deviceStorage.getItem(deviceKey) ?? deviceStorage.getItem('dodu.participant.device-key')
       if (!value) { value = crypto.randomUUID(); deviceStorage.setItem(deviceKey, value) }
       return value
     },
