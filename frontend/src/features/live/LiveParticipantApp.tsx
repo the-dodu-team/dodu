@@ -1,11 +1,14 @@
 import { focusScreenHeading } from '../promise/focusScreenHeading'
 import LiveSelfReport, { LiveSelfReportEntry } from '../self-report/LiveSelfReport'
 import { createLiveSurveyApi } from '../../api/liveSurveyApi'
-import { createBackendFetch, createDoduApi } from '../../api/doduApi'
+import { createBackendFetch, createDoduApi, DoduApiError } from '../../api/doduApi'
+import ScreenState from '../../components/ScreenState'
+import SettingsPage from '../settings/SettingsPage'
 import LivePhotoAuth from '../photo-auth/LivePhotoAuth'
 import PromiseAuthPreview from '../promise/PromiseAuthPreview'
 import { HistoryPage } from '../self-report/ReportScreens'
 import type { FinalPromiseRecord } from '../promise/promiseHistory'
+import type { ReportTarget } from '../self-report/selfReportModel'
 import LiveOnboardingFlow from '../onboarding/LiveOnboardingFlow'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createParticipantPromiseApi, ParticipantPromiseApiError } from '../../api/participantPromiseApi'
@@ -27,7 +30,7 @@ import type { PendingWrite } from './liveSession'
 import { promiseErrorMessage as errorMessage, creationBlockCode, scheduledDate } from './promiseFeedback'
 import '../home/home-states.css'
 
-type Screen = 'home' | 'name' | 'time' | 'tool' | 'confirm' | 'manage' | 'edit' | 'photo' | 'history'
+type Screen = 'home' | 'name' | 'time' | 'tool' | 'confirm' | 'manage' | 'edit' | 'photo' | 'history' | 'settings'
 function asDisplay(row: PromiseResponse): PreviewPromise {
   const kst = new Date(Date.parse(row.scheduledAt) + 9 * 3600000).toISOString()
   // 표시 컴포넌트의 입력 형식이다. 실제 인증 상태를 계산하거나 저장하지 않는다.
@@ -44,6 +47,7 @@ export default function LiveParticipantApp() {
   const [participant, setParticipant] = useState<ParticipantState | null>(null)
   const [active, setActive] = useState<PromiseResponse | null>(null)
   const [history, setHistory] = useState<FinalPromiseRecord[]>([])
+  const [reportTargets, setReportTargets] = useState<Record<string, ReportTarget>>({})
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const currentToken = session.token()
   const dataApi = useMemo(() => createDoduApi(currentToken ?? '', import.meta.env.VITE_DODU_API_BASE_URL ?? ''), [currentToken])
@@ -74,7 +78,7 @@ export default function LiveParticipantApp() {
     if (reason instanceof DOMException && reason.name === 'AbortError') return
     if (reason instanceof ParticipantPromiseApiError && reason.httpStatus === 401) {
       setOnboardingDismissed(false); session.clear(); setParticipant(null); setActive(null); setLoaded(false); setPending(null)
-      setHistory([]); setHistoryLoaded(false); blockedDates.current.clear(); lastReadAt.current = 0
+      setHistory([]); setReportTargets({}); setHistoryLoaded(false); blockedDates.current.clear(); lastReadAt.current = 0
     }
     if (reason instanceof ParticipantPromiseApiError && reason.code === 'STUDY_PERIOD_ENDED') setClosed(true)
     errorOrigin.current = origin
@@ -104,6 +108,12 @@ export default function LiveParticipantApp() {
             status: outcome === 'AuthCompleted' ? 'verified' as const : 'unverified' as const }]
         }))
         setHistoryLoaded(true)
+        setReportTargets(Object.fromEntries(rows.flatMap(row => {
+          const outcome = row.finalOutcome ?? row.lifecycleStatus
+          if (!['AuthCompleted', 'AuthIncomplete'].includes(outcome)) return []
+          const display = asDisplay(row)
+          return [[row.promiseId, { ...display, status: outcome === 'AuthCompleted' ? 'verified' as const : 'unverified' as const }]]
+        })))
       } catch { if (mounted.current && version === epoch.current) setHistoryLoaded(false) }
       if (me.serverTime) setServerClock({ value: Date.parse(me.serverTime), measured: performance.now() })
       const unresolved = session.pending()
@@ -148,7 +158,7 @@ export default function LiveParticipantApp() {
       if (!mounted.current || version !== epoch.current) return
       setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
-      setActive(null); setHistory([]); setHistoryLoaded(false); setLoaded(false)
+      setActive(null); setHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
       blockedDates.current.clear(); lastReadAt.current = 0
     } catch (reason) { if (mounted.current && version === epoch.current) fail(reason) }
     finally {
@@ -205,6 +215,16 @@ export default function LiveParticipantApp() {
     window.history.replaceState(window.history.state, '', url)
   }, [])
   const modifyAllowed = Boolean(active && now !== null && Date.parse(active.scheduledAt) > now && !pending)
+  async function logout() {
+    try { await dataApi.unsubscribeNotifications() }
+    catch (cause) { if (!(cause instanceof DoduApiError && cause.httpStatus === 401)) throw cause }
+    // Stop in-flight reads before removing the current browser's session only.
+    epoch.current++; reader.current?.abort(); reader.current = null
+    session.clear(); setParticipant(null); setActive(null); setPending(null)
+    setHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false); setError('')
+    setOnboardingDismissed(false); setSurveyId(null); setScreen('home')
+    blockedDates.current.clear(); lastReadAt.current = 0
+  }
   // 실제 화면 전환 때만 제목으로 이동한다. 시계 갱신과 서버 재조회는 포커스를 빼앗지 않는다.
   const visibleScreen = closed ? 'closed'
     : !participant && !session.token() ? 'entry'
@@ -222,16 +242,24 @@ export default function LiveParticipantApp() {
   let page
   if (closed) page = <AccessClosedPage />
   else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={code => { void login(code) }} isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} />
-  else if (!loaded) page = <main aria-label="홈" aria-busy={busy}><h1 className="visually-hidden">홈</h1><p role="status">확인 중…</p></main>
-  else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow onClose={() => { setOnboardingDismissed(true); setScreen('home') }} />
+  else if (!loaded) page = <ScreenState title="DODU" loading={busy} description={busy ? '약속을 불러오고 있어요' : '약속을 불러오지 못했어요.'}
+    onRetry={busy ? undefined : () => { void refresh() }} />
+  else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow
+    onClose={() => { void logout().catch(() => setError('입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.')) }}
+    onComplete={async () => {
+      await dataApi.completeOnboarding()
+      setParticipant(current => current ? { ...current, onboardingCompleted: true } : current)
+      setScreen('home')
+    }} />
   else if (surveyId) page = <LiveSelfReport key={surveyId} api={surveyApi} promiseId={surveyId}
-    target={null} onHome={home} />
+    target={reportTargets[surveyId] ?? null} onHome={home} />
+  else if (screen === 'settings') page = <SettingsPage onBack={home} onLogout={logout} />
   else if (screen === 'photo' && active) page = <LivePhotoAuth api={dataApi}
-    promise={{ promiseId: active.promiseId, taskName: active.taskTitle, tool: active.toolType === 'BOOK' ? 'book' : 'computer' }}
-    onClose={() => { home(); void refresh() }} />
+    promise={{ promiseId: active.promiseId, taskName: active.taskTitle, tool: active.toolType === 'BOOK' ? 'book' : 'computer', scheduledAt: active.scheduledAt }}
+    getNow={clockNow} onClose={() => { home(); void refresh() }} />
   else if (screen === 'history') page = historyLoaded
     ? <HistoryPage records={history} onBack={home} onCreate={() => setScreen('name')} />
-    : <main><h1>지난 약속</h1><p role="status">기록을 불러오지 못했어요.</p><button onClick={() => { void refresh() }}>다시 확인</button><button onClick={home}>닫기</button></main>
+    : <ScreenState title="인증 기록" description="기록을 불러오지 못했어요." onBack={home} onRetry={() => { void refresh() }} />
   else if (screen === 'name') page = <PromiseTaskNamePage initialValue={taskName} onBack={home} onNext={value => { setTaskName(value); setScreen('time') }} />
   else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt}
     getDateBlockedReason={date => blockedDates.current.has(date)
@@ -247,14 +275,13 @@ export default function LiveParticipantApp() {
     editBlockedReason={modifyAllowed ? '' : '시작 시간이 지나 수정·취소할 수 없어요.'}
     cancelBlockedReason={modifyAllowed ? '' : '시작 시간이 지나 수정·취소할 수 없어요.'}
     onCancelPromise={() => write({ kind: 'cancel', id: active.promiseId, version: active.version })} />
-  else page = <div className="home-page"><AppHeader /><main className="live-home-main" aria-label="홈"><h1 className="visually-hidden">홈</h1>
+  else page = <div className="home-page"><AppHeader onSettings={() => setScreen('settings')} /><main className="live-home-main" aria-label="홈"><h1 className="visually-hidden">홈</h1>
     <TodayPromiseCard promise={active ? { taskName: active.taskTitle, isToday: new Date(Date.parse(active.scheduledAt) + 9 * 3600000).toISOString().slice(0, 10) === new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10), startTimeLabel: formatPromiseDateTime(Date.parse(active.scheduledAt)), toolLabel: active.toolType === 'BOOK' ? '책' : '컴퓨터' } : null}
       canCreate={!pending} canEdit={modifyAllowed} onEdit={() => setScreen('manage')} onCreate={() => { setTaskName(''); setScheduledAt(''); setTool('computer'); setScreen('name') }} />
     <LiveSelfReportEntry api={surveyApi} onOpen={setSurveyId} />
-    {active && <PromiseAuthPreview promise={asDisplay(active)} isLive onVerify={() => setScreen('photo')} />}
     <WeeklyPromiseCard todayKey={new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10)}
       records={history} historyState={historyLoaded ? 'ready' : 'unavailable'} onViewAll={() => setScreen('history')} />
-  </main></div>
+  </main>{active && <footer className="live-home-cta"><PromiseAuthPreview promise={asDisplay(active)} isLive onVerify={() => setScreen('photo')} /></footer>}</div>
   return <>
     {(pending || (error && Boolean(session.token()) && !['confirm', 'edit', 'manage'].includes(screen))) && <aside className="live-request-status" aria-label="요청 상태">
       {pending && <p role="status">저장 결과 확인이 필요합니다. 다른 저장은 잠시 중단됩니다.</p>}

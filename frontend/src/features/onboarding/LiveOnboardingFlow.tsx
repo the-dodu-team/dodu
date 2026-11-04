@@ -23,12 +23,13 @@ function environment(): NotificationEnvironment {
 }
 
 // 안내를 닫아도 서버 완료 상태나 권한을 임의로 저장하지 않는다.
-export default function LiveOnboardingFlow({ onClose }: { onClose: () => void }) {
+export default function LiveOnboardingFlow({ onClose, onComplete }: { onClose: () => void; onComplete: () => Promise<void> }) {
   const [platform] = useState(detectOnboardingPlatform)
   const [controller] = useState(() => createNotificationPermissionController(environment))
   const [permission, setPermission] = useState(controller.read)
   const [step, setStep] = useState<'intro' | 'install' | 'notification' | 'camera' | 'complete'>('intro')
   const [camera, setCamera] = useState<CameraPermissionState>('default')
+  const [completionError, setCompletionError] = useState('')
   const [busy, setBusy] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const content = useRef<HTMLDivElement>(null)
@@ -103,6 +104,12 @@ export default function LiveOnboardingFlow({ onClose }: { onClose: () => void })
     version.current++
     setStep(next)
   }
+  useEffect(() => {
+    if (step === 'notification' && permission === 'granted') {
+      version.current++
+      setStep('camera')
+    }
+  }, [step, permission])
   function notificationStep() {
     const current = controller.read()
     setPermission(current)
@@ -138,6 +145,17 @@ export default function LiveOnboardingFlow({ onClose }: { onClose: () => void })
     setAttempt(value => value + 1)
     if (result === 'granted') navigate('complete')
   }
+  async function complete() {
+    if (pending.current) return
+    const currentPermission = controller.read()
+    if (currentPermission !== 'granted') {
+      setPermission(currentPermission); navigate('notification'); return
+    }
+    pending.current = true; setBusy(true); setCompletionError('')
+    try { await onComplete() }
+    catch { if (mounted.current) setCompletionError('준비 상태를 저장하지 못했어요. 다시 시도해 주세요.') }
+    finally { pending.current = false; if (mounted.current) setBusy(false) }
+  }
   const recovery = platform === 'ios'
     ? '홈 화면의 DODU 앱에서 다시 확인해 주세요. iPhone 설정의 앱별 알림 설정도 확인해 주세요.'
     : '사용 중인 브라우저의 사이트 권한에서 알림을 허용한 뒤 다시 확인해 주세요.'
@@ -151,11 +169,15 @@ export default function LiveOnboardingFlow({ onClose }: { onClose: () => void })
       onBack={() => navigate(platform === 'ios' ? 'install' : 'intro')}
       onRequest={() => { void request() }} requestBusy={busy}
       requestDisabled={['granted', 'unsupported', 'insecure', 'install-required'].includes(permission)}
-      isDenied={permission === 'denied'} recoveryText={recovery} attempt={attempt} />}
+      isDenied={permission !== 'default' && permission !== 'granted'} recoveryText={
+        permission === 'unsupported' ? '이 브라우저에서는 알림 권한을 요청할 수 없어요. 알림을 지원하는 브라우저로 접속해 주세요.'
+        : permission === 'insecure' ? '보안 연결(HTTPS)에서 다시 접속해 주세요.'
+        : permission === 'install-required' ? '공유 메뉴에서 홈 화면에 추가한 뒤 DODU를 열어 주세요.' : recovery} attempt={attempt} />}
     {(step === 'camera' || step === 'complete') && <OnboardingCameraPage totalSteps={totalSteps}
       isComplete={step === 'complete'} isDenied={!['default', 'granted'].includes(camera)}
       recoveryText={cameraRecoveryMessage(camera)} attempt={attempt} requestDisabled={busy} requestBusy={busy}
+      errorMessage={completionError}
       onBack={() => navigate('notification')} onClose={onClose}
-      onRequest={step === 'complete' ? onClose : () => { void requestCamera() }} />}
+      onRequest={step === 'complete' ? () => { void complete() } : () => { void requestCamera() }} />}
   </div>
 }
