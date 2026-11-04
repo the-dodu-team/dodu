@@ -1,5 +1,13 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-05 / SCRUM-76 참가자 입장 대기와 신규 참가자 빈 약속 응답
+
+- 사용자 증상: 입장 버튼이 확인 중으로 유지됨. Network 화면과 공개 JS 번들에서 구형 `/api/access/enter` 호출 확인. 운영 접근 코드는 기록하지 않음.
+- 원격 진단: health 최초 조회 30초 timeout, 후속 조회 HTTP 200. `/api/participant/sessions` preflight는 실제 프런트 출처에서 200 및 일치하는 허용 출처 확인. 지연의 서버 내부 원인은 미확인이다.
+- 수정: fetch와 응답 본문 읽기 합산 60초 제한, abort, 지연 안내 및 버튼 재활성화. 자동 재전송 없음. 신규 참가자 활성 약속이 없는 빈 본문/null을 null로 처리.
+- 검증: `npm run test:api --workspace frontend`, FE build/lint, `npm run security:scan`, `git diff --check` 통과. 기존 lint 경고 1건 유지. 백엔드 변경이 없어 전체 DB 테스트는 재실행하지 않음.
+- 남은 작업: 최신 dev 프런트 배포의 Production 승격, 실제 입장·약속·사진 업로드 검증. Supabase 업로드 성공이나 서버 지연 원인 해결로 기록하지 않음.
+
 ## 2026-11-04 / 참가자 초기 데이터·로컬 발급 준비 및 FE 입장 API 수정
 
 - 원격 읽기 검증: Render `/api/health` 200, `https://dodu-two.vercel.app` 출처의 입장 preflight 200 및 일치하는 허용 출처 확인.

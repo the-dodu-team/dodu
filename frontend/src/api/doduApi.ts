@@ -20,9 +20,44 @@ export class DoduApiError extends Error {
   }
 }
 
+export class DoduRequestTimeout extends Error {
+  constructor() {
+    super('REQUEST_TIMEOUT')
+    this.name = 'DoduRequestTimeout'
+  }
+}
+
+// Bound both connection time and response-body reading; never retry writes automatically.
+export async function fetchDoduJson<T>(url: string, init: RequestInit = {}, timeoutMs = 60_000) {
+  const controller = new AbortController()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const forwardAbort = () => controller.abort(init.signal?.reason)
+  if (init.signal?.aborted) forwardAbort()
+  else init.signal?.addEventListener('abort', forwardAbort, { once: true })
+  try {
+    return await Promise.race([
+      (async () => {
+        const response = await fetch(url, { ...init, signal: controller.signal })
+        const text = await response.text()
+        const body = (text.trim() ? JSON.parse(text) : null) as T
+        return { response, body }
+      })(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new DoduRequestTimeout())
+          controller.abort()
+        }, timeoutMs)
+      }),
+    ])
+  } finally {
+    clearTimeout(timer)
+    init.signal?.removeEventListener('abort', forwardAbort)
+  }
+}
+
 export function createDoduApi(token: string, baseUrl = '') {
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${baseUrl}${path}`, {
+    const { response, body } = await fetchDoduJson<ApiEnvelope<T> | ApiErrorEnvelope>(`${baseUrl}${path}`, {
       ...init,
       headers: {
         Accept: 'application/json',
@@ -31,7 +66,6 @@ export function createDoduApi(token: string, baseUrl = '') {
         ...init.headers,
       },
     })
-    const body = await response.json() as ApiEnvelope<T> | ApiErrorEnvelope
     if (!response.ok || body.status === 'error') {
       throw new DoduApiError(body as ApiErrorEnvelope, response.status)
     }
@@ -39,7 +73,7 @@ export function createDoduApi(token: string, baseUrl = '') {
   }
 
   async function requestRaw<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${baseUrl}${path}`, {
+    const { response, body } = await fetchDoduJson<T | ApiErrorEnvelope>(`${baseUrl}${path}`, {
       ...init,
       headers: {
         Accept: 'application/json',
@@ -48,8 +82,7 @@ export function createDoduApi(token: string, baseUrl = '') {
         ...init.headers,
       },
     })
-    const body = await response.json() as T | ApiErrorEnvelope
-    if (!response.ok || (body as ApiErrorEnvelope).status === 'error') {
+    if (!response.ok || (body as ApiErrorEnvelope | null)?.status === 'error') {
       throw new DoduApiError(body as ApiErrorEnvelope, response.status)
     }
     return body as T
@@ -108,12 +141,11 @@ export function createDoduApi(token: string, baseUrl = '') {
 export function createDoduAccessApi(baseUrl = '') {
   return {
     enter: async (code: string, deviceKey: string): Promise<AccessResponse> => {
-      const response = await fetch(`${baseUrl}/api/participant/sessions`, {
+      const { response, body } = await fetchDoduJson<ApiEnvelope<AccessResponse> | ApiErrorEnvelope>(`${baseUrl}/api/participant/sessions`, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, deviceKey }),
       })
-      const body = await response.json() as ApiEnvelope<AccessResponse> | ApiErrorEnvelope
       if (!response.ok || body.status === 'error') {
         throw new DoduApiError(body as ApiErrorEnvelope, response.status)
       }

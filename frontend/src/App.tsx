@@ -33,7 +33,7 @@ import type {
 import ParticipantEntryPage from './features/access/ParticipantEntryPage'
 import OnboardingMockFlow from './features/onboarding/OnboardingMockFlow'
 import { createDoduAccessApi, createDoduApi } from './api/doduApi'
-import { DoduApiError } from './api/doduApi'
+import { DoduApiError, DoduRequestTimeout } from './api/doduApi'
 import type { PromiseHistoryRecord, PromiseRecord } from './api/doduApi'
 import { ParticipantSessionStore } from './platform/participantSession'
 import { createBrowserStorage } from './platform/storage'
@@ -282,6 +282,10 @@ function LiveParticipantEntry() {
       await sessions.saveToken(response.sessionToken)
       window.location.reload()
     } catch (error) {
+      if (error instanceof DoduRequestTimeout) {
+        setErrorMessage('서버 응답이 지연되고 있어요. 잠시 후 다시 입장해 주세요.')
+        return
+      }
       const codeValue = error instanceof DoduApiError ? error.response.error.code
         : error instanceof Error ? error.message : 'ACCESS_REQUIRED'
       setErrorMessage(['ACCESS_REQUIRED', 'ACCESS_CODE_INVALID'].includes(codeValue) ? '접근 코드를 확인해 주세요.' : '입장할 수 없습니다. 잠시 후 다시 시도해 주세요.')

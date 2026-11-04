@@ -17,6 +17,10 @@
 
 ## 검증 상태
 
+- 입장·조회·제출 요청은 연결부터 응답 본문 읽기까지 합산 60초를 초과하면 중단하고 실패를 알린다. 입장 버튼은 재활성화한다. 시간 초과는 서버가 요청을 처리하지 않았다는 뜻이 아니며 POST 자동 재전송은 하지 않는다.
+- 활성 약속 조회의 빈 HTTP 200 본문과 JSON null은 약속 없음으로 처리한다.
+- Vercel dev Preview가 Ready인 것과 Production 공개 주소에 적용된 것은 별도다. 입장 경로 수정 배포를 Production으로 승격한 뒤 실제 공개 주소의 `/api/participant/sessions` 호출을 확인한다.
+
 - 자동 검증: FE build/lint와 API 계약 테스트 실행 대상.
 - 백엔드 자동 검증: 기존 MockMvc/Testcontainers 테스트에서 약속·사진·이력·자기보고·알림 소유권 및 상태 경계를 확인.
 - Swagger 수동 검증: 로컬 Swagger UI/OpenAPI 200, 입장 200, 약속 생성·조회·멱등·수정·취소·알림 조회를 확인. 사진 T 이전 제출은 정책대로 409 `PHOTO_WINDOW_CLOSED`. 실제 배포·Push·AI 운영 검증은 별도.
