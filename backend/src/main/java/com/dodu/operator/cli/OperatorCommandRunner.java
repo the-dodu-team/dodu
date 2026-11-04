@@ -86,8 +86,8 @@ public class OperatorCommandRunner implements ApplicationRunner {
                 System.out.printf("RESET_OK promises=%d photos=%d rows=%d participantsKept=%d credentialsKept=%d%n",
                         result.promises(), result.photos(), result.deletedRows(), result.participantsKept(), result.credentialsKept());
                 return EXIT_OK;
-            } catch (RuntimeException ignored) {
-                System.err.println("RESET_FAILED: DB changes rolled back. Check connectivity, active writes and Storage settings. Some photo deletions may have completed; metadata was kept for retry.");
+            } catch (RuntimeException failure) {
+                System.out.println("RESET_FAILED stage=RESET code=" + ResetFailureCode.of(failure));
                 return EXIT_FAILED;
             }
         }

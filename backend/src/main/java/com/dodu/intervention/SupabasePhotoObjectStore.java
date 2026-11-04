@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/** Supabase Storage adapter using its S3-compatible object HTTP API. */
+/** Supabase Storage REST adapter. */
 @Component
 @ConditionalOnProperty(name = "dodu.photo-storage.provider", havingValue = "supabase")
 public final class SupabasePhotoObjectStore implements PhotoObjectReader, PhotoObjectWriter {
@@ -58,10 +58,13 @@ public final class SupabasePhotoObjectStore implements PhotoObjectReader, PhotoO
 
     @Override
     public void delete(String storageKey) {
-        HttpResponse<byte[]> response = send("DELETE", storageKey, "application/json", null);
-        if (response.statusCode() == 404) return; // Already absent: a partial cleanup can be retried safely.
+        byte[] body = new tools.jackson.databind.json.JsonMapper().writeValueAsBytes(
+                java.util.Map.of("prefixes", java.util.List.of(storageKey)));
+        // Match the official SDK's remove API: exact object names in a JSON body.
+        // An absent object returns an empty success list; bucket/auth failures must not be ignored.
+        HttpResponse<byte[]> response = send("DELETE", null, "application/json", body);
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("Photo storage delete failed with HTTP " + response.statusCode());
+            throw new PhotoStorageRequestException(response.statusCode());
         }
     }
 
@@ -101,11 +104,13 @@ public final class SupabasePhotoObjectStore implements PhotoObjectReader, PhotoO
     }
 
     private HttpRequest.Builder requestBuilder(String method, String storageKey) {
-        return HttpRequest.newBuilder(URI.create(baseUrl + "/storage/v1/object/" + bucket + "/" + storageKey))
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl + "/storage/v1/object/" + bucket + (storageKey == null ? "" : "/" + storageKey)))
                 .timeout(TIMEOUT)
-                .header("Authorization", "Bearer " + serviceRoleKey)
                 .header("apikey", serviceRoleKey)
                 .header("Accept", "application/json");
+        // New secret credentials are not JWTs; the gateway accepts them on apikey only.
+        if (!serviceRoleKey.startsWith("sb_secret_")) builder.header("Authorization", "Bearer " + serviceRoleKey);
+        return builder;
     }
 
     private static String stripTrailingSlash(String value) {
