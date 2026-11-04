@@ -16,13 +16,55 @@ function load(file) {
     name => name.startsWith('.') ? load(path.resolve(path.dirname(file), name)) : require(name), mod, mod.exports)
   return mod.exports
 }
-const { createParticipantPromiseApi, classifyParticipantPromiseError } = load(path.resolve(__dirname, '../src/api/participantPromiseApi.ts'))
+const { createParticipantPromiseApi, classifyParticipantPromiseError, ParticipantPromiseApiError } = load(path.resolve(__dirname, '../src/api/participantPromiseApi.ts'))
+const { promiseErrorMessage, creationBlockCode } = load(path.resolve(__dirname, '../src/features/live/promiseFeedback.ts'))
 const { createParticipantPromiseController } = load(path.resolve(__dirname, '../src/api/participantPromiseController.ts'))
 const payload = { taskTitle: '작업', toolType: 'COMPUTER', scheduledAt: '2026-11-02T09:00:00+09:00' }
 const saved = { ...payload, promiseId: 'test-promise', version: 0 }
 const state = { expiresAt: '2026-12-01T00:00:00Z', onboardingCompleted: true }
 const envelope = data => ({ status: 'success', data, serverTime: '2026-11-01T00:00:00Z' })
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status })
+
+test('약속 충돌 사유를 공통·구형 응답에서 보존하고 서버 문장은 노출하지 않는다', async () => {
+  assert.doesNotMatch(promiseErrorMessage(new ParticipantPromiseApiError('HTTP_409', 409)), /일시적인 문제/)
+  for (const code of ['PROMISE_DATE_ALREADY_USED', 'PROMISE_ACTIVE_EXISTS', 'PROMISE_VERSION_CONFLICT']) {
+    for (const body of [{ status: 'error', error: { code, message: 'private-diagnostic' } }, { code }]) {
+      const api = createParticipantPromiseApi({ getToken: () => 'test', fetcher: async () => json(body, 409) })
+      await assert.rejects(api.prepareCreate(payload).send(), error => {
+        assert.equal(error.code, code)
+        assert.equal(error.outcomeUnknown, false)
+        const message = promiseErrorMessage(error)
+        assert.doesNotMatch(message, /일시적인 문제|private-diagnostic/)
+        assert.ok(message.length > 10)
+        return true
+      })
+    }
+  }
+})
+
+test('서버 생성 처리 중 409는 결과 불명으로 보존하고 같은 멱등키로만 확인한다', async () => {
+  const keys = []
+  const api = createParticipantPromiseApi({ getToken: () => 'test', fetcher: async (_url, init) => {
+    keys.push(init.headers.get('Idempotency-Key'))
+    return json({ code: 'PROMISE_CREATION_IN_PROGRESS' }, 409)
+  } })
+  const operation = api.prepareCreate(payload, 'synthetic-stable-request')
+  await assert.rejects(operation.send(), error => error.outcomeUnknown === true)
+  await assert.rejects(operation.send(), error => error.outcomeUnknown === true)
+  assert.deepEqual(keys, ['synthetic-stable-request', 'synthetic-stable-request'])
+})
+
+test('저장 시 5분·72시간 경계와 활성 약속·서버가 거절한 KST 날짜를 미리 확인한다', () => {
+  const now = Date.parse('2026-11-04T15:00:00Z')
+  const at = delta => ({ ...payload, scheduledAt: new Date(now + delta).toISOString() })
+  assert.equal(creationBlockCode(at(5 * 60000 - 1), now, false, new Set()), 'PROMISE_SCHEDULE_TOO_SOON')
+  assert.equal(creationBlockCode(at(5 * 60000), now, false, new Set()), null)
+  assert.equal(creationBlockCode(at(72 * 3600000), now, false, new Set()), null)
+  assert.equal(creationBlockCode(at(72 * 3600000 + 1), now, false, new Set()), 'PROMISE_SCHEDULE_TOO_FAR')
+  assert.equal(creationBlockCode(at(600000), now, true, new Set()), 'PROMISE_ACTIVE_EXISTS')
+  assert.equal(creationBlockCode(at(600000), now, false, new Set(['2026-11-05'])), 'PROMISE_DATE_ALREADY_USED')
+  assert.equal(creationBlockCode(at(24 * 3600000), now, false, new Set(['2026-11-05'])), null)
+})
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
 
 test('참가자 envelope와 빈 active 응답을 구분한다', async () => {

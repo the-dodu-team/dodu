@@ -24,6 +24,7 @@ import { formatPromiseDateTime } from '../promise/formatPromise'
 import type { PreviewPromise, PromiseTool } from '../promise/types'
 import { createLiveSession } from './liveSession'
 import type { PendingWrite } from './liveSession'
+import { promiseErrorMessage as errorMessage, creationBlockCode, scheduledDate } from './promiseFeedback'
 import '../home/home-states.css'
 
 type Screen = 'home' | 'name' | 'time' | 'tool' | 'confirm' | 'manage' | 'edit' | 'photo' | 'history'
@@ -32,15 +33,6 @@ function asDisplay(row: PromiseResponse): PreviewPromise {
   // 표시 컴포넌트의 입력 형식이다. 실제 인증 상태를 계산하거나 저장하지 않는다.
   return { taskName: row.taskTitle, date: kst.slice(0, 10), startTime: kst.slice(11, 16),
     tool: row.toolType === 'BOOK' ? 'book' : 'computer', status: 'pending' }
-}
-function errorMessage(error: unknown) {
-  if (error instanceof ParticipantPromiseApiError) {
-    if (error.code === 'ACCESS_CODE_INVALID') return '코드를 다시 확인해 주세요. 유효하지 않거나 만료된 코드예요.'
-    if (error.code === 'PROMISE_NOT_MODIFIABLE') return '시작 시간이 지나 수정·취소할 수 없어요.'
-    if (error.code === 'PROMISE_RESCHEDULE_LIMIT_REACHED') return '시작 시간을 이미 1번 수정했어요.'
-    if (error.code === 'PROMISE_SCHEDULE_TOO_FAR') return '지금부터 72시간 이내로 정해 주세요.'
-  }
-  return '일시적인 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'
 }
 
 export default function LiveParticipantApp() {
@@ -73,31 +65,38 @@ export default function LiveParticipantApp() {
   const epoch = useRef(0)
   const mounted = useRef(false)
   const reader = useRef<AbortController | null>(null)
+  const blockedDates = useRef(new Set<string>())
+  const lastReadAt = useRef(0)
+  const errorOrigin = useRef<'read' | 'write' | null>(null)
   const now = serverClock ? serverClock.value + performance.now() - serverClock.measured : null
 
-  function fail(reason: unknown) {
+  function fail(reason: unknown, origin: 'read' | 'write' = 'write') {
     if (reason instanceof DOMException && reason.name === 'AbortError') return
     if (reason instanceof ParticipantPromiseApiError && reason.httpStatus === 401) {
       setOnboardingDismissed(false); session.clear(); setParticipant(null); setActive(null); setLoaded(false); setPending(null)
+      setHistory([]); setHistoryLoaded(false); blockedDates.current.clear(); lastReadAt.current = 0
     }
     if (reason instanceof ParticipantPromiseApiError && reason.code === 'STUDY_PERIOD_ENDED') setClosed(true)
+    errorOrigin.current = origin
     setError(errorMessage(reason))
   }
   function mark(value: PendingWrite | null) { session.mark(value); setPending(value) }
   async function refresh() {
     if (running.current || !session.token()) return
+    if (reader.current && !reader.current.signal.aborted) return
     const version = ++epoch.current
-    reader.current?.abort()
+    const ownerToken = session.token()
     const abort = new AbortController(); reader.current = abort
-    setBusy(true); setError('')
+    setBusy(true)
+    if (errorOrigin.current === 'read') { setError(''); errorOrigin.current = null }
     try {
       const me = await api.me(abort.signal)
       const promise = await api.active(abort.signal)
       if (!mounted.current || version !== epoch.current) return
       setParticipant(me.data); setActive(promise.data); setLoaded(true)
       try {
-        const rows = await dataApi.listPromiseHistory()
-        if (!mounted.current || version !== epoch.current) return
+        const rows = await createDoduApi(ownerToken!, import.meta.env.VITE_DODU_API_BASE_URL ?? '').listPromiseHistory()
+        if (!mounted.current || version !== epoch.current || ownerToken !== session.token()) return
         setHistory(rows.flatMap(row => {
           const outcome = row.finalOutcome ?? row.lifecycleStatus
           if (!['AuthCompleted', 'AuthIncomplete'].includes(outcome)) return []
@@ -113,19 +112,32 @@ export default function LiveParticipantApp() {
           promise.data.version > unresolved.version && Date.parse(promise.data.scheduledAt) === Date.parse(unresolved.scheduledAt)) mark(null)
       // 활성 목록에서 사라진 것은 취소 성공이라고 표시하지 않고 현재 목록만 갱신한다.
       if (unresolved?.kind === 'cancel' && promise.data?.promiseId !== unresolved.id) mark(null)
-    } catch (reason) { if (mounted.current && version === epoch.current) fail(reason) }
-    finally { if (mounted.current && version === epoch.current) setBusy(false) }
+      lastReadAt.current = Date.now()
+    } catch (reason) { if (mounted.current && version === epoch.current) fail(reason, 'read') }
+    finally {
+      if (reader.current === abort) reader.current = null
+      if (mounted.current && version === epoch.current) setBusy(false)
+    }
   }
   useEffect(() => {
     mounted.current = true
     void refresh()
     const timer = setInterval(() => tick(value => value + 1), 1000)
-    const focus = () => { if (document.visibilityState === 'visible') void refresh() }
-    window.addEventListener('focus', focus)
-    return () => { mounted.current = false; epoch.current++; reader.current?.abort(); clearInterval(timer); window.removeEventListener('focus', focus) }
+    return () => { mounted.current = false; epoch.current++; reader.current?.abort(); clearInterval(timer) }
     // 세션·API 인스턴스는 이 앱이 마운트된 동안 유지된다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  useEffect(() => {
+    // Restoring focus while editing must not repeatedly reload or cancel the form.
+    if (screen !== 'home' || surveyId) return
+    const focus = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastReadAt.current >= 30000) void refresh()
+    }
+    window.addEventListener('focus', focus)
+    return () => window.removeEventListener('focus', focus)
+    // refresh uses the stable session/API instances and guards overlapping reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, surveyId])
 
   async function login(code: string) {
     if (running.current) return
@@ -136,6 +148,8 @@ export default function LiveParticipantApp() {
       if (!mounted.current || version !== epoch.current) return
       setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
+      setActive(null); setHistory([]); setHistoryLoaded(false); setLoaded(false)
+      blockedDates.current.clear(); lastReadAt.current = 0
     } catch (reason) { if (mounted.current && version === epoch.current) fail(reason) }
     finally {
       running.current = false
@@ -144,10 +158,21 @@ export default function LiveParticipantApp() {
   }
   async function write(operation: PendingWrite): Promise<string | undefined> {
     if (running.current) return undefined
-    if (pending && JSON.stringify(pending) !== JSON.stringify(operation)) return errorMessage(null)
+    if (pending && JSON.stringify(pending) !== JSON.stringify(operation)) {
+      const message = errorMessage(new ParticipantPromiseApiError('REQUEST_IN_PROGRESS', 409))
+      setError(message); return message
+    }
+    if (operation.kind === 'create' && !pending) {
+      const blocked = creationBlockCode(operation.payload, clockNow(), Boolean(active), blockedDates.current)
+      if (blocked) {
+        const message = errorMessage(new ParticipantPromiseApiError(blocked, 409))
+        setError(message); return message
+      }
+    }
     running.current = true; const version = ++epoch.current
     reader.current?.abort(); setBusy(true); setError('')
     let succeeded = false
+    let reconcile = false
     try {
       mark(operation)
       if (operation.kind === 'create') await api.prepareCreate(operation.payload, operation.key).send()
@@ -158,11 +183,18 @@ export default function LiveParticipantApp() {
     } catch (reason) {
       if (!mounted.current || version !== epoch.current) return undefined
       if (reason instanceof ParticipantPromiseApiError && !reason.outcomeUnknown) mark(null)
+      if (reason instanceof ParticipantPromiseApiError &&
+          ['PROMISE_ACTIVE_EXISTS', 'PROMISE_VERSION_CONFLICT'].includes(reason.code)) reconcile = true
+      if (reason instanceof ParticipantPromiseApiError && reason.code === 'PROMISE_DATE_ALREADY_USED') {
+        const date = operation.kind === 'create' ? scheduledDate(operation.payload)
+          : operation.kind === 'reschedule' ? scheduledDate({ scheduledAt: operation.scheduledAt }) : ''
+        if (date) blockedDates.current.add(date)
+      }
       fail(reason)
       return errorMessage(reason)
     } finally {
       running.current = false
-      if (mounted.current && version === epoch.current) { setBusy(false); if (succeeded && session.token()) void refresh() }
+      if (mounted.current && version === epoch.current) { setBusy(false); if ((succeeded || reconcile) && session.token()) void refresh() }
     }
   }
   const clockNow = () => serverClock ? serverClock.value + performance.now() - serverClock.measured : Date.now()
@@ -201,9 +233,13 @@ export default function LiveParticipantApp() {
     ? <HistoryPage records={history} onBack={home} onCreate={() => setScreen('name')} />
     : <main><h1>지난 약속</h1><p role="status">기록을 불러오지 못했어요.</p><button onClick={() => { void refresh() }}>다시 확인</button><button onClick={home}>닫기</button></main>
   else if (screen === 'name') page = <PromiseTaskNamePage initialValue={taskName} onBack={home} onNext={value => { setTaskName(value); setScreen('time') }} />
-  else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt} onBack={value => { setScheduledAt(value); setScreen('name') }} onNext={value => { setScheduledAt(value); setScreen('tool') }} />
+  else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt}
+    getDateBlockedReason={date => blockedDates.current.has(date)
+      ? errorMessage(new ParticipantPromiseApiError('PROMISE_DATE_ALREADY_USED', 409)) : ''}
+    onBack={value => { setError(''); setScheduledAt(value); setScreen('name') }}
+    onNext={value => { setError(''); setScheduledAt(value); setScreen('tool') }} />
   else if (screen === 'tool') page = <PromiseToolPage initialValue={tool} onBack={() => setScreen('time')} onNext={value => { setTool(value); setScreen('confirm') }} />
-  else if (screen === 'confirm') page = <PromiseConfirmPage taskName={taskName} scheduledAt={scheduledAt} tool={tool} errorMessage={error} onBack={() => setScreen('tool')} onSave={() => {
+  else if (screen === 'confirm') page = <PromiseConfirmPage taskName={taskName} scheduledAt={scheduledAt} tool={tool} errorMessage={pending ? '' : error} onBack={() => { setError(''); setScreen('tool') }} onSave={() => {
     void write(pending?.kind === 'create' ? pending : { kind: 'create', key: crypto.randomUUID(), payload: { taskTitle: taskName, toolType: tool === 'book' ? 'BOOK' : 'COMPUTER', scheduledAt } })
   }} />
   else if (screen === 'edit' && active) page = <PromiseTimePage getNow={clockNow} initialValue={active.scheduledAt} mode="edit" saveError={error} onBack={() => setScreen('manage')} onNext={value => { void write({ kind: 'reschedule', id: active.promiseId, version: active.version, scheduledAt: value }) }} />
@@ -220,11 +256,11 @@ export default function LiveParticipantApp() {
       records={history} historyState={historyLoaded ? 'ready' : 'unavailable'} onViewAll={() => setScreen('history')} />
   </main></div>
   return <>
-    {(pending || (error && Boolean(session.token()))) && <aside style={{ padding: 16 }} aria-label="요청 상태">
+    {(pending || (error && Boolean(session.token()) && !['confirm', 'edit', 'manage'].includes(screen))) && <aside className="live-request-status" aria-label="요청 상태">
       {pending && <p role="status">저장 결과 확인이 필요합니다. 다른 저장은 잠시 중단됩니다.</p>}
       {error && <p role="alert">{error}</p>}
-      {session.token() && <button type="button" disabled={busy} onClick={() => { void refresh() }}>서버 상태 다시 확인</button>}
-      {pending?.kind === 'create' && <button type="button" disabled={busy} onClick={() => { void write(pending) }}>같은 저장 요청 다시 확인</button>}
+      {session.token() && <button className="button" type="button" disabled={busy} onClick={() => { void refresh() }}>서버 상태 다시 확인</button>}
+      {pending?.kind === 'create' && <button className="button" type="button" disabled={busy} onClick={() => { void write(pending) }}>같은 저장 요청 다시 확인</button>}
     </aside>}
     <div ref={content} inert={busy} aria-busy={busy}>{page}</div>
   </>
