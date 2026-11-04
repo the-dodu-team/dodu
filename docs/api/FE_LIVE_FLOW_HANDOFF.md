@@ -38,4 +38,3 @@
 - 사진 화면은 처음 진입할 때 시도 목록을 조회하고 `Evaluating`이면 제출을 잠근 채 3초 간격으로 조회한다. 닫아도 서버 판정은 취소되지 않는다. 쓰기는 자동 재전송하지 않고 결과 불명 요청은 동일 멱등 식별자를 유지한다.
 - 오류 응답은 공통 envelope·기존 `{code}`·빈 본문에 대응한다. 원시 예외·provider 응답을 화면에 표시하지 않는다. 정당한 인증·소유권·상태 충돌의 HTTP 오류까지 성공으로 바꾸지는 않는다.
 - 신규 PR 테스트: `npm run test:integration-ui --workspace frontend`. 전체 검증: `npm run verify`.
-
