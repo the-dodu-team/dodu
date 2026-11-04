@@ -51,10 +51,11 @@ public class NotificationSubscriptionController {
         jdbc.update("""
                 update notification_subscription
                    set participant_session_id = ?, lifecycle_status = 'Active',
-                       activated_at = ?, last_seen_at = ?, deactivated_at = null
+                       activated_at = ?, last_seen_at = ?, deactivated_at = null,
+                       push_token = ?
                  where participant_id = ? and subscription_key_hash = ?
                 """, context.session().id(), timestamp(now), timestamp(now),
-                context.participant().id(), subscriptionHash);
+                subscriptionKey, context.participant().id(), subscriptionHash);
 
         UUID existing = jdbc.query("""
                 select id from notification_subscription
@@ -64,16 +65,16 @@ public class NotificationSubscriptionController {
         if (existing == null) {
             jdbc.update("""
                     update notification_subscription
-                       set lifecycle_status = 'Inactive', deactivated_at = ?
+                       set lifecycle_status = 'Inactive', deactivated_at = ?, push_token = null
                      where participant_id = ? and lifecycle_status = 'Active'
                     """, timestamp(now), context.participant().id());
             jdbc.update("""
                     insert into notification_subscription
-                        (participant_id, participant_session_id, subscription_key_hash,
+                        (participant_id, participant_session_id, subscription_key_hash, push_token,
                          lifecycle_status, activated_at, last_seen_at)
-                    values (?, ?, ?, 'Active', ?, ?)
+                    values (?, ?, ?, ?, 'Active', ?, ?)
                     """, context.participant().id(), context.session().id(), subscriptionHash,
-                    timestamp(now), timestamp(now));
+                    subscriptionKey, timestamp(now), timestamp(now));
         }
         return ApiResponse.success(new SubscriptionResponse("Active", now), ApiTime.now(clock));
     }
@@ -85,7 +86,8 @@ public class NotificationSubscriptionController {
         Instant now = clock.instant();
         jdbc.update("""
                 update notification_subscription
-                   set lifecycle_status = 'Inactive', deactivated_at = ?, last_seen_at = ?
+                   set lifecycle_status = 'Inactive', deactivated_at = ?, last_seen_at = ?,
+                       push_token = null
                  where participant_id = ? and participant_session_id = ?
                    and lifecycle_status = 'Active'
                 """, timestamp(now), timestamp(now), context.participant().id(), context.session().id());

@@ -99,6 +99,14 @@
 - 대안: FE에서 상태를 추정하거나 mock 결과를 유지하는 방식은 선택하지 않음.
 - 영향: 배포 주소와 외부 사진 저장소·AI worker가 준비되면 동일 화면에서 운영 API를 호출할 수 있음. Figma 노드 구조화 컨텍스트와 Swagger 수동 실행 결과는 외부 확인 전까지 미확정.
 - 검증: FE build, API 계약 테스트, 전체 verify 실행 결과를 같은 커밋에 기록.
+## DEV-20261030-05 Push 발송 분리·사전 차단·FCM 연동 경계
+
+- 배경: Push 외부 호출이 DB 트랜잭션 안에 있었고, 철회·취소·만료된 약속에도 예약된 Push가 나갈 수 있었으며 실제 provider가 없었다.
+- 선택: 외부 호출을 트랜잭션 밖으로 분리하고, 발송 직전에 참가자·약속·인증 창·설문 상태를 다시 검사해 사유와 함께 `SUPPRESSED`로 기록한다. FCM(firebase-admin)은 `dodu.push.fcm.enabled`로 켜고 기본은 꺼 둔다. 토큰은 `notification_subscription.push_token`에 저장한다.
+- 근거: 외부 호출이 트랜잭션을 점유하면 DB 락이 길어지고, 발송 시점의 상태가 예약 시점과 다를 수 있다. 토큰 만료·잘못된 토큰은 재시도해도 성공하지 않는다.
+- 대안: 트랜잭션 안 발송 유지, 예약 시점 검사만으로 충분하다고 보는 방식, 토큰 암호화 선적용(N-01로 이월)은 선택하지 않았다.
+- 영향: 중복 발송이 가능한 at-least-once 방식이며 단일 인스턴스를 전제한다. `UNREGISTERED`·`SENDER_ID_MISMATCH`는 구독을 비활성화하고 `INVALID_ARGUMENT`는 재시도하지 않는다. 키 파일은 저장소에 두지 않는다.
+- 검증: `FcmPushNotificationSenderTests`, `NotificationDeliveryServiceIntegrationTests`, dry-run 수동 확인(`FAILED`/`INVALID_ARGUMENT`, attempt_count 1), 전체 `npm run verify`.
 
 ## DEV-20261013-01 — Notion 최신 작업명 정책 및 구현 근거 동기화
 
