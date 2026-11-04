@@ -13,6 +13,10 @@ import type { SavedPromiseHistory } from '../promise/savedPromiseHistory'
 import type { ReportTarget } from '../self-report/selfReportModel'
 import LiveOnboardingFlow from '../onboarding/LiveOnboardingFlow'
 import PermissionRecoveryGate from '../onboarding/PermissionRecoveryGate'
+import PushConnection from '../notifications/PushConnection'
+import { readPushConfig } from '../notifications/pushConfig'
+import { createPushController } from '../notifications/pushController'
+import type { PushNotice, PushState } from '../notifications/pushController'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createParticipantPromiseApi, ParticipantPromiseApiError } from '../../api/participantPromiseApi'
 import type { ParticipantState, PromiseResponse } from '../../api/participantPromiseApi'
@@ -58,7 +62,20 @@ export default function LiveParticipantApp() {
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const [deviceChangeRequired, setDeviceChangeRequired] = useState(false)
   const [closed, setClosed] = useState(false)
+  const [pushState, setPushState] = useState<PushState>('disabled')
+  const [pushNotice, setPushNotice] = useState<PushNotice | null>(null)
+  const [push] = useState(() => createPushController({
+    ...readPushConfig(import.meta.env), session: session.token,
+    permission: () => typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+    driver: async () => (await import('../notifications/firebasePush')).firebasePushDriver(),
+    subscribe: (owner, token) => createDoduApi(owner, import.meta.env.VITE_DODU_API_BASE_URL ?? '').subscribeNotifications(token),
+    state: setPushState, receive: notice => {
+      setPushNotice(notice)
+      if (notice.data?.type === 'SESSION_REPLACED') void refresh()
+    },
+  }))
   const [screen, setScreen] = useState<Screen>('home')
   const [taskName, setTaskName] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
@@ -77,6 +94,19 @@ export default function LiveParticipantApp() {
   const lastReadAt = useRef(0)
   const errorOrigin = useRef<'read' | 'write' | null>(null)
   const now = serverClock ? serverClock.value + performance.now() - serverClock.measured : null
+
+  useEffect(() => {
+    let disposed = false
+    void push.pause().then(() => { if (!disposed && currentToken && loaded && !closed) push.resume() })
+    const sync = () => { if (!disposed && document.visibilityState === 'visible') void push.sync() }
+    const timer = setInterval(sync, 60000)
+    window.addEventListener('focus', sync)
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      disposed = true; clearInterval(timer); window.removeEventListener('focus', sync)
+      document.removeEventListener('visibilitychange', sync); void push.pause()
+    }
+  }, [push, currentToken, loaded, closed])
 
   function fail(reason: unknown, origin: 'read' | 'write' = 'write') {
     if (reason instanceof DOMException && reason.name === 'AbortError') return
@@ -161,18 +191,23 @@ export default function LiveParticipantApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, screen, active?.promiseId])
 
-  async function login(code: string) {
+  async function login(code: string, confirmDeviceChange = false) {
     if (running.current) return
     running.current = true; const version = ++epoch.current
     setBusy(true); setError(''); reader.current?.abort()
     try {
-      const result = await api.enter(code, session.device())
+      const result = await api.enter(code, session.device(), undefined, confirmDeviceChange)
       if (!mounted.current || version !== epoch.current) return
-      setOnboardingDismissed(false); session.enter(result.data.sessionToken)
+      setDeviceChangeRequired(false); setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
       setActive(null); setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
       blockedDates.current.clear(); lastReadAt.current = 0
-    } catch (reason) { if (mounted.current && version === epoch.current) fail(reason) }
+    } catch (reason) {
+      if (mounted.current && version === epoch.current) {
+        if (reason instanceof ParticipantPromiseApiError && reason.code === 'DEVICE_CHANGE_CONFIRMATION_REQUIRED') setDeviceChangeRequired(true)
+        else fail(reason)
+      }
+    }
     finally {
       running.current = false
       if (mounted.current && version === epoch.current) { setBusy(false); if (session.token()) void refresh() }
@@ -228,8 +263,13 @@ export default function LiveParticipantApp() {
   }, [])
   const modifyAllowed = Boolean(active && now !== null && Date.parse(active.scheduledAt) > now && !pending)
   async function logout() {
-    try { await dataApi.unsubscribeNotifications() }
-    catch (cause) { if (!(cause instanceof DoduApiError && cause.httpStatus === 401)) throw cause }
+    await push.pause()
+    try {
+      try { await dataApi.unsubscribeNotifications() }
+      catch (cause) { if (!(cause instanceof DoduApiError && cause.httpStatus === 401)) throw cause }
+      await push.removeToken()
+    } catch (cause) { push.resume(); throw cause }
+    setPushNotice(null); setPushState('disabled')
     // Stop in-flight reads before removing the current browser's session only.
     epoch.current++; reader.current?.abort(); reader.current = null
     session.clear(); setParticipant(null); setActive(null); setPending(null)
@@ -255,7 +295,9 @@ export default function LiveParticipantApp() {
   }, [visibleScreen, busy])
   let page
   if (closed) page = <AccessClosedPage />
-  else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={code => { void login(code) }} isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} />
+  else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={(code, confirmed) => { void login(code, confirmed) }}
+    isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} deviceChangeRequired={deviceChangeRequired}
+    onCancelDeviceChange={() => { setDeviceChangeRequired(false); setError('') }} />
   else if (!loaded) page = <ScreenState title="DODU" loading={busy} description={busy ? '약속을 불러오고 있어요' : '약속을 불러오지 못했어요.'}
     onRetry={busy ? undefined : () => { void refresh() }} />
   else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow
@@ -267,7 +309,9 @@ export default function LiveParticipantApp() {
     }} />
   else if (surveyId) page = <LiveSelfReport key={surveyId} api={surveyApi} promiseId={surveyId}
     target={reportTargets[surveyId] ?? null} onHome={home} />
-  else if (screen === 'settings') page = <SettingsPage onBack={home} onLogout={logout} />
+  else if (screen === 'settings') page = <SettingsPage onBack={home} onLogout={logout}
+    notificationConnection={<PushConnection state={pushState} notice={pushNotice}
+      retry={() => { void push.sync() }} dismiss={() => setPushNotice(null)} />} />
   else if (screen === 'photo' && active) page = <LivePhotoAuth api={dataApi}
     promise={{ promiseId: active.promiseId, taskName: active.taskTitle, tool: active.toolType === 'BOOK' ? 'book' : 'computer', scheduledAt: active.scheduledAt }}
     getNow={clockNow} onClose={() => { home(); void refresh() }} />
@@ -288,6 +332,7 @@ export default function LiveParticipantApp() {
     cancelBlockedReason={modifyAllowed ? '' : '시작 시간이 지나 수정·취소할 수 없어요.'}
     onCancelPromise={() => write({ kind: 'cancel', id: active.promiseId, version: active.version })} />
   else page = <div className="home-page"><AppHeader onSettings={() => setScreen('settings')} /><main className="live-home-main" aria-label="홈"><h1 className="visually-hidden">홈</h1>
+    {pushNotice && <PushConnection state="ready" notice={pushNotice} retry={() => {}} dismiss={() => setPushNotice(null)} />}
     <TodayPromiseCard promise={active ? { taskName: active.taskTitle, isToday: new Date(Date.parse(active.scheduledAt) + 9 * 3600000).toISOString().slice(0, 10) === new Date(clockNow() + 9 * 3600000).toISOString().slice(0, 10), startTimeLabel: formatPromiseDateTime(Date.parse(active.scheduledAt)), toolLabel: active.toolType === 'BOOK' ? '책' : '컴퓨터' } : null}
       canCreate={!pending} canEdit={modifyAllowed} onEdit={() => setScreen('manage')} onCreate={() => { setTaskName(''); setScheduledAt(''); setTool('computer'); setScreen('name') }} />
     <LiveSelfReportEntry api={surveyApi} onOpen={setSurveyId} targets={reportTargets} />
@@ -295,12 +340,6 @@ export default function LiveParticipantApp() {
       records={history} historyState={historyLoaded ? 'ready' : 'unavailable'} onViewAll={() => setScreen('history')} />
   </main>{active && <footer className="live-home-cta"><PromiseAuthPreview promise={asDisplay(active)} isLive onVerify={() => setScreen('photo')} /></footer>}</div>
   return <>
-    {(pending || (error && Boolean(session.token()) && !['confirm', 'edit', 'manage'].includes(screen))) && <aside className="live-request-status" aria-label="요청 상태">
-      {pending && <p role="status">저장 결과 확인이 필요합니다. 다른 저장은 잠시 중단됩니다.</p>}
-      {error && <p role="alert">{error}</p>}
-      {session.token() && <button className="button" type="button" disabled={busy} onClick={() => { void refresh() }}>서버 상태 다시 확인</button>}
-      {pending?.kind === 'create' && <button className="button" type="button" disabled={busy} onClick={() => { void write(pending) }}>같은 저장 요청 다시 확인</button>}
-    </aside>}
     <div ref={content} inert={busy} aria-busy={busy}>{participant?.onboardingCompleted && loaded && !closed
       ? <PermissionRecoveryGate key={currentToken}>{page}</PermissionRecoveryGate> : page}</div>
   </>

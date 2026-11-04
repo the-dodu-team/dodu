@@ -61,9 +61,22 @@ class ParticipantEntryServiceTest {
                 hasher,
                 new SecureRandom(),
                 Clock.fixed(NOW, ZoneId.of("Asia/Seoul")),
-                mock(PlatformTransactionManager.class));
+                mock(PlatformTransactionManager.class), mock(org.springframework.context.ApplicationEventPublisher.class));
         when(repository.insertDevice(any(), anyString(), any())).thenReturn(DEVICE_ID);
         when(repository.insertSession(any(), any(), anyString(), any(), any())).thenReturn(UUID.randomUUID());
+    }
+
+    @Test
+    void otherDeviceRequiresConfirmationWithoutChangingExistingSession() {
+        when(repository.findCredentialForUpdate(anyString())).thenReturn(Optional.of(
+                new CredentialLookup(PARTICIPANT_ID, null, null, null, null, null, FAR_FUTURE)));
+        when(repository.hasOtherActiveSession(any(), anyString(), any())).thenReturn(true);
+        BusinessException error = assertThrows(BusinessException.class, () -> service.enter(CODE, DEVICE));
+        assertEquals("DEVICE_CHANGE_CONFIRMATION_REQUIRED", error.code());
+        verify(repository, never()).endActiveSessions(any(), any(), any());
+        verify(repository, never()).insertSession(any(), any(), anyString(), any(), any());
+        service.enter(CODE, DEVICE, true);
+        verify(repository).endActiveSessions(any(), any(), any());
     }
 
     @Test

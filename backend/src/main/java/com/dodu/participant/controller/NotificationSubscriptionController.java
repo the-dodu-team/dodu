@@ -4,6 +4,7 @@ import com.dodu.access.AccessCredentialHasher;
 import com.dodu.common.api.ApiResponse;
 import com.dodu.common.api.ApiTime;
 import com.dodu.participant.domain.SessionContext;
+import com.dodu.notification.NotificationSubscriptionGuard;
 import java.time.Clock;
 import java.time.Instant;
 import java.sql.Timestamp;
@@ -31,10 +32,12 @@ public class NotificationSubscriptionController {
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final AccessCredentialHasher hasher;
+    private final NotificationSubscriptionGuard guard;
 
-    public NotificationSubscriptionController(JdbcTemplate jdbc, Clock clock) {
+    public NotificationSubscriptionController(JdbcTemplate jdbc, Clock clock, NotificationSubscriptionGuard guard) {
         this.jdbc = jdbc;
         this.clock = clock;
+        this.guard = guard;
         this.hasher = new AccessCredentialHasher(System.getenv().getOrDefault(
                 "DODU_CREDENTIAL_PEPPER", "local-development-only"));
     }
@@ -47,15 +50,25 @@ public class NotificationSubscriptionController {
         String subscriptionKey = validate(request);
         Instant now = clock.instant();
         String subscriptionHash = hasher.hash(subscriptionKey);
+        guard.lockAndCheck(context);
+        guard.lockToken(subscriptionHash);
+        jdbc.update("""
+                update notification_subscription
+                   set lifecycle_status = 'Inactive', deactivated_at = ?, push_token = null
+                 where lifecycle_status = 'Active'
+                   and ((participant_id = ? and subscription_key_hash <> ?)
+                     or (participant_id <> ? and subscription_key_hash = ?))
+                """, timestamp(now), context.participant().id(), subscriptionHash,
+                context.participant().id(), subscriptionHash);
 
         jdbc.update("""
                 update notification_subscription
-                   set participant_session_id = ?, lifecycle_status = 'Active',
+                   set participant_id = ?, participant_session_id = ?, lifecycle_status = 'Active',
                        activated_at = ?, last_seen_at = ?, deactivated_at = null,
                        push_token = ?
-                 where participant_id = ? and subscription_key_hash = ?
-                """, context.session().id(), timestamp(now), timestamp(now),
-                subscriptionKey, context.participant().id(), subscriptionHash);
+                 where subscription_key_hash = ?
+                """, context.participant().id(), context.session().id(), timestamp(now), timestamp(now),
+                subscriptionKey, subscriptionHash);
 
         UUID existing = jdbc.query("""
                 select id from notification_subscription
@@ -83,6 +96,7 @@ public class NotificationSubscriptionController {
     @DeleteMapping
     @Transactional
     public ApiResponse<SubscriptionResponse> unsubscribe(SessionContext context) {
+        guard.lockAndCheck(context);
         Instant now = clock.instant();
         jdbc.update("""
                 update notification_subscription

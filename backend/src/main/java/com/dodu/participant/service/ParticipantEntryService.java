@@ -18,6 +18,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.context.ApplicationEventPublisher;
+import com.dodu.notification.DeviceChangeNotice;
 
 /**
  * 참가자 입장과 세션 발급(PARTICIPANT_ACCESS_CONTRACT §3).
@@ -51,21 +53,27 @@ public class ParticipantEntryService {
     private final SecureRandom random;
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
+    private final ApplicationEventPublisher events;
 
     public ParticipantEntryService(
             ParticipantAccessRepository repository,
             SecretHasher secretHasher,
             SecureRandom random,
             Clock clock,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, ApplicationEventPublisher events) {
         this.repository = repository;
         this.secretHasher = secretHasher;
         this.random = random;
         this.clock = clock;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.events = events;
     }
 
     public EnterResult enter(String rawCode, String deviceKey) {
+        return enter(rawCode, deviceKey, false);
+    }
+
+    public EnterResult enter(String rawCode, String deviceKey, boolean confirmDeviceChange) {
         validateDeviceKey(deviceKey);
         Optional<String> code = AccessCode.normalize(rawCode);
         if (code.isEmpty()) {
@@ -76,7 +84,7 @@ public class ParticipantEntryService {
 
         for (int attempt = 1; ; attempt++) {
             try {
-                return transactionTemplate.execute(status -> enterInTransaction(codeHash, deviceKeyHash));
+                return transactionTemplate.execute(status -> enterInTransaction(codeHash, deviceKeyHash, confirmDeviceChange));
             } catch (DuplicateKeyException e) {
                 // 동시에 활성 세션이 둘 생기려던 경우. 한 번만 다시 시도합니다.
                 if (attempt >= MAX_ATTEMPTS) {
@@ -87,7 +95,7 @@ public class ParticipantEntryService {
         }
     }
 
-    private EnterResult enterInTransaction(String codeHash, String deviceKeyHash) {
+    private EnterResult enterInTransaction(String codeHash, String deviceKeyHash, boolean confirmed) {
         Instant now = Instant.now(clock);
 
         CredentialLookup credential = repository.findCredentialForUpdate(codeHash)
@@ -109,6 +117,12 @@ public class ParticipantEntryService {
         }
 
         UUID participantId = credential.participantId();
+        boolean replacing = repository.hasOtherActiveSession(participantId, deviceKeyHash, now);
+        if (replacing && !confirmed) {
+            throw new BusinessException(ErrorType.CONFLICT, "DEVICE_CHANGE_CONFIRMATION_REQUIRED",
+                    "다른 기기에서 이용 중이에요. 이 기기로 변경할까요?");
+        }
+        if (replacing) events.publishEvent(new DeviceChangeNotice(repository.activePushTokens(participantId)));
         UUID deviceId = upsertDevice(participantId, deviceKeyHash, now);
 
         // 새 기기 입장: 기존 세션·알림 구독·다른 기기를 종료합니다(0928 정책).

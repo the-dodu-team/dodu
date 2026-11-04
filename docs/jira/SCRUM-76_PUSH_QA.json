@@ -1,0 +1,14 @@
+{
+  "ticket": "SCRUM-76",
+  "date": "2026-11-05",
+  "scope": "웹 FCM 구독·수신·해제와 전역 서버 재확인 UI 제거",
+  "unit": { "passed": 8 },
+  "subscriptionIntegration": { "passed": 6 },
+  "backendFull": { "passed": 273, "failed": 0, "errors": 0, "skipped": 0 },
+  "deviceChange": "새 기기 확인 후 전환·취소 시 기존 세션 유지·기존 기기 안내만",
+  "browserFlows": ["푸시", "새 기기 확인·취소", "재입장", "전체 이력", "권한 복구"],
+  "browser": { "result": "통과", "sdk": "합성 어댑터", "worker": "실제 Chrome 활성화", "pageErrors": 0 },
+  "productionDependencyAudit": { "vulnerabilities": 0 },
+  "externalQa": "실제 기기 수신·운영 재시도 미검증",
+  "jiraStatus": "진행 중 유지"
+}

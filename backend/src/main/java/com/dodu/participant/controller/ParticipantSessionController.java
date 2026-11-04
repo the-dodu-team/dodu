@@ -32,7 +32,7 @@ public class ParticipantSessionController {
     @Operation(summary = "접근 코드로 입장하고 세션 토큰 받기")
     @PostMapping("/sessions")
     public ApiResponse<EnterResponse> enter(@RequestBody EnterRequest request) {
-        EnterResult result = entryService.enter(request.code(), request.deviceKey());
+        EnterResult result = entryService.enter(request.code(), request.deviceKey(), Boolean.TRUE.equals(request.confirmDeviceChange()));
         EnterResponse body = new EnterResponse(
                 result.sessionToken(),
                 ApiTime.format(result.expiresAt(), clock),

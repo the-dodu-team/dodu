@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import ScreenHeader from '../../components/ScreenHeader'
 
-export default function SettingsPage({ onBack, onLogout }: { onBack: () => void; onLogout: () => Promise<void> }) {
+export default function SettingsPage({ onBack, onLogout, notificationConnection }: {
+  onBack: () => void; onLogout: () => Promise<void>; notificationConnection?: ReactNode
+}) {
   const dialog = useRef<HTMLDialogElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
   const pending = useRef(false)
@@ -19,6 +22,7 @@ export default function SettingsPage({ onBack, onLogout }: { onBack: () => void;
   }
   return <main className="screen-page settings-page">
     <ScreenHeader title="설정" onBack={onBack} />
+    {notificationConnection}
     <button className="settings-logout" type="button" onClick={open}>로그아웃</button>
     <dialog ref={dialog} className="settings-dialog" aria-labelledby="logout-title"
       aria-describedby="logout-description" onCancel={event => { if (busy) event.preventDefault() }}>

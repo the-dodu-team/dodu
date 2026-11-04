@@ -15,5 +15,6 @@
     "start": "node scripts/workflow.mjs start",
     "security:scan": "node scripts/check-secrets.mjs"
   },
-  "devDependencies": { "concurrently": "10.0.5" }
+  "devDependencies": { "concurrently": "10.0.5" },
+  "overrides": { "@grpc/grpc-js": "^1.13.6" }
 }
