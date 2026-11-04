@@ -1,5 +1,6 @@
 {
   "ticket": "SCRUM-76",
+  "serverDiagnostics": { "scope": "단계·오류 코드만 기록, 운영 로그 직접 확인 안 됨", "unitPassed": 4, "fullRerun": false },
   "date": "2026-11-05",
   "scope": "웹 FCM 구독·수신·해제와 전역 서버 재확인 UI 제거",
   "unit": { "passed": 12 },
