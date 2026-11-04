@@ -10,6 +10,7 @@ function load(name) {
 }
 const { createPushController } = load('pushController')
 const { readPushConfig, pushDestination } = load('pushConfig')
+const { createForegroundPushHandler } = load('foregroundPush')
 function deferred() { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
 function setup(extra = {}) {
   let owner = 'synthetic-session-a', permission = 'granted', listener, token = 'synthetic-push-a'
@@ -67,4 +68,42 @@ test('공개 설정은 완전하게 주입해야 활성화하며 서버용 비�
   assert.equal(readPushConfig({}).configured, false)
   assert.equal(readPushConfig({ VITE_FIREBASE_APP_ID: 'synthetic' }).missing, true)
   assert.equal(readPushConfig(Object.fromEntries(names.map(name => ['VITE_FIREBASE_' + name, 'synthetic']))).configured, true)
+})
+
+test('전경 기기 전환은 세션 초기화 전에 OS 알림 표시를 요청하고 원문을 노출하지 않는다', () => {
+  const events = []
+  const handle = createForegroundPushHandler((title, options) => {
+    events.push('display'); assert.equal(title, '다른 기기에서 로그인했어요')
+    assert.deepEqual(options.data, { type: 'SESSION_REPLACED' })
+    assert.ok(!JSON.stringify(options).includes('synthetic-private'))
+    return Promise.resolve()
+  }, () => events.push('session-clear'))
+  handle({ messageId: 'one', data: { type: 'SESSION_REPLACED', arbitrary: 'synthetic-private' } })
+  assert.deepEqual(events, ['display', 'session-clear'])
+})
+
+test('같은 messageId는 OS 알림을 중복 표시하지 않고 일반 약속 알림은 기존 전경 UI로만 전달한다', () => {
+  let shown = 0, received = 0
+  const handle = createForegroundPushHandler(async () => { shown++ }, () => { received++ })
+  handle({ messageId: 'one', data: { type: 'SESSION_REPLACED' } })
+  handle({ messageId: 'one', data: { type: 'SESSION_REPLACED' } })
+  handle({ messageId: 'two', data: { type: 'START' } })
+  assert.equal(shown, 1); assert.equal(received, 3)
+})
+
+test('세션 UI를 먼저 해제해도 늦게 수신한 기기 전환 OS 알림을 표시한다', () => {
+  let shown = 0, received = 0, receiver = () => { received++ }
+  const handle = createForegroundPushHandler(async () => { shown++ }, notice => receiver?.(notice))
+  receiver = undefined
+  handle({ data: { type: 'SESSION_REPLACED' } })
+  assert.equal(shown, 1); assert.equal(received, 0)
+})
+
+test('OS 표시 실패는 세션 종료를 차단하거나 미처리 Promise 오류를 발생시키지 않는다', async () => {
+  let received = 0
+  for (const show of [async () => { throw Error('synthetic-failure') }, () => { throw Error('synthetic-sync-failure') }]) {
+    createForegroundPushHandler(show, () => { received++ })({ data: { type: 'SESSION_REPLACED' } })
+  }
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(received, 2)
 })
