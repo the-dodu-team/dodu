@@ -1,5 +1,6 @@
 param([string]$ResultPath)
 $ErrorActionPreference = 'Stop'
+$Host.UI.RawUI.WindowTitle = 'Dodu Test Reset - fixed'
 $doduRoot = Split-Path $PSScriptRoot -Parent
 $doduJar = Join-Path $doduRoot 'backend\target\dodu-backend-0.0.1-SNAPSHOT.jar'
 if (-not (Test-Path -LiteralPath $doduJar)) { throw 'Build the backend JAR first.' }
@@ -10,7 +11,7 @@ function Read-DoduSecret([string]$Prompt) {
     try { return [System.Net.NetworkCredential]::new('', $doduSecure).Password }
     finally { $doduSecure.Dispose() }
 }
-$doduNames = @('DODU_DB_URL','DODU_DB_USERNAME','DODU_DB_PASSWORD','DODU_ACCESS_CODE_PEPPER','DODU_PHOTO_STORAGE_PROVIDER','DODU_PHOTO_BUCKET','DODU_SUPABASE_URL','DODU_SUPABASE_SERVICE_ROLE_KEY')
+$doduNames = @('DODU_DB_URL','DODU_DB_USERNAME','DODU_DB_PASSWORD','DODU_ACCESS_CODE_PEPPER','DODU_PHOTO_STORAGE_PROVIDER','DODU_PHOTO_BUCKET','DODU_SUPABASE_URL','DODU_SUPABASE_SERVICE_ROLE_KEY','DODU_FCM_ENABLED')
 $doduPrevious = @{}
 foreach ($doduName in $doduNames) { $doduPrevious[$doduName] = [Environment]::GetEnvironmentVariable($doduName, 'Process') }
 try {
@@ -25,7 +26,8 @@ try {
     $env:DODU_SUPABASE_SERVICE_ROLE_KEY = Read-DoduSecret 'Supabase server-only service role credential'
     $env:DODU_PHOTO_STORAGE_PROVIDER = 'supabase'
     $env:DODU_PHOTO_BUCKET = 'dodu-photos'
-    & $doduJava -jar $doduJar --spring.profiles.active=operator --spring.main.lazy-initialization=true --logging.level.root=OFF --spring.main.banner-mode=off reset-test-data --scope=keep-participants | ForEach-Object {
+    $env:DODU_FCM_ENABLED = 'false'
+    & $doduJava -jar $doduJar --spring.profiles.active=operator --debug=false --trace=false --logging.level.root=OFF --logging.level.org.springframework=OFF --spring.main.banner-mode=off reset-test-data --scope=keep-participants | ForEach-Object {
         Write-Host $_
         if ($ResultPath -and $_ -match '^RESET_(OK|FAILED)') { $_ | Set-Content -LiteralPath $ResultPath -Encoding UTF8 }
     }

@@ -20,10 +20,13 @@
 - 스키마·테이블·버킷은 유지하고 CASCADE를 쓰지 않는다. DB에 연결되지 않은 Storage 고아 객체까지 삭제했다고 주장하지 않는다.
 - 공개 API 없음. operator의 `reset-test-data --scope=keep-participants`만 제공한다. `scripts/reset-test-data.ps1`에서 Render와 같은 자격정보를 숨겨 입력하며 프로세스 환경에서만 사용 후 정리한다. ResultPath에는 RESET_OK/FAILED 집계만 기록한다.
 - 입력 완료 후 승인된 삭제가 실행된다. 실제 RESET_OK 집계 전에는 초기화 완료로 보고하지 않는다. 실행 중 새 약속·사진 제출을 중지한다.
+- operator 프로필에서는 스케줄러를 켜지 않는다. 로컬 알림·사진 worker가 초기화와 경쟁하지 않으며 Flyway 초기화는 완료한 뒤 실행한다. 로컬 FCM은 끄고 기존 환경은 종료 후 복원한다.
+- 시작/실행 실패는 표준 출력의 `RESET_FAILED stage=STARTUP|RESET code=...`로만 기록한다. DB_BUSY·DB_AUTH_FAILED·DB_CONNECTION_FAILED·SCHEMA_NOT_READY·STORAGE_REQUEST_FAILED 등 허용된 코드만 제공하고 예외 원문은 출력하지 않는다. 실패 후 비밀값은 정리되므로 재실행 시 다시 입력해야 한다.
 
 ## 검증
 
-- 전체 verify: Docker 포함 BE 263건, 실패·오류·건너뛰기 0. FE 통합 35건·빌드·비밀값 검사 통과. lint 오류 없이 경고 유지.
+- 전체 verify: Docker 포함 BE 264건, 실패·오류·건너뛰기 0. FE 통합 35건·빌드·비밀값 검사 통과. lint 오류 없이 경고 유지.
+- 실제 JAR CLI도 별도 Docker DB에서 실행해 약속 1건 삭제·참가자 1명/자격 1건 보존·종료코드 0 확인. 잘못된 합성 DB 비밀번호는 `RESET_FAILED stage=STARTUP code=DB_AUTH_FAILED`, 종료코드 3으로 구분 확인. 실제 운영 데이터 초기화 결과와는 별개다.
 - DB: 종료 후 당일 생성·다른 키 동시 생성 1건·만료 저장/설문 1회·지연 판정 보호·구형 도구 읽기·초기화 참가자/코드 보존·Storage 실패 시 DB 보존·사진 선삭제 순서.
 - `npm run test:browser-history --workspace frontend`: 합성 API에서 목록 실패 복구·같은 날짜 5건/종료 사유·인증 집계 2건만 포함·다음 약속 생성·JS 오류 0.
 - 실제 Supabase 초기화·모바일/운영 QA는 별도 기록한다. 개발용 테스트 실행만으로 실제 삭제 성공을 주장하지 않는다.
