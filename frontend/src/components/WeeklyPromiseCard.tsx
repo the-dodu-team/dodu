@@ -4,6 +4,7 @@ import type { FinalPromiseRecord } from '../features/promise/promiseHistory'
 
 type WeeklyPromiseCardProps = {
   records?: FinalPromiseRecord[]
+  historyState?: 'ready' | 'unavailable'
   todayKey?: string
   onViewAll?: () => void
 }
@@ -12,11 +13,12 @@ const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일']
 const formatDate = (date: Date) => `${date.getUTCMonth() + 1}월 ${date.getUTCDate()}일`
 
 export default function WeeklyPromiseCard({
-  records = [], todayKey = getKstDateKey(), onViewAll,
+  records = [], todayKey = getKstDateKey(), onViewAll, historyState = 'ready',
 }: WeeklyPromiseCardProps) {
   // KST 달력 날짜의 월요일부터 일요일까지 집계한다.
   const { monday, sunday } = getWeekRange(todayKey)
-  const weekRecords = getWeeklyFinalRecords(records, todayKey)
+  const historyReady = historyState === 'ready'
+  const weekRecords = historyReady ? getWeeklyFinalRecords(records, todayKey) : []
   const totalCount = weekRecords.length
   const verifiedCount = weekRecords.filter(record => record.status === 'verified').length
   const progress = totalCount ? verifiedCount / totalCount * 100 : 0
@@ -35,12 +37,16 @@ export default function WeeklyPromiseCard({
     <section className="weekly-promise-card" aria-labelledby="weekly-promise-title">
       <div className="home-card-heading">
         <h2 id="weekly-promise-title" className="weekly-promise-label">지난 약속</h2>
-        <button type="button" className="home-card-action" onClick={onViewAll} disabled={!onViewAll}>
+        <button type="button" className="home-card-action" onClick={onViewAll} disabled={!historyReady || !onViewAll}>
           전체 보기 <span aria-hidden="true">›</span>
         </button>
       </div>
       <p className="weekly-promise-period">{formatDate(monday)} ~ {formatDate(sunday)}</p>
-      {totalCount === 0 ? (
+      {!historyReady ? (
+        <div className="weekly-promise-empty" role="status">
+          <h3>지난 약속 기록을 확인할 수 없어요</h3>
+        </div>
+      ) : totalCount === 0 ? (
         <div className="weekly-promise-empty">
           <h3>이번 주의 지난 약속이 없어요</h3>
           <p>약속이 있다면 알려드릴게요</p>
@@ -64,7 +70,7 @@ export default function WeeklyPromiseCard({
             className={`weekly-promise-day weekly-promise-day--${day.timing} weekly-promise-day--${day.status}`}
             aria-current={day.timing === 'today' ? 'date' : undefined}>
             <span>{day.date.getUTCDate()}</span><span>{day.label}</span>
-            <span className="visually-hidden">{day.status === 'verified' ? '인증 완료'
+            <span className="visually-hidden">{!historyReady ? '인증 결과 미확인' : day.status === 'verified' ? '인증 완료'
               : day.status === 'unverified' ? '인증 미완료' : '최종 인증 결과 없음'}</span>
           </li>
         ))}
