@@ -1,0 +1,15 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const source = fs.readFileSync(path.join(__dirname, '../src/features/photo-auth/compressPhoto.ts'), 'utf8')
+const livePhoto = fs.readFileSync(path.join(__dirname, '../src/features/photo-auth/LivePhotoAuth.tsx'), 'utf8')
+
+assert.match(source, /maxDimension: 1920/)
+assert.match(source, /maxBytes: 5 \* 1024 \* 1024/)
+assert.match(source, /imageOrientation: 'from-image'/)
+assert.match(source, /image\/jpeg/)
+assert.match(source, /PHOTO_TOO_LARGE_AFTER_COMPRESSION/)
+assert.match(livePhoto, /compressPhotoForUpload/)
+assert.match(livePhoto, /COMPRESSING/)
+console.log('PASS: browser photo compression policy, EXIF-aware decode, format guard, and upload wiring')

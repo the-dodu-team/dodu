@@ -7,6 +7,10 @@ spring:
     password: ${DODU_DB_PASSWORD:dodu}
   flyway:
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 7MB
 
 server:
   port: ${PORT:8080}
