@@ -13,7 +13,7 @@
     "test:home": "node tests/home-history.test.cjs",
     "test:photo": "node tests/photo-auth.test.cjs && node tests/photo-compression.test.cjs",
     "test:platform": "node tests/platform-adapters.test.cjs",
-    "test:api": "node tests/api-contract.test.cjs && node tests/participant-entry.test.cjs",
+    "test:api": "node tests/api-contract.test.cjs && node tests/participant-entry.test.cjs && node --test tests/push.test.cjs",
     "test:integration-ui": "node --test tests/home-state.test.cjs tests/live-participant.test.cjs tests/live-survey.test.cjs tests/notification-permission.test.cjs tests/camera-permission.test.cjs tests/participant-promise-api.test.cjs tests/final-design.test.cjs",
     "preview": "vite preview",
     "test:browser-recovery": "node tests/reminder-recovery.browser.cjs",
@@ -21,6 +21,7 @@
     "test:browser-history": "node tests/single-slot-history.browser.cjs"
   },
   "dependencies": {
+    "firebase": "12.19.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

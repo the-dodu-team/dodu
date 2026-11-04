@@ -102,6 +102,9 @@ export function createDoduApi(token: string, baseUrl = '') {
     completeOnboarding: () => request<{ onboardingCompleted: boolean; expiresAt: string }>(
       '/api/participant/onboarding', { method: 'PUT' }),
     unsubscribeNotifications: () => request<unknown>('/api/participant/notification-subscription', { method: 'DELETE' }),
+    subscribeNotifications: (subscriptionKey: string) => request<unknown>('/api/participant/notification-subscription', {
+      method: 'PUT', body: JSON.stringify({ subscriptionKey }),
+    }),
     getActivePromise: () => requestRaw<PromiseRecord | null>('/api/promises/active'),
     listPromiseHistory: () => requestRaw<PromiseHistoryRecord[]>('/api/promises/history'),
     createPromise: (payload: {

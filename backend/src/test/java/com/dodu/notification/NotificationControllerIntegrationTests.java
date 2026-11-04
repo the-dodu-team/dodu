@@ -2,10 +2,17 @@ package com.dodu.notification;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.dodu.participant.domain.SecretHasher;
+import com.dodu.participant.service.ParticipantAuthService;
+import com.dodu.participant.controller.NotificationSubscriptionController;
+import com.dodu.common.exception.BusinessException;
+import org.springframework.http.MediaType;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -29,6 +36,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 class NotificationControllerIntegrationTests {
     @Autowired private WebApplicationContext context;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private ParticipantAuthService auth;
+    @Autowired private NotificationSubscriptionController subscriptions;
 
     private MockMvc mockMvc;
     private String authorization;
@@ -79,6 +88,45 @@ class NotificationControllerIntegrationTests {
                 """, notificationId, participantId, promiseId, "sent-" + suffix, Timestamp.from(scheduledAt), Timestamp.from(now),
                 UUID.randomUUID(), participantId, promiseId, "failed-" + suffix, Timestamp.from(now),
                 UUID.randomUUID(), participantId, promiseId, "scheduled-" + suffix, Timestamp.from(now));
+    }
+
+    @Test
+    void subscriptionStoresCurrentTokenWithoutReturningItAndLogoutClearsIt() throws Exception {
+        String body = "{\"subscriptionKey\":\"synthetic-browser-push\"}";
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(put("/api/participant/notification-subscription").header("Authorization", authorization)
+                    .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.lifecycleStatus").value("Active"))
+                    .andExpect(jsonPath("$.data.pushToken").doesNotExist())
+                    .andExpect(jsonPath("$.data.subscriptionKey").doesNotExist());
+        }
+        var owner = auth.authenticate(authorization).participant().id();
+        assertEquals(1, jdbc.queryForObject("select count(*) from notification_subscription where participant_id = ? and lifecycle_status = 'Active'", Integer.class, owner));
+        mockMvc.perform(delete("/api/participant/notification-subscription").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        assertEquals(0, jdbc.queryForObject("select count(*) from notification_subscription where participant_id = ? and push_token is not null", Integer.class, owner));
+    }
+
+    @Test
+    void sameBrowserTokenCannotRemainActiveForTwoParticipants() throws Exception {
+        String first = authorization;
+        String body = "{\"subscriptionKey\":\"synthetic-shared-" + UUID.randomUUID() + "\"}";
+        mockMvc.perform(put("/api/participant/notification-subscription").header("Authorization", first)
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+        UUID previous = auth.authenticate(first).participant().id();
+        setUp();
+        mockMvc.perform(put("/api/participant/notification-subscription").header("Authorization", authorization)
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+        assertEquals(0, jdbc.queryForObject("select count(*) from notification_subscription where participant_id = ? and push_token is not null", Integer.class, previous));
+    }
+
+    @Test
+    void sessionRevokedAfterAuthenticationCannotReactivateSubscription() {
+        var stale = auth.authenticate(authorization);
+        jdbc.update("update participant_session set lifecycle_status = 'Revoked', revoked_at = now() where id = ?", stale.session().id());
+        assertThrows(BusinessException.class, () -> subscriptions.subscribe(stale,
+                new NotificationSubscriptionController.SubscriptionRequest("synthetic-stale-push")));
+        assertEquals(0, jdbc.queryForObject("select count(*) from notification_subscription where participant_id = ?", Integer.class, stale.participant().id()));
     }
 
     @Test
