@@ -62,6 +62,7 @@ export default function LiveParticipantApp() {
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const [deviceChangeRequired, setDeviceChangeRequired] = useState(false)
   const [closed, setClosed] = useState(false)
   const [pushState, setPushState] = useState<PushState>('disabled')
   const [pushNotice, setPushNotice] = useState<PushNotice | null>(null)
@@ -70,7 +71,10 @@ export default function LiveParticipantApp() {
     permission: () => typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
     driver: async () => (await import('../notifications/firebasePush')).firebasePushDriver(),
     subscribe: (owner, token) => createDoduApi(owner, import.meta.env.VITE_DODU_API_BASE_URL ?? '').subscribeNotifications(token),
-    state: setPushState, receive: setPushNotice,
+    state: setPushState, receive: notice => {
+      setPushNotice(notice)
+      if (notice.data?.type === 'SESSION_REPLACED') void refresh()
+    },
   }))
   const [screen, setScreen] = useState<Screen>('home')
   const [taskName, setTaskName] = useState('')
@@ -187,18 +191,23 @@ export default function LiveParticipantApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, screen, active?.promiseId])
 
-  async function login(code: string) {
+  async function login(code: string, confirmDeviceChange = false) {
     if (running.current) return
     running.current = true; const version = ++epoch.current
     setBusy(true); setError(''); reader.current?.abort()
     try {
-      const result = await api.enter(code, session.device())
+      const result = await api.enter(code, session.device(), undefined, confirmDeviceChange)
       if (!mounted.current || version !== epoch.current) return
-      setOnboardingDismissed(false); session.enter(result.data.sessionToken)
+      setDeviceChangeRequired(false); setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
       setActive(null); setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
       blockedDates.current.clear(); lastReadAt.current = 0
-    } catch (reason) { if (mounted.current && version === epoch.current) fail(reason) }
+    } catch (reason) {
+      if (mounted.current && version === epoch.current) {
+        if (reason instanceof ParticipantPromiseApiError && reason.code === 'DEVICE_CHANGE_CONFIRMATION_REQUIRED') setDeviceChangeRequired(true)
+        else fail(reason)
+      }
+    }
     finally {
       running.current = false
       if (mounted.current && version === epoch.current) { setBusy(false); if (session.token()) void refresh() }
@@ -286,7 +295,9 @@ export default function LiveParticipantApp() {
   }, [visibleScreen, busy])
   let page
   if (closed) page = <AccessClosedPage />
-  else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={code => { void login(code) }} isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} />
+  else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={(code, confirmed) => { void login(code, confirmed) }}
+    isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} deviceChangeRequired={deviceChangeRequired}
+    onCancelDeviceChange={() => { setDeviceChangeRequired(false); setError('') }} />
   else if (!loaded) page = <ScreenState title="DODU" loading={busy} description={busy ? '약속을 불러오고 있어요' : '약속을 불러오지 못했어요.'}
     onRetry={busy ? undefined : () => { void refresh() }} />
   else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow

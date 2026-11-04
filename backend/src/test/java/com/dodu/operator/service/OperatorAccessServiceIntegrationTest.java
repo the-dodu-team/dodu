@@ -80,7 +80,7 @@ class OperatorAccessServiceIntegrationTest {
 
         operatorService = new OperatorAccessService(
                 new OperatorAccessRepository(jdbc), accessRepository, hasher, random, clock, tm);
-        entryService = new ParticipantEntryService(accessRepository, hasher, random, clock, tm);
+        entryService = new ParticipantEntryService(accessRepository, hasher, random, clock, tm, event -> {});
         batches = new OperatorBatchEnrollmentService(new JdbcTemplate(dataSource), operatorService, clock, tm);
     }
 

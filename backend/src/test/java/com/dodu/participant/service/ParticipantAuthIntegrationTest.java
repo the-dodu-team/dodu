@@ -65,7 +65,7 @@ class ParticipantAuthIntegrationTest {
         Clock clock = Clock.fixed(NOW, ZoneId.of("Asia/Seoul"));
         ParticipantAccessRepository repository = new ParticipantAccessRepository(jdbc);
         entryService = new ParticipantEntryService(
-                repository, hasher, new SecureRandom(), clock, new DataSourceTransactionManager(dataSource));
+                repository, hasher, new SecureRandom(), clock, new DataSourceTransactionManager(dataSource), event -> {});
         authService = new ParticipantAuthService(repository, hasher, clock);
     }
 
@@ -145,7 +145,7 @@ class ParticipantAuthIntegrationTest {
         new ParticipantOnboardingService(jdbc, Clock.fixed(NOW.plusSeconds(60), ZoneOffset.UTC)).complete(context);
         assertEquals(NOW, jdbc.sql("select onboarding_completed_at from participant")
                 .query(OffsetDateTime.class).single().toInstant());
-        EnterResult next = entryService.enter(code, DEVICE_B);
+        EnterResult next = entryService.enter(code, DEVICE_B, true);
         assertTrue(authService.authenticate("Bearer " + next.sessionToken()).participant().onboardingCompleted());
     }
 
@@ -154,7 +154,7 @@ class ParticipantAuthIntegrationTest {
         String code = seedParticipant(accessEnd(30));
         EnterResult entered = entryService.enter(code, DEVICE_A);
         SessionContext context = authService.authenticate("Bearer " + entered.sessionToken());
-        entryService.enter(code, DEVICE_B);
+        entryService.enter(code, DEVICE_B, true);
         assertOnboardingRevoked(context);
     }
 
@@ -183,7 +183,7 @@ class ParticipantAuthIntegrationTest {
     void entryFromAnotherDeviceReplacesTheOldTokenOnly() {
         String code = seedParticipant(accessEnd(30));
         EnterResult first = entryService.enter(code, DEVICE_A);
-        EnterResult second = entryService.enter(code, DEVICE_B);
+        EnterResult second = entryService.enter(code, DEVICE_B, true);
 
         BusinessException e = assertThrows(BusinessException.class,
                 () -> authService.authenticate("Bearer " + first.sessionToken()));

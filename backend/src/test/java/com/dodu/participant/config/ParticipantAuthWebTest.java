@@ -196,7 +196,7 @@ class ParticipantAuthWebTest {
 
     @Test
     void entryPathDoesNotRequireASession() throws Exception {
-        when(entryService.enter(any(), any())).thenReturn(
+        when(entryService.enter(any(), any(), org.mockito.ArgumentMatchers.eq(false))).thenReturn(
                 new EnterResult("t".repeat(43), Instant.parse("2026-11-19T03:00:00Z"), false));
 
         mvc.perform(post("/api/participant/sessions")

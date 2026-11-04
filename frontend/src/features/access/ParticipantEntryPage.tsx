@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import './device-change.css'
 
 type ParticipantEntryPageProps = {
-  onSubmit: (code: string) => void
+  onSubmit: (code: string, confirmDeviceChange?: boolean) => void
   isSubmitting?: boolean
   errorMessage?: string
   onClearError?: () => void
+  deviceChangeRequired?: boolean
+  onCancelDeviceChange?: () => void
 }
 
 export default function ParticipantEntryPage({
@@ -12,9 +15,16 @@ export default function ParticipantEntryPage({
   isSubmitting = false,
   errorMessage,
   onClearError,
+  deviceChangeRequired = false,
+  onCancelDeviceChange,
 }: ParticipantEntryPageProps) {
   const [code, setCode] = useState('')
   const canSubmit = code.trim().length > 0 && !isSubmitting
+  const dialog = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    if (deviceChangeRequired && !dialog.current?.open) dialog.current?.showModal()
+    if (!deviceChangeRequired && dialog.current?.open) dialog.current?.close()
+  }, [deviceChangeRequired])
 
   return (
     <div className="entry-page">
@@ -99,6 +109,16 @@ export default function ParticipantEntryPage({
           </footer>
         </form>
       </main>
+      <dialog ref={dialog} className="device-change-dialog" aria-labelledby="device-change-title"
+        onCancel={event => { event.preventDefault(); if (!isSubmitting) onCancelDeviceChange?.() }}>
+        <h2 id="device-change-title">이 기기로 변경할까요?</h2>
+        <p>다른 기기에서 이용 중이에요. 확인하면 기존 기기의 이용이 종료되고 이 기기에서 계속할 수 있어요.</p>
+        {deviceChangeRequired && errorMessage && <p role="alert">{errorMessage}</p>}
+        <div>
+          <button type="button" disabled={isSubmitting} onClick={onCancelDeviceChange}>취소</button>
+          <button type="button" disabled={isSubmitting} onClick={() => onSubmit(code.trim(), true)}>확인</button>
+        </div>
+      </dialog>
     </div>
   )
 }

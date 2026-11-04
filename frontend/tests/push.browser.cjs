@@ -15,7 +15,7 @@ async function main() {
     const directory = path.resolve(__dirname, '../../.tools/push-browser-dist')
     const worker = fs.readdirSync(directory).find(name => /^firebase-messaging-sw-.*\.js$/.test(name))
     assert.ok(worker)
-    let puts = 0, deletes = 0, reads = 0
+    let puts = 0, deletes = 0, reads = 0, replaced = false
     await page.route('**/assets/firebasePush-*.js', route => route.fulfill({ contentType: 'text/javascript', body: `
       export function firebasePushDriver() { return {
         supported: async () => true,
@@ -28,7 +28,10 @@ async function main() {
     await page.route('**/api/**', async route => {
       const req = route.request(), url = new URL(req.url()); let body
       if (url.pathname.endsWith('/sessions')) body = envelope({ sessionToken: 'synthetic-owner', onboardingCompleted: true, expiresAt: new Date(Date.now() + 86400000).toISOString() })
-      else if (url.pathname.endsWith('/me')) body = envelope({ onboardingCompleted: true, expiresAt: new Date(Date.now() + 86400000).toISOString() })
+      else if (url.pathname.endsWith('/me')) {
+        if (replaced) return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ status: 'error', error: { code: 'SESSION_REPLACED' } }) })
+        body = envelope({ onboardingCompleted: true, expiresAt: new Date(Date.now() + 86400000).toISOString() })
+      }
       else if (url.pathname.endsWith('/active')) body = null
       else if (url.pathname.endsWith('/history')) body = []
       else if (url.pathname.endsWith('/notifications')) body = envelope([])
@@ -57,8 +60,14 @@ async function main() {
     await page.getByRole('dialog').getByRole('button', { name: '로그아웃', exact: true }).click()
     await page.getByRole('button', { name: '입장하기', exact: true }).waitFor()
     assert.equal(deletes, 1); assert.equal(await page.evaluate(() => window.syntheticRemoved), true)
+    await page.getByLabel('참가자 식별 코드', { exact: true }).fill('SYNTHETIC123')
+    await page.getByRole('button', { name: '입장하기', exact: true }).click()
+    await page.waitForFunction(() => typeof window.syntheticPush === 'function')
+    replaced = true
+    await page.evaluate(() => window.syntheticPush({ messageId: 'synthetic-session-notice', data: { type: 'SESSION_REPLACED' } }))
+    await page.getByText('다른 기기에서 입장했어요. 이 기기에서 사용하려면 다시 입장해 주세요.').waitFor()
     assert.deepEqual(errors, [])
-    console.log('PASS: 합성 FCM 토큰→실제 worker 활성화→구독 PUT→전경 알림→로그아웃 DELETE·토큰 해제, JS 오류 0')
+    console.log('PASS: 합성 FCM 토큰→실제 worker 활성화→구독 PUT→전경 알림→로그아웃 해제·기존 기기 세션 종료 안내, JS 오류 0')
   } finally { await browser.close() }
 }
 main().catch(e => { console.error(e.message); process.exitCode = 1 })

@@ -70,14 +70,14 @@ class PromiseControllerIntegrationTests {
         jdbc.update("insert into access_credential(participant_id, secret_hash, issued_at) values (?, ?, ?)",
                 participantId, secretHasher.hash(code), timestamp(now));
         String device = "synthetic-device-aaaaaaaaaaaa";
-        var first = entryService.enter(code, device);
+        var first = entryService.enter(code, device, true);
         authorization = "Bearer " + first.sessionToken();
         String body = "{\"taskTitle\":\"reentry task\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
         String id = extractPromiseId(createWithKey(body, "reentry-" + UUID.randomUUID()));
         for (String nextDevice : new String[] {device, "synthetic-device-bbbbbbbbbbbb"}) {
             mockMvc.perform(delete("/api/participant/notification-subscription").header("Authorization", authorization))
                     .andExpect(status().isOk());
-            var entered = entryService.enter(code, nextDevice);
+            var entered = entryService.enter(code, nextDevice, true);
             authorization = "Bearer " + entered.sessionToken();
             mockMvc.perform(get("/api/promises/active").header("Authorization", authorization))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.promiseId").value(id))

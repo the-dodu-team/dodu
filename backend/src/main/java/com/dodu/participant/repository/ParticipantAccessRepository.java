@@ -151,6 +151,23 @@ public class ParticipantAccessRepository {
     }
 
     /** 참가자의 활성 세션을 모두 종료합니다. @return 종료한 세션 수 */
+    public boolean hasOtherActiveSession(UUID participantId, String deviceHash, Instant now) {
+        return jdbc.sql("""
+                select exists(select 1 from participant_session s
+                  join participant_device d on d.id = s.participant_device_id
+                 where s.participant_id = :id and s.lifecycle_status = 'Active'
+                   and s.expires_at > :now and d.device_key_hash <> :hash)
+                """).param("id", participantId).param("now", utc(now)).param("hash", deviceHash)
+                .query(Boolean.class).single();
+    }
+
+    public java.util.List<String> activePushTokens(UUID participantId) {
+        return jdbc.sql("""
+                select push_token from notification_subscription
+                 where participant_id = :id and lifecycle_status = 'Active' and push_token is not null
+                """).param("id", participantId).query(String.class).list();
+    }
+
     public int endActiveSessions(UUID participantId, Instant now, SessionRevokeReason reason) {
         return jdbc.sql("""
                         update participant_session
@@ -169,7 +186,7 @@ public class ParticipantAccessRepository {
     public int deactivateActiveSubscriptions(UUID participantId, Instant now) {
         return jdbc.sql("""
                         update notification_subscription
-                        set lifecycle_status = :inactive, deactivated_at = :now
+                        set lifecycle_status = :inactive, deactivated_at = :now, push_token = null
                         where participant_id = :participantId and lifecycle_status = :active
                         """)
                 .param("inactive", SubscriptionStatus.INACTIVE.dbValue())

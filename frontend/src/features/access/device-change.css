@@ -1,0 +1,7 @@
+.device-change-dialog { max-width: min(360px, calc(100vw - 32px)); padding: 24px; border: 0; border-radius: 24px; color: #172333; }
+.device-change-dialog::backdrop { background: #0006; }
+.device-change-dialog h2 { margin-top: 0; font-size: 20px; }
+.device-change-dialog p { line-height: 1.6; }
+.device-change-dialog > div { display: flex; gap: 12px; }
+.device-change-dialog button { flex: 1; border: 0; border-radius: 12px; padding: 14px; font: inherit; color: #172333; background: #eeeaf9; cursor: pointer; }
+.device-change-dialog button:last-child { color: white; background: #6545ff; }

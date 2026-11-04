@@ -18,7 +18,9 @@
     "preview": "vite preview",
     "test:browser-recovery": "node tests/reminder-recovery.browser.cjs",
     "test:browser-reentry": "node tests/promise-reentry.browser.cjs",
-    "test:browser-history": "node tests/single-slot-history.browser.cjs"
+    "test:browser-history": "node tests/single-slot-history.browser.cjs",
+    "test:browser-push": "node tests/push.browser.cjs",
+    "test:browser-device": "node tests/device-change.browser.cjs"
   },
   "dependencies": {
     "firebase": "12.19.0",

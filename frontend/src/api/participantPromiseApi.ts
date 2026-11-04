@@ -121,8 +121,8 @@ export function createParticipantPromiseApi(options: {
 
   return {
     // 참가자 코드는 저장하지 않는다. deviceKey는 호출자가 기기별로 유지한다.
-    enter: (code: string, deviceKey: string, signal?: AbortSignal) => request('/api/participant/sessions', session,
-      { method: 'POST', body: JSON.stringify({ code, deviceKey }), signal }, true, false),
+    enter: (code: string, deviceKey: string, signal?: AbortSignal, confirmDeviceChange = false) => request('/api/participant/sessions', session,
+      { method: 'POST', body: JSON.stringify({ code, deviceKey, ...(confirmDeviceChange ? { confirmDeviceChange: true } : {}) }), signal }, true, false),
     me: (signal?: AbortSignal) => request('/api/participant/me', participant, { signal }, true),
     // 약속 컨트롤러는 현재 envelope와 serverTime을 반환하지 않는다.
     active: (signal?: AbortSignal) => request('/api/promises/active',

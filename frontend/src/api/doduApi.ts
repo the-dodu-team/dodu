@@ -168,11 +168,11 @@ export function createBackendFetch(baseUrl: string): typeof fetch {
 
 export function createDoduAccessApi(baseUrl = '') {
   return {
-    enter: async (code: string, deviceKey: string): Promise<AccessResponse> => {
+    enter: async (code: string, deviceKey: string, confirmDeviceChange = false): Promise<AccessResponse> => {
       const { response, body } = await fetchDoduJson<ApiEnvelope<AccessResponse> | ApiErrorEnvelope>(`${baseUrl}/api/participant/sessions`, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, deviceKey }),
+        body: JSON.stringify({ code, deviceKey, ...(confirmDeviceChange ? { confirmDeviceChange: true } : {}) }),
       })
       if (!response.ok || body?.status === 'error') {
         throw new DoduApiError(body as ApiErrorEnvelope, response.status)

@@ -74,7 +74,7 @@ class ParticipantEntryIntegrationTest {
                 hasher,
                 new SecureRandom(),
                 Clock.fixed(NOW, ZoneId.of("Asia/Seoul")),
-                new DataSourceTransactionManager(dataSource));
+                new DataSourceTransactionManager(dataSource), event -> {});
     }
 
     @BeforeEach
@@ -121,7 +121,12 @@ class ParticipantEntryIntegrationTest {
                 select participant_id, id, 'sub-hash', 'Active', now() from participant_session
                 """).update();
 
-        service.enter(code, DEVICE_B);
+        BusinessException confirmation = assertThrows(BusinessException.class, () -> service.enter(code, DEVICE_B));
+        assertEquals("DEVICE_CHANGE_CONFIRMATION_REQUIRED", confirmation.code());
+        assertEquals(1, count("select count(*) from participant_session where lifecycle_status = 'Active'"));
+        assertEquals(1, count("select count(*) from participant_device"));
+        assertEquals(1, count("select count(*) from notification_subscription where lifecycle_status = 'Active'"));
+        service.enter(code, DEVICE_B, true);
 
         assertEquals(1, count("select count(*) from participant_session where lifecycle_status = 'Active'"));
         assertEquals(1, count("select count(*) from participant_session "
@@ -225,7 +230,7 @@ class ParticipantEntryIntegrationTest {
             String device = "device-key-concurrent-" + i + "-xxxxxxxx";
             futures.add(pool.submit(() -> {
                 start.await();
-                return service.enter(code, device);
+                return service.enter(code, device, true);
             }));
         }
         start.countDown();
