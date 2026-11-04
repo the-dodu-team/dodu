@@ -5,6 +5,9 @@ public final class ResetFailureCode {
     private ResetFailureCode() { }
     public static String of(Throwable failure) {
         for (int depth = 0; failure != null && depth < 20; depth++, failure = failure.getCause()) {
+            if (failure instanceof com.dodu.intervention.PhotoStorageRequestException storage) {
+                return "STORAGE_HTTP_" + storage.status();
+            }
             if (failure instanceof java.sql.SQLException sql && sql.getSQLState() != null) {
                 String state = sql.getSQLState();
                 if ("55P03".equals(state)) return "DB_BUSY";

@@ -1,6 +1,6 @@
 param([string]$ResultPath)
 $ErrorActionPreference = 'Stop'
-$Host.UI.RawUI.WindowTitle = 'Dodu Test Reset - fixed'
+$Host.UI.RawUI.WindowTitle = 'Dodu Test Reset - Storage fix'
 $doduRoot = Split-Path $PSScriptRoot -Parent
 $doduJar = Join-Path $doduRoot 'backend\target\dodu-backend-0.0.1-SNAPSHOT.jar'
 if (-not (Test-Path -LiteralPath $doduJar)) { throw 'Build the backend JAR first.' }
@@ -27,11 +27,22 @@ try {
     $env:DODU_PHOTO_STORAGE_PROVIDER = 'supabase'
     $env:DODU_PHOTO_BUCKET = 'dodu-photos'
     $env:DODU_FCM_ENABLED = 'false'
-    & $doduJava -jar $doduJar --spring.profiles.active=operator --debug=false --trace=false --logging.level.root=OFF --logging.level.org.springframework=OFF --spring.main.banner-mode=off reset-test-data --scope=keep-participants | ForEach-Object {
-        Write-Host $_
-        if ($ResultPath -and $_ -match '^RESET_(OK|FAILED)') { $_ | Set-Content -LiteralPath $ResultPath -Encoding UTF8 }
+    while ($true) {
+        $doduMessages = @(& $doduJava -jar $doduJar --spring.profiles.active=operator --debug=false --trace=false --logging.level.root=OFF --logging.level.org.springframework=OFF --spring.main.banner-mode=off reset-test-data --scope=keep-participants)
+        $doduResetExit = $LASTEXITCODE
+        foreach ($doduMessage in $doduMessages) {
+            Write-Host $doduMessage
+            if ($ResultPath -and $doduMessage -match '^RESET_(OK|FAILED)') { $doduMessage | Set-Content -LiteralPath $ResultPath -Encoding UTF8 }
+        }
+        if ($doduResetExit -eq 0) { break }
+        Write-Host 'Reset NOT completed. Inputs remain in memory only while this window stays open.'
+        $doduRetry = Read-Host 'Enter retries same approved scope; S changes Storage settings; Q exits and clears inputs'
+        if ($doduRetry -eq 'S') {
+            $env:DODU_SUPABASE_URL = Read-Host 'Supabase project URL'
+            $env:DODU_SUPABASE_SERVICE_ROLE_KEY = Read-DoduSecret 'Supabase server-only service role credential'
+        } elseif ($doduRetry) { break }
     }
-    if ($LASTEXITCODE -ne 0) { throw 'Reset did not complete. Do not report it as completed.' }
+    if ($doduResetExit -ne 0) { throw 'Reset did not complete. Do not report it as completed.' }
 } finally {
     foreach ($doduName in $doduNames) { [Environment]::SetEnvironmentVariable($doduName, $doduPrevious[$doduName], 'Process') }
 }
