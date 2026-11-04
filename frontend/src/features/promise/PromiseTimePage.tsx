@@ -1,3 +1,5 @@
+import { chooseInitialPromiseTime } from './chooseInitialPromiseTime'
+import { formatPromiseDateTime } from './formatPromise'
 import { useEffect, useRef, useState } from 'react'
 import arrowLeftIcon from '../../assets/icons/arrow-left.svg'
 import { getInterventionEndError } from './validateInterventionEnd'
@@ -163,14 +165,21 @@ export default function PromiseTimePage({
   onBack,
   onNext,
 }: PromiseTimePageProps) {
-  const [initial] = useState(() => getInitialParts(initialValue))
+  // 기존 초기값: getInitialParts(initialValue)
+  const [initial] = useState(() => getInitialParts(chooseInitialPromiseTime({
+    initialValue,
+    now: Date.now(),
+    isEditing: mode === 'edit',
+    isBlocked: (day) => Boolean(getDateBlockedReason?.(day) || isDateUnavailable?.(day)),
+    interventionEndsAt,
+  })))
   const [date, setDate] = useState(initial.date)
   const [period, setPeriod] = useState(initial.period)
   const [hour, setHour] = useState(initial.hour)
   const [minute, setMinute] = useState(initial.minute)
   const [selected, setSelected] = useState(initial.selected)
   const [now, setNow] = useState(Date.now)
-  const [checkedDate, setCheckedDate] = useState('')
+  const [checkedDate, setCheckedDate] = useState(initial.date)
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
@@ -189,7 +198,7 @@ export default function PromiseTimePage({
   const timestamp = Date.parse(scheduledAt)
   const originalTimestamp = Date.parse(initialValue)
   const hasChanged = timestamp !== originalTimestamp
-  // 날짜 제한은 다음으로를 눌렀을 때 표시하고, 다른 날짜를 고르면 해제한다.
+  // 기존에는 다음으로를 누른 뒤 표시했다. 이제 막힌 날짜를 누르면 즉시 안내한다.
   const dateError = checkedDate === date ? getDateBlockedReason?.(date) ?? '' : ''
 
   const errorMessage = !selected
@@ -215,14 +224,14 @@ export default function PromiseTimePage({
     : ''
 
   const originalTimeLabel = Number.isFinite(originalTimestamp)
-    ? new Intl.DateTimeFormat('ko-KR', {
+    ? formatPromiseDateTime(originalTimestamp) /* 기존 날짜 포맷: new Intl.DateTimeFormat('ko-KR', {
         timeZone: 'Asia/Seoul',
         month: 'numeric',
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
-      }).format(new Date(originalTimestamp))
+      }).format(new Date(originalTimestamp)) */
     : ''
 
   return (
@@ -336,12 +345,14 @@ export default function PromiseTimePage({
                       : 'promise-date-chip'
                   }
                   aria-pressed={item === date}
-                  disabled={item === checkedDate && Boolean(isDateUnavailable?.(item))}
+                  // 기존 disabled는 클릭 안내까지 막으므로 사용 불가 상태를 따로 표시한다.
+                  data-unavailable={Boolean(getDateBlockedReason?.(item) || isDateUnavailable?.(item))}
+                  aria-label={dateLabel(item) + (getDateBlockedReason?.(item) || isDateUnavailable?.(item) ? ', 생성 불가, 사유 확인' : '')}
                   aria-invalid={item === date && Boolean(dateError)}
                   aria-describedby={item === date && dateError ? 'promise-date-error' : undefined}
                   onClick={() => {
                     setDate(item)
-                    if (item !== date) setCheckedDate('')
+                    setCheckedDate(item)
                     setSelected(true)
                   }}
                 >

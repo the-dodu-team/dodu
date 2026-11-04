@@ -50,3 +50,6 @@
 .photo-secondary:disabled { color: #A2A9BE; cursor: default; opacity: 1; }
 .photo-page button:focus-visible, .photo-mock-root select:focus-visible, .photo-mock-root summary:focus-visible { outline: 3px solid #8F7AFF; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .photo-spinner { animation: none; } }
+
+/* 사진 인증 화면도 좌우 16px 여백을 유지한다. */
+.photo-mock-root .photo-page { max-width: none; width: 100%; padding-inline: 16px; }
