@@ -26,7 +26,9 @@ public final class AiPhotoEvaluationResponseMapper {
             JsonNode response = objectMapper.readTree(body);
             Optional<String> label = findLabel(response);
             if (label.isEmpty()) return PhotoEvaluationRecoveryHandler.RecoveryResult.retryable("AI_RESPONSE_INVALID");
-            String modelVersion = findText(response, "model_version").orElse(null);
+            String modelVersion = findText(response, "model_version")
+                    .or(() -> findText(response, "model"))
+                    .orElse(null);
             return switch (label.get()) {
                 case "laptop", "book" -> PhotoEvaluationRecoveryHandler.RecoveryResult.completed(modelVersion);
                 case "other" -> PhotoEvaluationRecoveryHandler.RecoveryResult.rejected("AI_OTHER", modelVersion);

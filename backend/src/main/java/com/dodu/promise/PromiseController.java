@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.ZoneId;
 import java.sql.Timestamp;
 import java.util.UUID;
+import java.util.List;
 
 import com.dodu.participant.service.ParticipantAuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -138,6 +139,32 @@ public class PromiseController {
                 rs -> rs.next() ? new PromiseResponse(UUID.fromString(rs.getString("id")), rs.getString("task_title"), PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")), rs.getTimestamp("scheduled_at").toInstant(), rs.getLong("row_version")) : null, participantId);
     }
 
+    @Operation(summary = "약속 이력 조회")
+    @GetMapping("/history")
+    public List<PromiseHistoryResponse> history(@RequestHeader("Authorization") String authorization) {
+        UUID participantId = participantFromBearer(authorization);
+        Instant now = clock.instant();
+        return jdbc.query("""
+                        select id, task_title, tool_type, scheduled_at, row_version, lifecycle_status, final_outcome
+                          from promise
+                         where participant_id = ?
+                           and (
+                               lifecycle_status in ('Closed', 'AuthCompleted', 'AuthIncomplete')
+                               or (lifecycle_status in ('Scheduled', 'AuthAvailable') and auth_window_ends_at <= ?)
+                           )
+                         order by scheduled_at desc
+                        """,
+                (rs, rowNum) -> new PromiseHistoryResponse(
+                        rs.getObject("id", UUID.class),
+                        rs.getString("task_title"),
+                        PromiseRequestValidator.ToolType.valueOf(rs.getString("tool_type")),
+                        rs.getTimestamp("scheduled_at").toInstant(),
+                        rs.getLong("row_version"),
+                        rs.getString("lifecycle_status"),
+                        rs.getString("final_outcome")),
+                participantId, timestamp(now));
+    }
+
     @Operation(summary = "약속 시각 변경")
     @PatchMapping("/{promiseId}/schedule")
     @Transactional
@@ -202,6 +229,8 @@ public class PromiseController {
     public record RescheduleRequest(String scheduledAt, long expectedVersion) { }
     public record VersionRequest(long expectedVersion) { }
     public record PromiseResponse(UUID promiseId, String taskTitle, PromiseRequestValidator.ToolType toolType, Instant scheduledAt, long version) { }
+    public record PromiseHistoryResponse(UUID promiseId, String taskTitle, PromiseRequestValidator.ToolType toolType,
+                                         Instant scheduledAt, long version, String lifecycleStatus, String finalOutcome) { }
     private record StudyRow(UUID id, Instant interventionEndsAt) { }
     private record PromiseRow(String taskTitle, PromiseRequestValidator.ToolType toolType, Instant scheduledAt, long rowVersion, int scheduleVersion, String lifecycleStatus) { }
     private record CreationRequest(UUID promiseId, String requestFingerprint) { }

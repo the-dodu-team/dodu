@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.sql.Timestamp;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -51,6 +52,8 @@ class PromiseControllerIntegrationTests {
     private MockMvc mockMvc;
     private String authorization;
     private String scheduledAt;
+    private UUID participantId;
+    private UUID policyId;
 
     @BeforeEach
     void setUp() {
@@ -59,7 +62,7 @@ class PromiseControllerIntegrationTests {
         String token = SessionToken.generate(new SecureRandom());
         String tokenHash = secretHasher.hash(token);
         UUID studyId = UUID.randomUUID();
-        UUID participantId = UUID.randomUUID();
+        participantId = UUID.randomUUID();
         UUID deviceId = UUID.randomUUID();
         UUID sessionId = UUID.randomUUID();
         Instant now = Instant.now();
@@ -69,7 +72,7 @@ class PromiseControllerIntegrationTests {
                 studyId, "integration-" + suffix, timestamp(now.plusSeconds(172_800)));
         jdbc.update("insert into policy_version(version, effective_from) values (?, ?)",
                 "integration-" + suffix, timestamp(now.minusSeconds(60)));
-        UUID policyId = jdbc.queryForObject("select id from policy_version where version = ?", UUID.class,
+        policyId = jdbc.queryForObject("select id from policy_version where version = ?", UUID.class,
                 "integration-" + suffix);
         jdbc.update("insert into participant(id, study_period_id, public_code, lifecycle_status, enrolled_at) "
                         + "values (?, ?, ?, 'Active', ?)", participantId, studyId, "integration-" + suffix, timestamp(now));
@@ -239,6 +242,31 @@ class PromiseControllerIntegrationTests {
                         .content("{\"expectedVersion\":0}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("PROMISE_NOT_MODIFIABLE"));
+    }
+
+    @Test
+    void historyReturnsFinalizedPromisesAndExpiredUnansweredPromise() throws Exception {
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        UUID verifiedId = insertHistoryPromise("verified", now.minusSeconds(7_200), "AuthCompleted", null);
+        UUID cancelledId = insertHistoryPromise("cancelled", now.minusSeconds(3_600), "Closed", "Cancelled");
+        UUID expiredId = insertHistoryPromise("expired", now.minusSeconds(1_800), "Scheduled", null);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/promises/history")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].promiseId").value(expiredId.toString()))
+                .andExpect(jsonPath("$[0].lifecycleStatus").value("Scheduled"))
+                .andExpect(jsonPath("$[1].promiseId").value(cancelledId.toString()))
+                .andExpect(jsonPath("$[1].finalOutcome").value("Cancelled"))
+                .andExpect(jsonPath("$[2].promiseId").value(verifiedId.toString()))
+                .andExpect(jsonPath("$[2].lifecycleStatus").value("AuthCompleted"));
+    }
+
+    private UUID insertHistoryPromise(String title, Instant scheduled, String lifecycle, String outcome) {
+        UUID id = UUID.randomUUID();
+        jdbc.update("insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst, tool_type, creation_type, lifecycle_status, final_outcome, auth_window_ends_at) values (?, ?, ?, ?, ?, ?, 'BOOK', 'NORMAL', ?, ?, ?)",
+                id, participantId, policyId, title, timestamp(scheduled), scheduled.atZone(ZoneId.of("Asia/Seoul")).toLocalDate(), lifecycle, outcome, timestamp(scheduled.plusSeconds(1_800)));
+        return id;
     }
 
     private String createWithKey(String body, String key) throws Exception {

@@ -8,6 +8,105 @@
 - 대안: 트랜잭션 안 발송 유지, 예약 시점 검사만으로 충분하다고 보는 방식, 토큰 암호화 선적용(N-01로 이월)은 선택하지 않았다.
 - 영향: 중복 발송이 가능한 at-least-once 방식이며 단일 인스턴스를 전제한다. `UNREGISTERED`·`SENDER_ID_MISMATCH`는 구독을 비활성화하고 `INVALID_ARGUMENT`는 재시도하지 않는다. 키 파일은 저장소에 두지 않는다.
 - 검증: `FcmPushNotificationSenderTests`, `NotificationDeliveryServiceIntegrationTests`, dry-run 수동 확인(`FAILED`/`INVALID_ARGUMENT`, attempt_count 1), 전체 `npm run verify`.
+## DEV-20261105-03 — 배포 환경의 실제 약속 사진 인증 진입
+
+- 배경: 실제 약속이 있어도 사진 인증 버튼이 비활성화됐다. 버튼과 클릭 처리에 남아 있던 `import.meta.env.DEV` 제한이 배포 환경의 실제 API 연결에도 적용되고 있었다.
+- 선택: 실제 API와 서버 약속 ID가 있는 경우 `isLive`를 전달하여 사진 제출 화면 진입을 허용한다. 개발 미리보기는 기존 DEV 조건을 따른다.
+- 근거: 카메라 유무는 버튼 비활성화 조건이 아니며, 실제 약속은 배포 환경에서 인증 흐름에 진입할 수 있어야 한다.
+- 대안: DEV 제한을 전부 제거해 운영에서 mock 인증을 허용하는 방식은 사용하지 않는다.
+- 영향: 시작 전·T+30 이후 신규 제출·취소·철회·권한 차단 경계는 유지한다. 실제 제출 접수 가능 여부는 서버가 다시 검증한다.
+- 검증: DEV=false 렌더링에서 실제 약속의 시작 시각 활성화, 마감·시작 전·취소·철회·권한 차단 유지, mock 비활성화 확인. 전체 `npm run verify` 통과, BE 240건 통과. Vercel Production 반영 후 실사진 업로드는 별도 검증한다.
+
+## DEV-20261105-02 — 운영자 참가자 일괄 등록·발급
+
+- 배경: 사용자가 기존 1명과 별도로 참가자 30명의 접근 코드 발급을 요청했다. Render Free 환경에서 로컬 운영 도구를 사용한다.
+- 선택: 기존 기간을 잠근 뒤 참가자 등록·개별 코드 발급·감사 기록을 한 트랜잭션으로 수행하고 커밋 후에만 코드 목록을 출력한다. 현재 기술검증 기간을 재사용한다.
+- 근거: 코드 하나를 공유하지 않고 참가자별 해시 자격을 발급하며 반복·동시 실행에도 기존 세션과 코드를 보존해야 한다.
+- 대안: 참가자마다 CLI를 30회 실행하거나 원문 코드를 SQL·저장소에 저장하는 방식은 사용하지 않는다.
+- 영향: 같은 prefix의 기존 참가자는 건너뛰고 다른 기간과의 충돌은 신규 작업 전체를 롤백한다. 폐기·철회된 자격은 자동 복구하지 않는다. 실제 운영 날짜는 변경하지 않는다.
+- 검증: PostgreSQL 16 통합 테스트에서 30명별 자격 유일성·해시 저장·정상 입장, 재실행 시 세션 보존, 충돌 전체 롤백, 종료 기간 거절, 동시 일괄 실행 검증. 기존 운영자 검증을 포함해 21건 통과. 실제 Supabase 발급은 로컬 입력 후 진행한다.
+
+## DEV-20261105-01 — 참가자 입장 무기한 대기 방지
+
+- 배경: 코드 제출 후 확인 중 화면이 유지됐다. 배포 백엔드 health 요청이 처음 30초 내 응답하지 않았고 이후 정상 응답했다. 공개 Vercel 번들에는 수정 전 `/api/access/enter` 경로가 남아 있었다.
+- 선택: FE 요청과 본문 읽기에 합산 60초 제한을 두고, 지연 시 입장 버튼을 복구하며 다시 시도할 수 있는 안내를 표시한다. 활성 약속 조회의 빈 본문과 JSON null도 정상적인 약속 없음으로 처리한다.
+- 근거: 네트워크가 끝나지 않아도 UI가 대기 상태에서 벗어나야 하며, 신규 참가자의 빈 약속은 오류가 아니다.
+- 대안: 무제한 대기·자동 POST 재시도는 채택하지 않는다. 시간 초과는 서버 처리 실패 확정이나 사용자 인증 실패의 증거로 사용하지 않는다.
+- 영향: API 경계만 변경하며 서버 시간·세션·약속·사진 정책은 유지한다. Vercel의 최신 dev 배포를 Production으로 승격해야 실제 공개 주소에 반영된다.
+- 검증: FE 실행 테스트에서 세션 endpoint/응답, 401, 연결·본문 읽기 지연, abort, 자동 재전송 없음, 활성 약속 빈 본문/null을 확인했다. FE 빌드·린트·보안 검사 통과. 운영 입장 성공은 미확인이다.
+
+## DEV-20261104-04 — 배포 환경의 검증용 참가자 준비와 현재 입장 API 연결
+
+- 배경: 배포 DB에 기간·참가자·정책이 모두 0건이고, Render Free는 Shell을 제공하지 않는다. 프런트가 호출하던 구형 입장 API는 `public_code` 조회와 다른 pepper를 사용하여 운영 CLI 발급 자격과 호환되지 않았다.
+- 선택: 프런트 입장을 `POST /api/participant/sessions`와 공통 응답의 `sessionToken`으로 연결한다. 기술 검증 전용 초기 SQL과 비밀값을 숨김 입력받는 로컬 운영 CLI 실행 도구를 제공한다.
+- 근거: 기존 `ParticipantEntryService`와 `OperatorAccessService`의 해시·코드 정규화 계약을 재사용한다. 참가자 공개 식별자와 입장 비밀 코드를 구분한다.
+- 대안: 구형 API에 맞춰 공개 식별자를 자격으로 저장하거나 운영자 API를 외부에 추가하는 방식은 채택하지 않는다.
+- 영향: 초기 데이터는 기술 검증 참가자 1명, 생성 시점부터 개입 7일·접근 9일로 한정하고 실제 연구 일정으로 취급하지 않는다. 재실행은 기존 날짜·정책·참가자를 덮어쓰지 않는다. 비밀값은 로컬 프로세스에만 주입하고 종료 시 환경변수를 복원한다.
+- 검증: FE 입장 함수 실행 테스트(현재 endpoint, 토큰 응답, 401 오류), FE 빌드, PowerShell 구문 검사, PostgreSQL 16 격리 환경에서 V1~V9 적용 후 초기 SQL 두 번 실행 시 각 테이블 1건 유지. 운영 발급·실사진 검증은 사용자 입력 후 진행한다.
+
+## DEV-20261104-03 — Supabase 저장소 Spring 생성자 선택 수정
+
+- 배경: Render에서 provider를 `supabase`로 활성화하자 `No default constructor found`로 서버가 기동되지 않았다. 환경변수용·HTTP 테스트용 생성자가 공존하여 Spring이 사용할 생성자를 선택하지 못했다.
+- 선택: 환경변수를 받는 운영 생성자에 `@Autowired`를 지정한다.
+- 근거: 테스트용 HttpClient 주입 구조를 보존하면서 실제 운영과 동일한 빈 생성 경로를 명시한다.
+- 대안: 기본 생성자 추가는 필수 환경설정 검증을 우회할 수 있어 제외했다.
+- 영향: 저장소 provider와 읽기·쓰기 인터페이스 연결은 유지한다. 자격정보 교체나 버킷 재생성은 필요하지 않다.
+- 검증: 수정 전 Spring 컨텍스트 테스트에서 Render와 같은 오류 재현. 수정 후 컨텍스트·객체 HTTP 테스트 실행 결과는 구현 상태 문서에 기록한다. 실제 Supabase 업로드·삭제와 배포 검증은 별도다.
+
+## DEV-20261104-02 — Vercel Linux 빌드용 Rolldown 선택적 바인딩
+
+- 배경: Vercel의 Linux 빌드에서 Windows lockfile에 기록된 `rolldown`·`lightningcss` 네이티브 바인딩만 설치되어 `npm run build`가 실패했다.
+- 결정: 프런트엔드에 Linux x64 GNU/MUSL Rolldown 및 lightningcss 바인딩을 선택적 의존성으로 명시하고 Node.js 22 범위를 frontend package에도 선언한다.
+- 근거: Vercel과 Docker의 Linux 빌드가 플랫폼별 선택적 의존성을 재현할 수 있고, Windows 개발 환경에서는 비호환 패키지가 자동 제외된다.
+- 영향: Vercel에서 별도 수동 설치 없이 `npm ci` 후 Vite 빌드가 가능해진다.
+- 검증: `npm install --package-lock-only --ignore-scripts`, `npm run build --workspace frontend`, `git diff --check`. Vercel 재배포 확인은 외부 대시보드에서 진행한다.
+
+## DEV-20261104-01 — 사진 업로드 전 브라우저 자동 압축
+
+- 배경: 최신 스마트폰 사진은 원본 용량이 커서 사진 인증 업로드 전에 저장소·API 한도를 넘을 수 있다.
+- 결정: JPEG/PNG를 브라우저에서 EXIF 방향을 반영해 긴 변 최대 1920px로 축소하고 JPEG로 변환한다. 품질은 0.82부터 0.50까지 단계적으로 조정하며 최대 5 MiB를 목표로 한다. 원본은 전송·저장하지 않는다.
+- 근거: 참가자의 별도 조작 없이 업로드 용량과 처리 시간을 줄이고, 비공개 저장소를 유지할 수 있다.
+- 대안: 원본 업로드 후 서버·저장소에서 압축하는 방식은 원본 전송과 저장 비용이 남아 제외했다.
+- 영향: 백엔드는 6 MB 파일·7 MB 요청 한도로 보호하며, 압축 실패 파일은 업로드하지 않는다. 최종 저장소·AI worker 연결과 실기기 QA는 배포 후 별도 검증한다.
+- 검증: 사진 압축 정책 테스트, FE 빌드·린트, Docker를 실행한 뒤 전체 `npm run verify` 통과. 백엔드 233건, 프런트 계약·사진·플랫폼·홈 테스트, 보안 스캔, 패키지 빌드를 확인했다.
+
+## DEV-20261102-06 — 주간 요일 색상 및 취소창 보조 버튼 최종 문구
+
+- 배경: 화면 검토 결과 주간 카드의 토요일·일요일만 별도 색상을 적용한 변경을 되돌리고, 취소 확인창의 복귀 문구를 더 짧게 정리한다.
+- 결정: 토요일·일요일 요일 라벨은 기본 텍스트 색상을 사용한다. `돌아가기` 버튼은 `닫기`로 변경한다.
+- 영향: 취소 확정 동작과 모달 닫기·포커스 흐름은 유지한다.
+- 검증: FE 테스트·빌드와 `git diff --check`.
+
+## DEV-20261102-04 — 약속 취소 확인 버튼 문구
+
+- 배경: 약속 취소 확인 화면의 보조 버튼 `유지`가 사용자의 이전 화면 복귀 의도를 충분히 설명하지 못했다.
+- 결정: 보조 버튼 문구를 `돌아가기`로 변경하고 취소 동작은 기존 `약속 취소` 버튼으로 유지한다.
+- 검증: 프런트 타입 검사·빌드와 변경 파일 공백 검사를 실행한다.
+
+## DEV-20261102-03 — 주간 지난 약속 요일 색상
+
+- 배경: 홈의 주간 지난 약속 요일에서 토요일·일요일을 구분하기 어렵다는 화면 보정 요청이 있었다.
+- 결정: 요일 라벨만 토요일은 파란색, 일요일은 빨간색으로 표시하고 날짜 숫자와 인증 상태 색상은 기존 규칙을 유지한다.
+- 검증: 프런트 빌드 및 홈 렌더링 테스트로 주간 카드 마크업과 기존 상태 표시를 확인한다.
+
+## DEV-20261102-02 Swagger 실제 입장 API JDBC 시간값 수정
+
+- 배경: 로컬 Swagger 실행에서 `POST /api/access/enter`가 참가자 기기 생성·갱신 시 PostgreSQL JDBC 500을 반환함.
+- 원인: `JdbcTemplate`에 `java.time.Instant`를 직접 전달해 PostgreSQL timestamptz 바인딩 타입을 추론하지 못함.
+- 선택: 해당 SQL 파라미터를 `Timestamp.from(Instant)`로 변환해 기존 DB 스키마와 명시적으로 맞춤.
+- 검증: 수정 후 로컬 Swagger에서 입장·세션 발급부터 약속·알림 흐름을 재실행하고, 관련 통합 테스트를 확인.
+
+- 추가 원인: 입장 응답은 UUID 연결 문자열을 발급해 `SessionToken`의 43자 Base64URL 형식을 위반했고, 후속 인증이 401로 거절됨.
+- 수정: 세션 발급을 공통 `SessionToken.generate`로 통일해 저장 해시와 Authorization 파서의 계약을 일치시킴.
+
+## DEV-20261102-01 FE 실제 API 흐름 통합
+
+- 배경: 웹 FE의 약속·사진·이력·자기보고·알림 화면을 mock 흐름에서 실제 Dodu API로 전환해야 함.
+- 선택: `createDoduApi`를 화면 계층에 주입하고, 약속 생성에는 멱등성 키, 수정·취소에는 서버 `version`을 사용한다. 사진은 단일 JPG/PNG 업로드만 허용하고 판정 상태는 서버 응답값으로 표시한다.
+- 근거: 서버 시간·동시성·지연 결과 보호는 백엔드가 최종 판단해야 하며 FE는 서버 상태를 재현하지 않고 표시해야 한다.
+- 대안: FE에서 상태를 추정하거나 mock 결과를 유지하는 방식은 선택하지 않음.
+- 영향: 배포 주소와 외부 사진 저장소·AI worker가 준비되면 동일 화면에서 운영 API를 호출할 수 있음. Figma 노드 구조화 컨텍스트와 Swagger 수동 실행 결과는 외부 확인 전까지 미확정.
+- 검증: FE build, API 계약 테스트, 전체 verify 실행 결과를 같은 커밋에 기록.
 
 ## DEV-20261013-01 — Notion 최신 작업명 정책 및 구현 근거 동기화
 
@@ -795,3 +894,120 @@
 - 대안: 무제한 재시도, provider에만 책임 위임, `UNCONFIGURED`를 일시 실패로 위장하는 방식은 선택하지 않는다.
 - 영향: 운영 provider 연결 전에도 DB에 재시도 상태를 안전하게 보존하고, 중복 worker 실행은 row lock으로 보호한다.
 - 검증: `PushRetryPolicyTests`, Flyway V8 검증, 전체 `npm run build`.
+
+## DEV-20261030-05 FE API client와 오류 분기
+
+- 배경: FE mock 화면과 백엔드 계약 사이에 실제 API를 호출할 공통 진입점이 없었다.
+- 선택: 인증 토큰을 받는 typed client 하나에서 알림·인증 이력·자기보고 요청을 만들고, 성공 envelope와 오류 envelope를 검증한다.
+- 근거: FE는 메시지 문구가 아니라 `error.code`로 상태를 분기해야 하며, 토큰·사진·설문 원문은 로그와 URL에 남기지 않아야 한다.
+- 대안: 화면별 fetch 중복, 오류 메시지 문자열 분기, 토큰을 query string에 넣는 방식은 선택하지 않는다.
+- 영향: 후속 화면 연결은 공통 client를 사용하며, 현재 mock 동작은 별도 유지한다.
+- 검증: frontend TypeScript build·lint와 전체 `npm run build`.
+## DEV-20261101-01 — trusted proxy 원본 IP의 안전한 기본값
+
+- 배경: 참가자 코드 실패 제한은 PostgreSQL에 저장되지만 운영 프록시가 전달하는 원본 IP를 무조건 신뢰하면 헤더 위조로 차단을 우회하거나 정상 사용자를 함께 차단할 수 있습니다.
+- 결정: `DODU_TRUSTED_PROXIES`에 등록된 프록시 네트워크에서 온 요청만 `X-Forwarded-For` 또는 표준 `Forwarded`의 첫 주소를 사용합니다. 설정이 비어 있거나 직접 연결 주소가 허용 목록에 없으면 `HttpServletRequest.getRemoteAddr()`만 사용합니다.
+- 근거: 서버가 신뢰하는 프록시 경계를 명시하기 전에는 전달 헤더를 신뢰하지 않는다는 BE 운영 답변과 SCRUM-70 보안 기준.
+- 영향: 개발·기본 운영 환경은 헤더 위조에 안전한 보수적 동작을 유지합니다. 실제 배포 CIDR은 배포 구조 확정 후 환경변수로 주입해야 하며 소스나 저장소에 운영 주소를 고정하지 않습니다.
+- 검증: IPv4 CIDR, IPv6 CIDR, 다중 `X-Forwarded-For`, 미신뢰 직접 연결의 단위 테스트와 전체 빌드로 확인합니다.
+- 남은 작업: 실제 배포 프록시 목록과 원본 IP 헤더 규칙을 운영 환경에서 확정하고 공격·오차단 QA를 수행해야 합니다.
+## DEV-20261101-02 — 사진 원본 저장소와 운영 자격정보 경계
+
+- 배경: 현재 Dodu는 `photo_asset` 메타데이터와 `storage_key`만 저장하고 실제 객체 저장소 provider는 연결하지 않았다. 사진 원본을 PostgreSQL이나 공개 URL에 두면 보관·삭제·접근 통제가 불명확해진다.
+- 결정 변경: 자동 결제를 허용하지 않으므로 Cloudflare R2와 Supabase Storage를 운영 provider로 확정하지 않는다. provider가 정해지기 전까지 개발·로컬 검증은 비공개 마운트 볼륨으로 제한하고, 운영 환경에서는 원본 사진 기능을 활성화하지 않는다.
+- 보안 경계: 어떤 provider를 선택하더라도 백엔드는 `PhotoObjectStore` 경계를 통해 업로드·조회·삭제하고, 브라우저에 저장소 자격정보나 공개 URL을 전달하지 않는다. 객체 키에는 참가자 식별정보를 넣지 않는다.
+- 보관: 공식 개입 종료시각+30일을 DB 삭제 기준으로 삼고, provider 확정 후 삭제 worker가 객체 삭제와 메타데이터 정리를 수행한다.
+- 대안: 관리형 저장소는 자동 청구 조건을 검토한 뒤에만 다시 선택한다. PostgreSQL bytea는 데이터베이스 부담과 백업·삭제 복구 문제 때문에 운영 대안으로 선택하지 않는다.
+- 영향: 사진 원본 운영 연동은 보류되며, 자동 결제 없는 고정비·선불형 호스팅과 백업 방식을 정해야 SCRUM-83 구현을 시작할 수 있다.
+- 검증: `docs/operations/PHOTO_STORAGE.md`에 자동 결제 금지, 개발용 볼륨, provider 확정 후 권한·보관·삭제 절차를 기록했다. 실제 provider smoke test와 통합 테스트는 운영 방식 확정 후 수행한다.
+## DEV-20261101-03 — React Native 전환을 위한 플랫폼 경계
+
+- 배경: 웹 UI를 앱스토어용 React Native 화면으로 전환할 가능성이 있으므로, 화면 코드가 브라우저 API와 API 계약에 직접 묶이지 않게 할 필요가 있다.
+- 결정: API 응답 타입은 `frontend/src/shared/apiTypes.ts`, 저장소 접근은 `KeyValueStorage`와 `ParticipantSessionStore`, HTTP 호출은 기존 typed API client에 둔다. 웹은 브라우저 storage adapter를 주입하고 RN은 AsyncStorage 계열 adapter를 주입한다.
+- 영향: 현재 mock 화면을 즉시 RN으로 재작성하지 않고, API·세션·도메인 규칙을 먼저 공유 가능하게 만든다. 웹 전용 UI와 RN UI는 별도 presentation layer로 유지한다.
+- 대안: 웹 DOM/CSS를 RN에서 직접 재사용하거나 화면마다 `localStorage`·`window`를 호출하는 방식은 플랫폼 전환 비용과 테스트 격리를 악화시키므로 선택하지 않는다.
+- 검증: 플랫폼 adapter 테스트를 추가하고 프런트 TypeScript build·lint·기존 화면 테스트에 포함한다.
+## DEV-20261101-04 — 최종 Figma 핸드오프 기준 확정
+
+- 배경: 기존 Figma 링크의 node를 확인하지 못해 화면 보정을 보류했으나, 최종 검토 섹션의 유효한 링크가 전달되었다.
+- 결정: `Qx26p9tdYo9doDhbxYGnfB`의 `1806:1897` 섹션을 Sprint 3 웹 화면 보정의 최종 디자인 기준으로 사용한다. 홈·약속·사진 인증·자기보고·권한 오류·행동검증 종료 상태를 포함한다.
+- 근거: 사용자가 전달한 최종 디자인 링크와 섹션 내부의 `현재 시각 +5분~+72시간` 예약 기준 메모.
+- 영향: Figma 링크 차단은 해소되었으며, 화면 구현 시 기존 정책·API 상태와 디자인 상태를 대조한다. 디자인에 있는 기준 메모가 현재 정책과 충돌하면 정책 원문과 승인 결정을 우선한다.
+- 검증: Figma `10/13 최종 검토` 섹션의 metadata와 screenshot을 확인했다. 코드 반영과 화면 QA는 후속 작업이다.
+
+## DEV-20261101-05 — 현재 Dodu Figma 기준 갱신
+
+- 배경: 사용자가 현재 Dodu 화면 기준으로 새 Figma 파일을 전달했다.
+- 결정: `SyTucdjEX94fcqYzRmK5xE`의 `393:1781` 페이지 `v2.5 디자인 핸드오프`를 현재 화면 비교 기준으로 사용한다. 이전 `Qx26p9tdYo9doDhbxYGnfB` 파일은 보조 기준으로 내린다.
+- 근거: 새 Figma URL과 metadata 조회 결과의 페이지 ID·페이지명 일치.
+- 영향: 이후 Figma 화면 보정·상태 화면 검토는 새 파일을 기준으로 진행한다. 기존 정책·API 계약과 충돌하면 정책 원문과 승인 결정을 우선한다.
+- 검증: Figma top-level metadata 조회 성공. 지정 노드 screenshot은 MCP timeout으로 시각 검증하지 못했으며, 코드 반영과 화면 QA는 후속 작업이다.
+
+## DEV-20261101-06 — AI worker 응답 계약 연결
+
+- 배경: 전달된 DINOv2-base FastAPI worker의 실제 응답 형식과 기존 Dodu AI adapter의 모델 버전 매핑을 대조할 필요가 있다.
+- 결정: Dodu는 `POST /predict/batch`에 사진 1장을 `files` multipart로 전송하고, `laptop`·`book`은 `Completed`, `other`는 `Rejected/AI_OTHER`로 매핑한다. worker의 현재 모델 식별 필드 `model`도 `model_version`의 대체값으로 저장한다.
+- 근거: worker 코드·README·실제 `/health`, `/predict`, `/predict/batch` 응답 확인.
+- 영향: AI endpoint와 사진 저장소가 환경변수·`PhotoObjectReader`로 연결되면 모델 버전이 이력에 보존된다. AI 운영 완료나 Jira 완료 처리는 하지 않는다.
+- 검증: 단건 laptop 200, 3장 batch(book/other/laptop) 200, 백엔드 mapper 테스트 보강. API 자격정보는 출력·문서·커밋에 포함하지 않았다.
+
+## DEV-20261101-07 — Supabase Storage adapter 경계
+
+- 배경: Sprint 4 SCRUM-89 구현을 위해 private photo metadata와 실제 원본 저장소 사이의 실행 가능한 adapter가 필요하다.
+- 결정: `DODU_PHOTO_STORAGE_PROVIDER=supabase`일 때만 Supabase Storage HTTP adapter를 활성화한다. bucket, 프로젝트 URL, service role secret은 환경변수로만 주입하고, 미설정 환경에서는 기존 안전한 비활성 경계를 유지한다.
+- 근거: 사진 원문은 PostgreSQL·로그·Git에 저장하지 않고 private object storage에서만 읽어야 한다는 정책과 SCRUM-89 범위.
+- 영향: 사진 제출 시 adapter가 원본을 저장하고, recovery worker가 같은 storage key로 읽어 AI worker에 전달하며, 삭제 경로에서 원본을 제거할 수 있다. provider 설정 전 운영 완료로 표시하지 않는다.
+- 검증: Supabase HTTP adapter의 업로드·조회·삭제·인증 헤더 단위 테스트, AI mapper 테스트, 백엔드 package 빌드 통과. 실제 Supabase bucket smoke test는 외부 설정 후 실행한다.
+
+## DEV-20261101-08 — 사진 30일 보관·삭제 worker
+
+- 배경: 정책의 행동검증 종료 후 30일 보관과 원본 삭제 조건을 실제 저장소 adapter와 연결해야 한다.
+- 결정: 사진 저장 시 개입 종료시각+30일을 `photo_asset.delete_due_at`에 기록하고, due worker가 provider 원본 삭제 성공 후 `auth_attempt.photo_asset_id` 연결과 삭제 metadata를 정리한다. provider 실패 시 행을 남겨 다음 실행에서 재시도한다.
+- 근거: 서비스 운영 정책의 30일 보관·자동삭제와 참가자 삭제 요청 처리 기준.
+- 영향: 삭제 전까지 원본은 private storage에만 존재하며, 삭제 실패가 DB metadata 선삭제로 이어지지 않는다. 실제 provider smoke test와 참가자 삭제 API 연동은 남아 있다.
+- 검증: retention deadline 단위 테스트, Supabase adapter 단위 테스트, 백엔드 package 및 targeted test 통과. Docker 기반 DB migration/worker 통합 검증은 Docker 환경 부재로 미실행.
+## DEV-20261101-09 참가자 철회 요청의 서버 연동 경계
+
+- 배경: 참가자 삭제 요청은 인증된 참가자 본인만 수행해야 하며, 철회 이후 약속·설문·알림·사진 처리도 같은 상태 전이를 따라야 한다.
+- 선택: `DELETE /api/participant/account`를 추가하고 기존 철회 트랜잭션을 재사용한다. 참가자 ID·접근 코드를 요청 입력으로 받지 않고 세션에서 결정한다. 활성 약속은 `Withdrawn`으로 마감하고, 대기 자기보고·미발송 알림은 중지하며, 사진은 즉시 원본을 지우지 않고 retention worker가 처리하도록 `delete_due_at`을 현재 시각으로 설정한다.
+- 근거: 서버 시간과 세션 소유권을 기준으로 중복·타인 접근을 차단하고, provider 장애가 DB 철회 상태를 되돌리지 않도록 저장소 삭제를 후속 worker로 분리한다.
+- 대안: 참가자 ID를 본문으로 받거나 원본 사진을 요청 처리 중 직접 삭제하는 방식은 권한 혼동과 외부 provider 장애 시 트랜잭션 불일치를 키우므로 채택하지 않는다.
+- 영향: 철회 직후 새 약속·알림·자기보고·사진 판정 결과가 최종 상태를 덮어쓰지 않는다. 실제 provider 삭제는 Supabase 자격정보가 등록된 환경에서 별도 smoke test가 필요하다.
+- 검증: Docker 기반 `mvnw.cmd -q test`, Flyway V1~V9 마이그레이션, `git diff --check`.
+## DEV-20261101-10 FE API client의 실제 계약 연결 범위
+
+- 배경: 기존 FE client는 알림·이력·자기보고만 typed API로 제공하고 약속·사진·입장 API는 mock 화면에 남아 있었다.
+- 결정: 세션 입장, 활성 약속 조회·생성·수정·취소, multipart 사진 제출, 참가자 철회 API를 client에 추가한다. 공통 envelope 응답과 기존 raw 응답을 구분하고 multipart 요청에는 JSON content type을 강제하지 않는다.
+- 근거: 현재 백엔드 계약이 혼재하므로 응답 형식을 임의로 바꾸지 않고 실제 endpoint 계약을 보존해야 한다. 세션 토큰은 API client 외부의 `ParticipantSessionStore`가 관리한다.
+- 영향: 이후 화면은 mock fetch를 반복하지 않고 같은 client를 사용해 웹·PWA·향후 RN adapter에서 재사용할 수 있다. 실제 화면을 운영 API로 전환하는 작업과 외부 환경 QA는 별도 범위다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.
+## DEV-20261101-11 FE 입장 화면의 운영 API 전환 방식
+
+- 배경: 기존 참가자 입장 화면은 개발 preview에서만 mock 코드를 처리하고 있었다.
+- 결정: `VITE_DODU_API_BASE_URL`이 설정된 환경에서만 실제 입장 API를 호출하고, 브라우저 저장소의 `ParticipantSessionStore`에 세션 토큰을 저장한다. 환경변수가 없으면 기존 preview를 보존한다.
+- 근거: 배포 전 API 주소가 없는 로컬 디자인 preview를 깨지 않으면서 동일한 화면으로 실제 세션 흐름을 검증할 수 있다.
+- 영향: 운영 FE는 접근 코드·device key·세션 발급을 실제 백엔드와 연결할 수 있고, API 주소는 빌드 환경 설정으로 교체할 수 있다. 약속·사진·이력 화면의 실제 wiring은 후속 작업이다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.
+## DEV-20261101-12 FE 홈 화면의 활성 약속 조회 연결
+
+- 배경: 실제 입장 후에도 홈 화면이 항상 mock 약속 상태를 사용하면 백엔드 세션·약속 조회를 확인할 수 없다.
+- 결정: API base URL과 유효한 세션 토큰이 있는 경우 `/api/promises/active`를 호출해 현재 약속을 홈 화면 모델로 변환한다. API base URL이 없거나 세션이 없으면 기존 preview 흐름을 유지한다.
+- 근거: 서버가 반환한 ISO 시각을 KST 표시 모델로 변환하고, 기존 화면 상태 모델과 API 계약을 분리하면 이후 생성·수정·취소 wiring을 단계적으로 붙일 수 있다.
+- 영향: 실제 세션의 활성 약속 조회가 가능해진다. 생성·수정·취소·사진 제출 UI는 아직 mock action이므로 전체 FE 운영 흐름 완료로 표시하지 않는다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check`.
+## DEV-20261102-05 — 서버 기반 약속 이력 조회
+
+- 배경: 기존 FE의 지난 약속 목록은 메모리에만 생성되어 새로고침 후 사라졌다.
+- 결정: `GET /api/promises/history`를 추가하고 기존 `promise` 원장의 종료 상태·결과를 참가자 소유권 기준으로 조회한다. 인증 완료·미완료는 FE의 주간 이력으로 표시하고 취소·철회는 인증 이력에서 제외한다.
+- 근거: 약속 원장은 이미 `lifecycle_status`, `final_outcome`, `auth_window_ends_at`를 저장하므로 별도 이력 테이블을 추가하지 않아도 저장·조회가 가능하다. 응답이 늦는 `Evaluating` 약속은 자동 미완료로 바꾸지 않는다.
+- 영향: FE가 로그인 시 서버 이력을 불러와 새로고침 후에도 지난 약속을 표시한다. 아직 응답 envelope로 통일하지 않은 기존 약속 API 형식을 유지한다.
+- 검증: PromiseController Testcontainers 통합 테스트, FE API 계약 테스트, FE build/lint.
+- 보완: API가 반환하는 마감 후 `Scheduled`/`AuthAvailable` 상태도 FE에서 미완료 이력으로 표시한다.
+- DEV-20261102-07 배포 클릭 경로와 런타임 설정
+
+  - 배경: 웹/PWA를 계정에서 반복 설정하지 않고 배포할 수 있는 최소 설정이 필요하다.
+  - 선택: 백엔드는 Render Blueprint와 멀티스테이지 Dockerfile, 프런트엔드는 Vercel의 `frontend` 루트와 Vite 설정을 사용한다. DB·사진 저장소는 Supabase를 환경변수로 연결하고 사진 버킷은 비공개로 둔다.
+  - 근거: 현재 Spring Boot jar가 프런트 정적 산출물을 번들할 수 있고, FE는 `VITE_DODU_API_BASE_URL`로 API 주소를 주입받는다. 저장소에 자격정보를 넣지 않고 계정 화면에서만 입력할 수 있다.
+  - 대안: Render DB·공개 사진 URL·저장소 내 비밀값 보관은 선택하지 않는다.
+  - 영향: 사용자는 Render Blueprint와 Vercel Import를 실행한 뒤 환경변수만 입력하면 된다. Supabase·Render·Vercel 계정 생성과 실제 운영 QA는 외부 작업으로 남는다.
+  - 검증: Docker 이미지 빌드 성공, 프런트 빌드 성공, 백엔드 233개 테스트·패키지 성공, 비밀값 검사 성공. 일시적으로 899초로 계산되던 Retry-After 경계 테스트도 올림 계산으로 안정화했다.

@@ -1,5 +1,110 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-05 / SCRUM-83 배포 환경의 약속 인증 버튼
+
+- 원인: `PromiseAuthPreview`의 버튼 활성화와 클릭 처리에 있던 DEV 전용 조건으로 인해 배포 환경의 실제 약속도 인증 진입 불가.
+- 수정: API·서버 약속 ID가 있는 경우에만 실제 인증 플래그를 전달해 `LivePhotoAuth`에 진입한다. 운영 mock 진입 및 시간·최종 상태 제한은 유지한다.
+- 검증: DEV=false에서 실제 약속 버튼·시작/종료 경계·제외 상태·mock 차단 렌더 테스트 통과. `npm run verify` 통과(FE 테스트/린트/빌드, 보안, PostgreSQL 기반 BE 240건, 패키지). 기존 FE lint 경고 1건 유지.
+- 남은 작업: Vercel 최신 배포를 Production으로 승격 후 실제 사진 업로드·Supabase 저장 확인. 카메라 유무가 원인이라고 기록하지 않으며 실제 provider 업로드 성공은 아직 미확인.
+
+## 2026-11-05 / SCRUM-94 참가자 30명 일괄 등록·발급
+
+- 담당: mono, Sprint 4(ID 36). 사용자 요청으로 추가 30명을 현재 기술검증 기간에 등록·발급할 로컬 명령을 구현했다.
+- 구현: `OperatorBatchEnrollmentService`, `enroll-batch` CLI 및 `issue-participant.ps1 -Count 30`. 기존 등록은 건너뛰고 기간 날짜·기존 자격·세션을 유지한다. 신규 등록·해시 자격·감사 기록은 한 트랜잭션이며 코드 출력은 커밋 후에만 수행한다.
+- 검증: Docker PostgreSQL 16 운영자 통합 테스트 21건 통과(신규 일괄 발급 검증 5건 포함). PowerShell 구문 검사 통과. `npm run verify` 통과: FE 테스트·린트·빌드, 보안 스캔, BE 240건 실패/오류/스킵 0, 패키지 빌드. 기존 FE lint 경고 1건 유지.
+- 남은 작업: 로컬 발급 창에 Render와 동일한 DB 접속정보·pepper 입력 후 실제 30건 발급 확인. 비밀값·발급 원문은 문서·티켓·Git에 남기지 않는다. 실제 발급 전 완료 처리하지 않는다.
+
+## 2026-11-05 / SCRUM-76 참가자 입장 대기와 신규 참가자 빈 약속 응답
+
+- 사용자 증상: 입장 버튼이 확인 중으로 유지됨. Network 화면과 공개 JS 번들에서 구형 `/api/access/enter` 호출 확인. 운영 접근 코드는 기록하지 않음.
+- 원격 진단: health 최초 조회 30초 timeout, 후속 조회 HTTP 200. `/api/participant/sessions` preflight는 실제 프런트 출처에서 200 및 일치하는 허용 출처 확인. 지연의 서버 내부 원인은 미확인이다.
+- 수정: fetch와 응답 본문 읽기 합산 60초 제한, abort, 지연 안내 및 버튼 재활성화. 자동 재전송 없음. 신규 참가자 활성 약속이 없는 빈 본문/null을 null로 처리.
+- 검증: `npm run test:api --workspace frontend`, FE build/lint, `npm run security:scan`, `git diff --check` 통과. 기존 lint 경고 1건 유지. 백엔드 변경이 없어 전체 DB 테스트는 재실행하지 않음.
+- 남은 작업: 최신 dev 프런트 배포의 Production 승격, 실제 입장·약속·사진 업로드 검증. Supabase 업로드 성공이나 서버 지연 원인 해결로 기록하지 않음.
+
+## 2026-11-04 / 참가자 초기 데이터·로컬 발급 준비 및 FE 입장 API 수정
+
+- 원격 읽기 검증: Render `/api/health` 200, `https://dodu-two.vercel.app` 출처의 입장 preflight 200 및 일치하는 허용 출처 확인.
+- 사용자 확인: 운영 DB의 `study_period`, `participant`, `policy_version` 모두 0건.
+- 구현: 기술 검증용 7일 개입·9일 접근 기간과 참가자 1명 생성 SQL, 비밀값 숨김 입력 로컬 발급 스크립트 추가. FE를 `/api/participant/sessions` 및 공통 응답 `data.sessionToken`으로 연결하여 운영 CLI와 입장 해시 계약을 일치시킴.
+- 검증: FE API 테스트·빌드, 보안 스캔, PowerShell 구문 검사 통과. 격리 PostgreSQL 16에서 Flyway V1~V9 SQL 적용 및 초기 SQL 두 번 실행 후 기간·참가자·정책 각 1건 유지.
+- 미실행: 실제 Supabase 초기 데이터 SQL, 운영 접근 코드 발급, 실사진 업로드·삭제 및 AI 판정. 실제 DB 자격정보·pepper는 로컬 실행 환경에 없으며 사용자 입력 필요. 전체 DB 통합 테스트는 이번 변경에서 재실행하지 않음.
+
+## 2026-11-04 / SCRUM-83 Supabase 활성화 시 서버 기동 오류
+
+- 범위: `SupabasePhotoObjectStore`의 운영 생성자에 `@Autowired`를 추가하여 Spring 생성자 선택을 명시했다.
+- 근거: Render 런타임 로그의 `No default constructor found`와 동일한 오류를 새 Spring 컨텍스트 테스트에서 수정 전에 재현했다.
+- 검증: `SupabasePhotoObjectStoreContextTests`는 provider 활성화 시 읽기·쓰기 빈이 같은 객체인지, `none`일 때 자격정보 없이 시작하는지 확인한다. 실제 자격정보·사진·DB를 사용하지 않는다.
+- 실행 결과: `mvnw.cmd -Dtest=SupabasePhotoObjectStoreContextTests,SupabasePhotoObjectStoreTests test` 4건 통과, `mvnw.cmd -DskipTests package` 성공, `npm run security:scan` 및 `git diff --check` 통과. 이번 변경에서 전체 DB 통합 테스트는 재실행하지 않았다.
+- 남은 작업: 수정 커밋으로 Render 수동 배포 후 기동·CORS·실사진 업로드/삭제 확인. 외부 통합 검증 전 SCRUM-83은 진행 중으로 유지한다.
+
+## 2026-11-04 / Vercel Linux 빌드 호환성 보강
+
+- 원인: Vercel Linux 환경에서 `rolldown`과 `lightningcss`의 Windows 네이티브 바인딩만 설치되어 Linux 바인딩을 찾지 못함.
+- 조치: `frontend/package.json`에 두 도구의 Linux x64 GNU/MUSL 선택적 바인딩과 Node.js 22 엔진 범위를 추가하고 `package-lock.json`을 갱신했다.
+- 검증: `npm run build --workspace frontend` 통과, `git diff --check` 통과. Vercel 재배포 결과 확인 필요.
+- 남은 범위: Vercel에서 최신 커밋으로 재배포 후 `Ready` 상태와 실제 사이트 접근 확인.
+
+## 2026-11-04 / 사진 업로드 자동 압축
+
+- 대응 범위: FE 사진 인증 업로드 전처리. `frontend/src/features/photo-auth/compressPhoto.ts`에서 JPEG/PNG를 긴 변 1920px, 최대 5 MiB 목표의 JPEG로 변환한다.
+- 연결: `LivePhotoAuth`가 압축 완료 파일만 `POST /api/promises/{id}/photo-attempts`로 전송한다. 압축 실패 시 원본을 전송하지 않는다.
+- 서버 보호: Spring multipart 파일 6 MB, 요청 7 MB 한도를 설정했다.
+- 검증: `npm run test:photo --workspace frontend`, `npm run build --workspace frontend`, `npm run lint --workspace frontend` 통과. Docker 실행 후 `npm run verify`도 통과했으며, 보안 스캔·FE 테스트/빌드·BE 233건·패키지 빌드를 확인했다. FE lint에는 기존 `LiveParticipantPanel.tsx` 경고 1건이 남아 있다.
+- 남은 범위: 실제 모바일 브라우저·기기별 압축 확인, Supabase 저장소 및 AI worker 연결 후 실사진 통합 QA.
+
+## 2026-11-02 / FE 실제 API 흐름·검증 보강
+
+- 대응 티켓: SCRUM-87, SCRUM-76. 외부 배포·Push·AI worker 연결은 별도 운영 조건으로 남김.
+- FE 약속 흐름: `POST /api/promises`, `PATCH /api/promises/{id}/schedule`, `POST /api/promises/{id}/cancel` 연결. 멱등성 키와 `expectedVersion`을 실제 호출에 사용.
+- FE 사진 흐름: JPG/PNG 단일 파일을 `POST /api/promises/{id}/photo-attempts`로 제출하고 `processingStatus`를 화면에 표시.
+- FE 이력·자기보고·알림: 인증 이력, 자기보고 상태/건너뛰기, 알림 조회·읽음 처리를 실제 API client로 연결. 민감한 사진 원문과 접근 자격정보는 화면·로그에 노출하지 않음.
+- Swagger 체크리스트: 이번 변경에서 직접 Swagger를 실행한 결과는 기록하지 않음. 기존 MockMvc/Testcontainers 결과를 근거로 자동 검증 범위를 갱신하며, 수동 Swagger 결과 칸은 사용자 환경 확인 전까지 `⏳`로 유지.
+- Figma: 최종 파일 스크린샷은 확인했으나 지정 노드의 구조화된 디자인 컨텍스트 선택 오류로 정확한 치수·컴포넌트 매핑은 확인하지 못함. 임의의 픽셀 단위 보정은 하지 않음.
+- 테스트: FE API 계약 테스트 추가. `npm run verify` 성공: 보안 스캔 335개 Git-visible 파일, FE 테스트 4종, lint/build, 백엔드 232건, Flyway V1~V9/Testcontainers PostgreSQL, 패키지 빌드.
+
+## 2026-11-02 / Swagger 실행 중 발견한 입장 API 결함
+
+- 로컬 Swagger 실행에서 `POST /api/access/enter`가 `participant_device.last_seen_at`의 Instant 바인딩 오류로 HTTP 500을 반환함.
+- `ParticipantAccessController`의 기기 생성·갱신 SQL 시간 파라미터를 PostgreSQL JDBC가 인식하는 `Timestamp`로 변환함.
+- 수정 후 Swagger 실제 결과를 이어서 기록하며, 수정 전 500은 실패 결과로 남김.
+- 추가 확인: 수정 전 UUID 형식 세션은 입장 200 후 후속 API가 401이 됨. `SessionToken.generate` 사용으로 발급·인증 형식을 통일함.
+
+## 2026-11-02 / 주간 지난 약속 요일 색상 보정
+
+- 주간 지난 약속 카드의 요일 라벨에 토요일 파란색, 일요일 빨간색을 적용함.
+- 날짜 숫자와 약속 인증 상태 색상은 기존 표시 규칙을 유지함.
+- 검증: `npm run build` 성공, 홈 렌더링 테스트 통과, `git diff --check` 통과.
+
+## 2026-11-02 / 약속 취소 확인 문구 보정
+
+- 취소 확인 화면의 보조 버튼 문구를 `유지`에서 `돌아가기`로 변경함.
+- 취소 확정 동작과 접근성 포커스 흐름은 변경하지 않음.
+- 검증: 프런트 타입 검사·빌드와 `git diff --check` 통과.
+
+## 2026-11-02 / 로컬 Swagger 실제 실행 결과
+
+실행 환경: `http://127.0.0.1:8080`, Swagger UI `/swagger-ui/index.html`, OpenAPI `/v3/api-docs`, PostgreSQL 16 Docker, 합성 테스트 참가자. 접근 코드·토큰·사진 원문은 기록하지 않음.
+
+| 항목 | 실제 결과 |
+|---|---|
+| Swagger UI / OpenAPI | UI 200 / OpenAPI 200, 17개 path 노출 |
+| A-01 참가자 입장 | 200, 세션 토큰 발급 |
+| A-02 잘못된 코드 | 401 |
+| A-03 재입장 후 기존 세션 | 기존 토큰 401, 신규 토큰 200 |
+| A-04 토큰 없음 | 400 |
+| B-01 약속 생성 | 200 |
+| B-11 동일 멱등성 키 재요청 | 200, 동일 promise 반환 |
+| C-01 예정 시간 수정 | 200, version 1 |
+| C-03 2차 수정 | 409 |
+| D-01 약속 취소 | 200 |
+| E-01 T 이전 사진 제출 | 409 `PHOTO_WINDOW_CLOSED` |
+| E-history 인증 이력 조회(판정 전) | 404 |
+| 자기보고 조회(대상 없음) | 404 |
+| G-06 알림 조회(발송 데이터 없음) | 200, 빈 배열 |
+
+직접 실행하지 않은 항목: 실제 AI callback, Push provider 수신·재시도, T/T+10/T+20 시간 조작 시나리오, Supabase 사진 저장소 운영 연결.
+
 이 파일은 구현 완료 범위와 Jira 추적 상태를 함께 기록한다. 구현이 완료된 항목은 관련 티켓의 완료 조건과 검증 결과를 남긴다. 원격 Jira 상태를 변경할 수 없는 경우에는 완료로 표시하지 않고 사유를 기록한다.
 
 ## 2026-10-25 현재 Sprint 3 상태 및 dev 반영
@@ -267,6 +372,25 @@
 - 검증: AI 응답 매핑 3개 단위 테스트, 로컬 HTTP server를 이용한 실제 multipart 호출 2개 기능 테스트, Docker/Testcontainers 복구 worker 2개 기능 테스트가 통과했다.
 - 남은 범위: 실제 외부 사진 저장소 provider 구현, 운영 endpoint smoke test, AI 서버 운영 QA. provider와 저장소가 확정되기 전에는 SCRUM-85를 완료 처리하지 않는다.
 
+### SCRUM-85 / AI worker 실제 응답 대조 — 2026-11-01
+
+- 확인: 전달된 DINOv2-base FastAPI worker의 `/health`, `/predict`, `/predict/batch` 응답을 실제 호출로 확인했다. `laptop`·`book`·`other` 결과와 `model: dinov2-base-prototype`을 확인했다.
+- 변경: Dodu mapper가 `model_version`뿐 아니라 현재 worker의 `model` 필드도 모델 버전으로 저장하도록 보강했다. AI worker 계약을 `docs/api/AI_WORKER_CONTRACT.md`에 기록했다.
+- 보안: AI 패키지·샘플·공개 URL·인증 비밀값이 저장소에 올라가지 않도록 외부 bundle 디렉터리를 `.gitignore`에 추가했다.
+- 검증: `AiPhotoEvaluationRecoveryHandlerTests` 통과, `npm run security:scan` 통과, 실제 AI 단건·3장 batch HTTP 200 확인.
+- 남은 범위: 실제 사진 저장소 `PhotoObjectReader` 구현·운영 endpoint 환경변수 등록·AI 담당자 운영 QA. SCRUM-85는 완료 처리하지 않는다.
+
+### SCRUM-89 / Sprint 4 사진 저장소·AI worker 실제 연결 티켓 — 2026-11-01
+
+- Jira: `SCRUM-89` 생성, `SCRUM Sprint 4`(ID 36) 배정, 담당 `mono`.
+- 범위: Supabase 비공개 사진 저장소 adapter, `PhotoObjectReader`, AI worker 실제 호출, 결과·재시도·철회 보호, 30일 보관·삭제와 통합 검증.
+- 외부 준비: Supabase bucket·Render 환경변수 등록은 운영 담당자 준비 범위. 비밀값은 로컬 문서·Jira·Git에 기록하지 않는다.
+- 상태: 해야 할 일. 외부 설정과 구현·운영 QA 완료 전까지 완료 처리하지 않는다.
+- 구현 증분: `SupabasePhotoObjectStore` 업로드·조회·삭제 adapter와 사진 제출 시 선택적 원본 저장 연결을 추가했다. `DODU_PHOTO_STORAGE_PROVIDER`가 설정되지 않으면 저장소 호출을 활성화하지 않는다.
+- 검증: adapter 단위 테스트와 AI handler 테스트 통과, 백엔드 package 통과. 전체 통합 테스트 40건은 Docker 환경 부재로 실행 실패.
+- 추가 구현: `delete_due_at` 기반 30일 보관·삭제 worker를 추가하고 provider 삭제 성공 후 DB 연결 metadata를 정리하도록 했다. provider 실패 시 다음 실행에서 재시도한다.
+- 남은 범위: 실제 Supabase migration·bucket smoke test, 참가자 삭제 요청 연동, Docker 통합 검증과 운영 QA.
+
 ### 사진 재사용 정책 보강 — 2026-10-29
 
 - 상태: 같은 약속 내 재시도 허용과 다른 날짜 사진 재사용 차단을 구현·검증했다.
@@ -322,6 +446,12 @@
 - 검증: `PushRetryPolicyTests`에서 백오프 경계와 최대 시도 제한을 확인했다.
 - 남은 범위: 실제 FCM/Web Push provider 자격정보·endpoint 연결과 운영 발송·수신 QA.
 
+### SCRUM-87·76 / FE API client 기반 — 2026-10-30
+
+- 상태: FE 연결 기반 구현 완료. `frontend/src/api/doduApi.ts`에 알림·인증 이력·자기보고 typed client와 공통 성공/오류 envelope 처리를 추가했다.
+- 보호: 토큰은 `Authorization` 헤더에만 전달하고, 오류 분기는 안전한 오류 코드로 처리한다.
+- 남은 범위: 기존 mock 화면을 실제 세션·약속 데이터에 연결하는 화면 전환, 운영 FE 환경변수와 사용자 QA.
+
 ### SCRUM-84 / 사진 판정 동시성 보호 통합 검증 — 2026-10-30
 
 - 상태: 현재 attempt의 단일 terminal 전이를 통합 검증했다.
@@ -345,3 +475,61 @@
 - 상태: 구현 대조 문서 보강 완료.
 - 갱신: 공통 응답 계약에 실제 적용 범위와 기존 DTO 호환 경계를 기록하고, 화면 API 인수 지도에 알림 목록·읽음 처리 계약과 404 소유권 규칙을 추가했다.
 - 남은 범위: FE/BE가 모든 업무 API를 envelope로 전환할지에 대한 최종 합의와 실제 화면 인수 승인.
+### SCRUM-70·76·83·86·87 / 비AI 통합 마감 점검 — 2026-11-01
+
+- 이번 범위: 운영 설정을 알 수 없는 상태에서 재현 가능한 코드 경계만 보강했다. `ClientIpResolver`를 추가해 trusted proxy가 비어 있으면 전달 IP 헤더를 무시하고, 허용된 IPv4/IPv6 네트워크에서만 `X-Forwarded-For`/`Forwarded`의 원본 주소를 사용한다. 참가자 코드 rate limit은 기존 PostgreSQL 저장소를 그대로 사용한다.
+- 검증: `ClientIpResolverTests` 3건, `npm run security:scan`, `git diff --check`, 백엔드 컴파일을 확인했다. 전체 `npm run verify`는 프런트 검증까지 통과했지만 Testcontainers가 Docker 엔진을 찾지 못해 백엔드 통합 테스트 40건이 실행되지 않아 실패했다.
+- 완료로 표시하지 않는 범위: 실제 FCM/Web Push 자격정보·endpoint·발송/수신 QA, 실제 사진 객체 저장소와 AI worker, FE 화면의 세션·약속 실데이터 연결 및 사용자 QA, 모든 API envelope 전환 승인, 실제 배포 프록시/CIDR와 다중 노드 운영 QA, Figma 최종 화면 비교, Sprint 3 최종 승인.
+- Figma: 현재 기준 파일을 [Dodu 디자인 파일](https://www.figma.com/design/SyTucdjEX94fcqYzRmK5xE/%EB%94%94%EC%9E%90%EC%9D%B8-%ED%8C%8C%EC%9D%BC?node-id=393-1781)로 갱신했다. `393:1781` 페이지 `v2.5 디자인 핸드오프`가 존재하는 것을 metadata로 확인했다. 이전 `Qx26p9tdYo9doDhbxYGnfB` 파일은 보조 기준으로 내리고, 현재 화면 비교·상태 QA는 아직 남아 있다.
+- Jira: SCRUM-70·76·83·84·85·86은 외부 연동·인수 조건이 남아 진행 중으로 유지하고, SCRUM-87은 FE 사용자 검증 전까지 해야 할 일/진행 범위로 유지한다.
+### SCRUM-83 / 사진 원본 저장소 선택 — 2026-11-01
+
+- 결정 변경: 자동 결제를 허용하지 않으므로 R2·Supabase Storage를 운영 provider로 확정하지 않는다. provider 확정 전에는 개발용 비공개 마운트 볼륨만 허용하고 운영 원본 사진 기능은 비활성화한다.
+- 정책: 공식 개입 종료시각+30일을 DB 기준으로 삭제 worker가 처리하며, provider 확정 후에만 Lifecycle 안전망을 추가한다. 브라우저·DB·로그에는 저장소 비밀값과 공개 URL을 남기지 않는다.
+- 문서: `docs/operations/PHOTO_STORAGE.md`, `Decisions.md`의 `DEV-20261101-02`.
+- 남은 범위: 자동 결제 없는 운영 저장소·배포 호스트·백업 방식 확정, 실제 adapter 구현, 업로드/조회/삭제 smoke test, 삭제 worker와 통합 테스트. 운영 방식이 확정되기 전에는 완료 처리하지 않는다.
+### SCRUM-87·76 / React Native 전환 기반 — 2026-11-01
+
+- 구현: API 타입을 shared 영역으로 분리하고, 브라우저/RN 저장소를 교체할 수 있는 `KeyValueStorage`·`ParticipantSessionStore`를 추가했다. 기존 mock 화면은 변경하지 않았다.
+- 검증: `test:platform`에 저장소·세션 어댑터 테스트를 추가하고 전체 프런트 검증 workflow에 포함했다.
+- 남은 범위: RN 프로젝트 생성, 네이티브 화면 재작성, 카메라·알림 권한 adapter, 실제 세션·약속 API 화면 연결과 기기 QA.
+### 참가자 철회 요청 API
+
+- 구현: `DELETE /api/participant/account` 추가.
+- 범위: 인증된 세션 소유자만 자기 계정을 철회할 수 있으며 서버 시각을 사용한다. 세션·구독 종료, 활성 약속 `Withdrawn` 마감, 자기보고·미발송 알림 중지, 사진 retention worker 삭제 예약을 하나의 트랜잭션으로 처리한다.
+- 검증: Docker Desktop을 사용한 전체 백엔드 테스트 및 Flyway 9단계 마이그레이션 검증 통과. Surefire 실패·오류 없음.
+- 미완료: 실제 Supabase storage 삭제 smoke test와 운영 환경 QA는 자격정보·배포 환경 설정 후 별도 확인 필요.
+### FE 실제 API client 계약 보강
+
+- 구현: 세션 입장, 약속 CRUD, multipart 사진 제출, 참가자 철회 client를 추가하고 raw 응답과 공통 envelope 응답을 구분했다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check` 통과.
+- 미완료: 실제 FE 화면에서 토큰 발급·약속·사진 API를 연결하는 사용자 흐름 QA, 운영 API base URL 등록, 실제 Supabase·AI worker 연동.
+### FE 참가자 입장 화면 실제 API 전환
+
+- 구현: `VITE_DODU_API_BASE_URL` 설정 시 입장 화면이 실제 `/api/access/enter`를 호출하고 브라우저 세션 저장소에 토큰을 보관한다. 미설정 환경은 기존 mock preview를 유지한다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check` 통과.
+- 미완료: 실제 Render API 주소를 넣은 운영 FE smoke test 및 약속·사진·이력 화면 연결.
+### FE 홈 활성 약속 조회 연결
+
+- 구현: 실제 API base URL과 세션 토큰이 있으면 `/api/promises/active`를 호출하고 KST 화면 모델로 변환해 홈에 표시한다.
+- 검증: `frontend/npm run build`, `frontend/npm run lint`, `git diff --check` 통과.
+- 미완료: 약속 생성·수정·취소·사진·이력 화면의 실제 mutation/조회 wiring과 운영 API QA.
+### SCRUM-23·SCRUM-87 / 서버 기반 약속 이력 조회 및 FE 연결 — 2026-11-02
+
+- 구현: `GET /api/promises/history`가 참가자 소유 약속 원장의 종료 상태와 마감 후 미응답 약속을 반환한다. FE 로그인 시 이 API를 호출해 주간 지난 약속과 이력 화면에 반영한다.
+- 상태 매핑: `AuthCompleted`는 인증 완료, `AuthIncomplete`와 기술 실패는 미완료로 표시하며 `Cancelled`·`Withdrawn`은 인증 이력에서 제외한다. `Evaluating` 지연 결과는 자동 미완료 처리하지 않는다.
+- 보완: API가 반환하는 마감 후 `Scheduled`·`AuthAvailable` 상태도 미완료로 표시한다.
+- 검증: PromiseController Testcontainers 통합 테스트 통과, 전체 백엔드 233건 통과, FE API 계약·홈·사진·플랫폼 테스트 통과, FE build 통과, lint 경고만 존재.
+- 남은 범위: 실제 배포 API와의 smoke test, 전체 Swagger 결과 기록, 운영 QA 및 Jira 완료 승인은 별도 진행.
+## 2026-11-02 / 주간 요일 색상 및 취소창 문구 최종 보정
+
+- 주간 약속 카드의 토요일·일요일 라벨을 기본 텍스트 색상으로 복원함.
+- 취소 확인창의 보조 버튼 문구를 `돌아가기`에서 `닫기`로 변경함.
+- 취소 확정 동작과 모달 포커스 흐름은 변경하지 않음.
+- 검증: FE 테스트·빌드 및 `git diff --check`.
+## 2026-11-02 / 클릭 중심 배포 설정
+
+- 완료 범위: Render Blueprint, 백엔드 멀티스테이지 Dockerfile, Vercel Vite 설정, Spring Boot `PORT`·호스팅 DB URL·명시적 CORS origin 환경변수 지원, 배포 클릭 가이드.
+- 파일: `render.yaml`, `deploy/backend.Dockerfile`, `.dockerignore`, `frontend/vercel.json`, `docs/operations/DEPLOYMENT_CLICK_GUIDE.md`.
+- 검증 범위: Docker 이미지 빌드 성공, `npm run verify` 성공(프런트 테스트·빌드, 백엔드 233개 테스트·패키지), 비밀값 검사 성공, `git diff --check` 통과. 실제 Render·Vercel·Supabase 계정 배포와 외부 smoke test는 계정 입력 후 진행한다.
+- Jira: SCRUM-70 운영 배포 경계와 SCRUM-83 사진 저장소 연동 범위에 구현 근거를 남긴다. 외부 계정 설정 전에는 완료 처리하지 않는다.

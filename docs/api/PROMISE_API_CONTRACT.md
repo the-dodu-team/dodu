@@ -93,3 +93,8 @@
 - [x] 실제 HTTP·DB·동시성 경합 검증 — Docker/Testcontainers 통합 테스트로 생성·수정·취소 확인
 
 지정 Notion 기준 페이지는 이번에도 404다. 접근 가능한 운영정책 페이지는 2026-10-12 수정 표시와 20261013 첨부를 유지하며, 하위 전체 최신성은 확인하지 못했다. 미승인 카메라 요청·기술오류 UI·기록 범위는 SCRUM-75에 남긴다.
+## 약속 이력 조회
+
+`GET /api/promises/history`는 인증된 참가자의 종료 약속과 인증 마감이 지난 미응답 약속을 `scheduledAt` 내림차순으로 반환한다. `Evaluating` 상태의 지연 판정은 결과가 도착할 때까지 이력에서 미완료로 확정하지 않는다.
+
+응답 항목은 `promiseId`, `taskTitle`, `toolType`, `scheduledAt`, `version`, `lifecycleStatus`, `finalOutcome`이다. `Closed/Cancelled`, `Closed/Withdrawn`은 원장 확인에는 포함되지만 FE의 인증 성공·미완료 이력 표기에서는 제외한다. 참가자 소유권은 Bearer 세션으로 검증한다.

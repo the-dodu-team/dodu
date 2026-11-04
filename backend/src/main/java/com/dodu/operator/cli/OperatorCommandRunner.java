@@ -5,6 +5,7 @@ import com.dodu.operator.domain.OperatorAction;
 import com.dodu.operator.domain.OperatorResult;
 import com.dodu.operator.repository.OperatorAccessRepository;
 import com.dodu.operator.service.OperatorAccessService;
+import com.dodu.operator.service.OperatorBatchEnrollmentService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -44,16 +45,19 @@ public class OperatorCommandRunner implements ApplicationRunner {
     private static final int EXIT_FAILED = 3;
 
     private final OperatorAccessService service;
+    private final OperatorBatchEnrollmentService batches;
     private final OperatorAccessRepository repository;
     private final Clock clock;
     private final ConfigurableApplicationContext context;
 
     public OperatorCommandRunner(
             OperatorAccessService service,
+            OperatorBatchEnrollmentService batches,
             OperatorAccessRepository repository,
             Clock clock,
             ConfigurableApplicationContext context) {
         this.service = service;
+        this.batches = batches;
         this.repository = repository;
         this.clock = clock;
         this.context = context;
@@ -72,6 +76,7 @@ public class OperatorCommandRunner implements ApplicationRunner {
         }
         String command = commands.get(0);
         String operatorRef = option(args, "operator");
+        if ("enroll-batch".equals(command)) return executeBatch(args, operatorRef);
         UUID participantId;
         try {
             participantId = UUID.fromString(option(args, "participant"));
@@ -121,6 +126,35 @@ public class OperatorCommandRunner implements ApplicationRunner {
         }
     }
 
+    private int executeBatch(ApplicationArguments args, String operatorRef) {
+        try {
+            var enrollments = batches.enroll(option(args, "study-code"), option(args, "prefix"),
+                    Integer.parseInt(option(args, "count")), operatorRef);
+            int issued = 0;
+            System.out.println("Participant label | Participant UUID | Access code (shown once)");
+            for (var item : enrollments) {
+                if (item.credential() == null) {
+                    System.out.printf("%s | %s | SKIPPED (already registered)%n", item.publicCode(), item.participantId());
+                } else {
+                    issued++;
+                    System.out.printf("%s | %s | %s%n", item.publicCode(), item.participantId(), item.credential().code());
+                }
+            }
+            System.out.printf("Issued: %d; skipped: %d. Store and deliver these codes privately.%n",
+                    issued, enrollments.size() - issued);
+            return EXIT_OK;
+        } catch (IllegalArgumentException e) {
+            return usage("Check study-code, prefix, count (1..100), operator and study dates.");
+        } catch (BusinessException e) {
+            System.err.println("Batch rejected [" + e.code() + "]");
+            return EXIT_REJECTED;
+        } catch (RuntimeException e) {
+            log.error("Batch enrollment failed: exception={}", e.getClass().getSimpleName());
+            System.err.println("Batch failed; no partial enrollment was committed.");
+            return EXIT_FAILED;
+        }
+    }
+
     private static Instant parseRequestedAt(String value) {
         if (value == null) {
             throw new IllegalArgumentException("--requested-at 에 철회 요청 시각을 입력해 주세요. 예: 2026-10-25T14:00:00+09:00");
@@ -162,6 +196,7 @@ public class OperatorCommandRunner implements ApplicationRunner {
         System.err.println("""
                 사용법:
                   issue    --participant=<uuid> --operator=<이름>
+                  enroll-batch --study-code=<code> --prefix=<label> --count=<1..100> --operator=<이름>
                   reissue  --participant=<uuid> --operator=<이름>
                   withdraw --participant=<uuid> --operator=<이름> --requested-at=<ISO-8601>""");
         return EXIT_USAGE;

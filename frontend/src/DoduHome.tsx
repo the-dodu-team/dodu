@@ -28,6 +28,7 @@ type DoduHomeProps = {
   onEdit: () => void
   onViewAll?: () => void
   onVerify: () => void
+  livePhotoEnabled?: boolean
 }
 
 export default function DoduHome({
@@ -37,6 +38,7 @@ export default function DoduHome({
   onEdit,
   onViewAll,
   onVerify,
+  livePhotoEnabled = false,
 }: DoduHomeProps) {
   const [now, setNow] = useState(Date.now)
   const today = getKstDateKey()
@@ -111,6 +113,7 @@ export default function DoduHome({
             key={promise.date + promise.startTime}
             promise={promise}
             onVerify={onVerify}
+            isLive={livePhotoEnabled}
           />
         )}
 

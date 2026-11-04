@@ -1,7 +1,11 @@
 package com.dodu.access;
 
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.UUID;
+
+import com.dodu.participant.domain.SessionToken;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,11 +29,14 @@ public class ParticipantAccessController {
     private final JdbcTemplate jdbc;
     private final AccessCredentialHasher hasher;
     private final AccessFailureRateLimiter failureRateLimiter;
+    private final ClientIpResolver clientIpResolver;
 
     @Autowired
-    public ParticipantAccessController(JdbcTemplate jdbc, AccessFailureRateLimiter failureRateLimiter) {
+    public ParticipantAccessController(JdbcTemplate jdbc, AccessFailureRateLimiter failureRateLimiter,
+                                       ClientIpResolver clientIpResolver) {
         this.jdbc = jdbc;
         this.failureRateLimiter = failureRateLimiter;
+        this.clientIpResolver = clientIpResolver;
         this.hasher = new AccessCredentialHasher(System.getenv().getOrDefault(
                 "DODU_CREDENTIAL_PEPPER", "local-development-only"));
     }
@@ -38,7 +45,8 @@ public class ParticipantAccessController {
     @PostMapping("/enter")
     @Transactional
     public ResponseEntity<AccessResponse> enter(@RequestBody AccessRequest request, HttpServletRequest httpRequest) {
-        String ipAddress = httpRequest.getRemoteAddr();
+        String ipAddress = clientIpResolver.resolve(httpRequest.getRemoteAddr(),
+                httpRequest.getHeader("X-Forwarded-For"), httpRequest.getHeader("Forwarded"));
         AccessFailureRateLimiter.BlockStatus blockStatus = failureRateLimiter.status(ipAddress);
         if (blockStatus.blocked()) {
             throw blocked(blockStatus.blockedUntil());
@@ -69,12 +77,15 @@ public class ParticipantAccessController {
         UUID deviceId = upsertDevice(participant.id(), deviceHash, now);
         jdbc.update("update participant_session set lifecycle_status = 'Revoked', revoked_at = ?, "
                         + "revoke_reason = 'SESSION_REPLACED' where participant_id = ? "
-                        + "and lifecycle_status = 'Active'", now, participant.id());
-        String rawToken = UUID.randomUUID().toString() + UUID.randomUUID();
+                        + "and lifecycle_status = 'Active'", Timestamp.from(now), participant.id());
+        String rawToken = SessionToken.generate(new java.security.SecureRandom());
         String tokenHash = hasher.hash(rawToken);
+        Timestamp accessEndsAt = participant.accessEndsAt() == null
+                ? null
+                : Timestamp.from(participant.accessEndsAt());
         jdbc.update("insert into participant_session(participant_id, participant_device_id, session_token_hash, "
                         + "lifecycle_status, issued_at, last_seen_at, expires_at) values (?, ?, ?, 'Active', ?, ?, ?)",
-                participant.id(), deviceId, tokenHash, now, now, participant.accessEndsAt());
+                participant.id(), deviceId, tokenHash, Timestamp.from(now), Timestamp.from(now), accessEndsAt);
         failureRateLimiter.clear(ipAddress);
         return ResponseEntity.ok(new AccessResponse(rawToken, participant.id().toString(), participant.accessEndsAt()));
     }
@@ -104,12 +115,13 @@ public class ParticipantAccessController {
                 rs -> rs.next() ? UUID.fromString(rs.getString("id")) : null, participantId, deviceHash);
         if (existing != null) {
             jdbc.update("update participant_device set lifecycle_status = 'Active', last_seen_at = ?, deactivated_at = null where id = ?",
-                    now, existing);
+                    Timestamp.from(now), existing);
             return existing;
         }
         UUID id = UUID.randomUUID();
         jdbc.update("insert into participant_device(id, participant_id, device_key_hash, lifecycle_status, first_seen_at, last_seen_at) "
-                        + "values (?, ?, ?, 'Active', ?, ?)", id, participantId, deviceHash, now, now);
+                + "values (?, ?, ?, 'Active', ?, ?)", id, participantId, deviceHash,
+                Timestamp.from(now), Timestamp.from(now));
         return id;
     }
 
@@ -126,7 +138,8 @@ public class ParticipantAccessController {
 
     @org.springframework.web.bind.annotation.ExceptionHandler(AccessBlockedException.class)
     ResponseEntity<ErrorResponse> accessBlocked(AccessBlockedException exception) {
-        long retryAfter = Math.max(1, exception.blockedUntil().getEpochSecond() - Instant.now().getEpochSecond());
+        long retryAfter = Math.max(1, (long) Math.ceil(
+                Duration.between(Instant.now(), exception.blockedUntil()).toNanos() / 1_000_000_000d));
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, Long.toString(retryAfter))
                 .body(new ErrorResponse("TOO_MANY_ATTEMPTS"));

@@ -7,6 +7,8 @@ import type { ReportTarget } from './features/self-report/selfReportModel'
 import { useSelfReportMock } from './features/self-report/useSelfReportMock'
 import PhotoAuthMockFlow from './features/photo-auth/PhotoAuthMockFlow'
 import PhotoAuthPreview from './features/photo-auth/PhotoAuthPreview'
+import LivePhotoAuth from './features/photo-auth/LivePhotoAuth'
+import LiveParticipantPanel from './features/self-report/LiveParticipantPanel'
 import { usePhotoAuthMock } from './features/photo-auth/usePhotoAuthMock'
 import { photoPromiseStatus, promiseKey } from './features/photo-auth/photoAuthModel'
 import { getFinalPromiseRecord } from './features/promise/promiseHistory'
@@ -30,6 +32,11 @@ import type {
 
 import ParticipantEntryPage from './features/access/ParticipantEntryPage'
 import OnboardingMockFlow from './features/onboarding/OnboardingMockFlow'
+import { createDoduAccessApi, createDoduApi } from './api/doduApi'
+import { DoduApiError, DoduRequestTimeout } from './api/doduApi'
+import type { PromiseHistoryRecord, PromiseRecord } from './api/doduApi'
+import { ParticipantSessionStore } from './platform/participantSession'
+import { createBrowserStorage } from './platform/storage'
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -37,6 +44,8 @@ const HOUR = 60 * MINUTE
 type ManagedPreviewPromise = PreviewPromise & {
   timeEditCount: number
   isRecreated: boolean
+  promiseId?: string
+  rowVersion?: number
 }
 
 type CancelledPreviewPromise = Omit<ManagedPreviewPromise, 'status'> & {
@@ -169,7 +178,130 @@ export default function App() {
     )
   }
 
+  if (import.meta.env.VITE_DODU_API_BASE_URL) {
+    return <LiveApp interventionEndsAt={interventionEndsAt} />
+  }
+
   return <HomePrototype interventionEndsAt={interventionEndsAt} />
+}
+
+function LiveApp({ interventionEndsAt }: { interventionEndsAt?: number }) {
+  const [token, setToken] = useState<string | null>(null)
+  const [api, setApi] = useState<ReturnType<typeof createDoduApi> | null>(null)
+  const [activePromise, setActivePromise] = useState<PromiseRecord | null>(null)
+  const [pastResults, setPastResults] = useState<FinalPromiseRecord[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    const sessions = new ParticipantSessionStore(createBrowserStorage(window.localStorage))
+    sessions.getToken().then(async (savedToken) => {
+      if (cancelled) return
+      if (!savedToken) {
+        setIsLoading(false)
+        return
+      }
+      setToken(savedToken)
+      const liveApi = createDoduApi(savedToken, import.meta.env.VITE_DODU_API_BASE_URL)
+      setApi(liveApi)
+      try {
+        const [promise, history] = await Promise.all([
+          liveApi.getActivePromise(),
+          liveApi.listPromiseHistory(),
+        ])
+        if (!cancelled) {
+          setActivePromise(promise)
+          setPastResults(history.flatMap(toFinalPromiseRecord))
+        }
+      } catch {
+        if (!cancelled) setErrorMessage('현재 약속 정보를 불러오지 못했습니다.')
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  if (isLoading) return <p role="status">불러오는 중입니다.</p>
+  if (!token) return <LiveParticipantEntry />
+  if (errorMessage) return <p role="alert">{errorMessage}</p>
+  return <HomePrototype
+    interventionEndsAt={interventionEndsAt}
+    api={api ?? undefined}
+    initialPromise={activePromise ? toPreviewPromise(activePromise) : undefined}
+    initialPastResults={pastResults}
+  />
+}
+
+function toFinalPromiseRecord(record: PromiseHistoryRecord): FinalPromiseRecord[] {
+  if (record.finalOutcome === 'Cancelled' || record.finalOutcome === 'Withdrawn') return []
+  const status = record.lifecycleStatus === 'AuthCompleted' || record.finalOutcome === 'AuthCompleted'
+    ? 'verified'
+    : record.lifecycleStatus === 'AuthIncomplete' || record.lifecycleStatus === 'Scheduled' || record.lifecycleStatus === 'AuthAvailable'
+      || record.finalOutcome === 'AuthIncomplete' || record.finalOutcome === 'TechFailed'
+      ? 'unverified'
+      : null
+  if (!status) return []
+  const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date(record.scheduledAt))
+  return [{ date, status }]
+}
+
+function toPreviewPromise(record: PromiseRecord): ManagedPreviewPromise {
+  const scheduled = new Date(record.scheduledAt)
+  const kst = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(scheduled)
+  const value = (type: string) => kst.find((part) => part.type === type)?.value ?? ''
+  return {
+    promiseId: record.promiseId,
+    rowVersion: record.version,
+    taskName: record.taskTitle,
+    date: `${value('year')}-${value('month')}-${value('day')}`,
+    startTime: `${value('hour')}:${value('minute')}`,
+    tool: record.toolType === 'COMPUTER' ? 'computer' : 'book',
+    status: 'pending',
+    timeEditCount: 0,
+    isRecreated: false,
+  }
+}
+
+function LiveParticipantEntry() {
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  async function handleSubmit(code: string) {
+    setErrorMessage('')
+    setIsSubmitting(true)
+    try {
+      const storage = createBrowserStorage(window.localStorage)
+      const sessions = new ParticipantSessionStore(storage)
+      const deviceKey = await sessions.getOrCreateDeviceKey()
+      const response = await createDoduAccessApi(import.meta.env.VITE_DODU_API_BASE_URL).enter(code, deviceKey)
+      await sessions.saveToken(response.sessionToken)
+      window.location.reload()
+    } catch (error) {
+      if (error instanceof DoduRequestTimeout) {
+        setErrorMessage('서버 응답이 지연되고 있어요. 잠시 후 다시 입장해 주세요.')
+        return
+      }
+      const codeValue = error instanceof DoduApiError ? error.response.error.code
+        : error instanceof Error ? error.message : 'ACCESS_REQUIRED'
+      setErrorMessage(['ACCESS_REQUIRED', 'ACCESS_CODE_INVALID'].includes(codeValue) ? '접근 코드를 확인해 주세요.' : '입장할 수 없습니다. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <ParticipantEntryPage
+      isSubmitting={isSubmitting}
+      errorMessage={errorMessage}
+      onClearError={() => setErrorMessage('')}
+      onSubmit={handleSubmit}
+    />
+  )
 }
 
 // 개발 환경의 화면 분기 확인용이다. 실제 인증이나 세션 저장은 실행하지 않는다.
@@ -277,6 +409,8 @@ type HomePrototypeProps = {
   previewControls?: Ref<PreviewHomeControls>
   initialScreen?: PreviewScreen
   interventionEndsAt?: number
+  initialPromise?: ManagedPreviewPromise
+  api?: ReturnType<typeof createDoduApi>
 }
 
 function HomePrototype({
@@ -284,6 +418,8 @@ function HomePrototype({
   initialPastResults = [],
   previewControls,
   interventionEndsAt,
+  initialPromise,
+  api,
 }: HomePrototypeProps) {
   const [screen, setScreen] = useState<PreviewScreen>(initialScreen)
 
@@ -297,7 +433,7 @@ function HomePrototype({
   const [scheduledAt, setScheduledAt] = useState('')
   const [selectedTool, setSelectedTool] = useState<PromiseTool | null>(null)
   const [confirmError, setConfirmError] = useState('')
-  const [storedPromise, setPromise] = useState<ManagedPreviewPromise | null>(null)
+  const [storedPromise, setPromise] = useState<ManagedPreviewPromise | null>(initialPromise ?? null)
   const photo = usePhotoAuthMock()
   const promise: ManagedPreviewPromise | null = storedPromise && photo.session &&
     promiseKey(storedPromise) === promiseKey(photo.session.promise)
@@ -446,7 +582,7 @@ function HomePrototype({
 
   // 미리보기 전용: 실제 서버 저장·예약·알림은 실행하지 않는다.
   // API 연결 시 서버 저장 성공을 확인한 뒤에만 홈으로 이동한다.
-  function savePreview() {
+  async function savePreview() {
     if (creationInProgressRef.current) return
 
     if (promise && promise.status !== 'techFailed' && !getFinalPromiseRecord(promise, Date.now())) {
@@ -517,6 +653,25 @@ function HomePrototype({
     // 모든 검사를 통과한 저장만 재생성 횟수를 사용한다.
     creationInProgressRef.current = true
 
+    if (api) {
+      try {
+        const record = await api.createPromise({
+          taskTitle: nextDraft.taskName,
+          toolType: nextDraft.tool === 'computer' ? 'COMPUTER' : 'BOOK',
+          scheduledAt,
+        }, crypto.randomUUID())
+        setDraft(nextDraft)
+        setPromise({ ...toPreviewPromise(record), isRecreated })
+        setConfirmError('')
+        setHomeNotice('')
+        setScreen('home')
+      } catch (error) {
+        creationInProgressRef.current = false
+        setConfirmError(error instanceof DoduApiError ? error.response.error.code : 'PROMISE_CREATE_FAILED')
+      }
+      return
+    }
+
     if (isRecreated) {
       recreationUsedDatesRef.current.add(date)
     }
@@ -545,7 +700,7 @@ function HomePrototype({
   }
 
   // 시간 수정은 기존 약속의 날짜·시간만 바꾼다.
-  function saveEditedTime(value: string) {
+  async function saveEditedTime(value: string) {
     if (!promise) return
 
     const current = Date.now()
@@ -595,6 +750,22 @@ function HomePrototype({
       }
     }
 
+    if (api && promise.promiseId && promise.rowVersion !== undefined) {
+      try {
+        const record = await api.reschedulePromise(promise.promiseId, value, promise.rowVersion)
+        setPromise(previous => previous ? {
+          ...toPreviewPromise(record),
+          timeEditCount: previous.timeEditCount + 1,
+          isRecreated: previous.isRecreated,
+        } : previous)
+        setEditError('')
+        setScreen('manage')
+      } catch (error) {
+        setEditError(error instanceof DoduApiError ? error.response.error.code : 'PROMISE_RESCHEDULE_FAILED')
+      }
+      return
+    }
+
     setPromise((previous) => {
       if (!previous) return previous
 
@@ -618,7 +789,7 @@ function HomePrototype({
     setScreen('manage')
   }
 
-  function cancelPreviewPromise(): string | undefined {
+  async function cancelPreviewPromise(): Promise<string | undefined> {
     if (!promise) {
       return '취소할 약속이 없어요.'
     }
@@ -638,6 +809,15 @@ function HomePrototype({
     }
 
     cancellationInProgressRef.current = true
+
+    if (api && promise.promiseId && promise.rowVersion !== undefined) {
+      try {
+        await api.cancelPromise(promise.promiseId, promise.rowVersion)
+      } catch (error) {
+        cancellationInProgressRef.current = false
+        return error instanceof DoduApiError ? error.response.error.code : 'PROMISE_CANCEL_FAILED'
+      }
+    }
 
     // 취소 당시의 최종 예정 날짜와 재생성 여부를 기록한다.
     setCancelledPromises((previous) => [
@@ -690,7 +870,12 @@ function HomePrototype({
 
   */
   function verifyPreviewPromise() {
-    if (!import.meta.env.DEV || !promise) return
+    if (!promise) return
+    if (api && promise.promiseId) {
+      setScreen('photo-auth')
+      return
+    }
+    if (!import.meta.env.DEV) return
     photo.dispatch({ type: 'open', promise })
     setScreen('photo-auth')
   }
@@ -715,9 +900,17 @@ function HomePrototype({
       onClose={report.dismiss} onSkip={() => report.skip(report.activeTarget!)} onSubmit={report.submit} />
   }
   if (screen === 'history') {
+    if (api && promise?.promiseId) {
+      return <LiveParticipantPanel api={api} promiseId={promise.promiseId} promiseHistory={pastResults}
+        onBack={() => setScreen('home')} />
+    }
     const currentResult = getFinalPromiseRecord(promise, now)
     return <HistoryPage records={currentResult ? [...pastResults, currentResult] : pastResults}
       onBack={() => setScreen('home')} onCreate={openCreator} />
+  }
+
+  if (screen === 'photo-auth' && api && promise?.promiseId) {
+    return <LivePhotoAuth api={api} promise={promise} onClose={() => setScreen('home')} />
   }
 
   if (screen === 'photo-auth' && photo.session) {
@@ -860,6 +1053,7 @@ function HomePrototype({
             onEdit={openManager}
             onViewAll={() => setScreen('history')}
             onVerify={verifyPreviewPromise}
+            livePhotoEnabled={Boolean(api && promise?.promiseId)}
           />
         </>
       )}

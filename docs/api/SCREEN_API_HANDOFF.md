@@ -29,6 +29,12 @@ S07은 이 초안에서 별도 API 책임을 배정하지 않았다. 화면 번�
 - 실패·예약 상태나 타 참가자의 알림은 존재 여부를 노출하지 않고 404로 처리한다.
 - 응답은 현재 공통 성공 envelope를 사용하며, 읽음은 발송·수신 증거가 아니라 참가자의 화면 열람 상태 기록이다.
 
+### 1.2 2026-10-30 FE API client
+
+- `frontend/src/api/doduApi.ts`에 인증 토큰을 요청 헤더에만 넣는 typed client를 추가했다.
+- 알림 목록·읽음 처리, 사진 인증 이력, 자기보고 조회·건너뛰기·제출 API를 공통 envelope와 오류 envelope 기준으로 읽는다.
+- 원문 토큰은 로그·응답·URL에 기록하지 않으며, FE는 `DoduApiError.response.error.code`로 분기한다.
+
 ## 2. 모듈별 계약을 작성할 때의 인수 기준
 
 각 모듈은 아래 항목을 채운 후 FE·BE 리뷰를 받는다. 이 지도만으로 SCRUM-76을 완료 처리하거나 모든 후행 티켓의 계약 의존성이 해결되었다고 보지 않는다.
@@ -68,3 +74,9 @@ S07은 이 초안에서 별도 API 책임을 배정하지 않았다. 화면 번�
 - [ ] 모듈별 FE/BE 인수와 승인 근거 연결
 
 앱 코드·DB 마이그레이션·실제 권한 요청은 이 증분에서 변경하지 않는다.
+## 1.3 플랫폼 중립 FE 기반 — 2026-11-01
+
+- `src/shared/apiTypes.ts`에 API 성공·오류 envelope, 알림, 인증 이력, 자기보고 응답 타입을 화면과 분리했다.
+- `src/platform/storage.ts`는 브라우저 저장소와 React Native의 AsyncStorage 계열 구현이 같은 `KeyValueStorage` 계약을 사용할 수 있게 한다.
+- `ParticipantSessionStore`는 세션 토큰과 기기 식별자 저장 정책을 UI에서 분리한다. 저장소 구현은 토큰을 로그나 URL에 기록하지 않는다.
+- 현재 웹 미리보기는 계속 기존 mock 흐름을 사용한다. RN 화면 전환은 후속 단계에서 같은 API client·shared 타입·도메인 함수를 사용한다.

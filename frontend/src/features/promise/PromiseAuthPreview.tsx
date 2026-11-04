@@ -7,14 +7,16 @@ import type { PreviewPromise } from './types'
 type PromiseAuthPreviewProps = {
   promise: PreviewPromise
   onVerify: () => void
+  isLive?: boolean
 }
 
 const AUTH_DURATION_MS = 30 * 60 * 1000
 
-// 화면 확인용이며 실제 사진 인증이나 서버 저장은 실행하지 않는다.
+// The caller connects live promises to the photo submission flow.
 export default function PromiseAuthPreview({
   promise,
   onVerify,
+  isLive = false,
 }: PromiseAuthPreviewProps) {
   const [now, setNow] = useState(() => Date.now())
 
@@ -26,7 +28,8 @@ export default function PromiseAuthPreview({
   const hasReachedStart = hasValidTime && now >= startsAt
   const hasExpired = hasValidTime && now >= endsAt
   const isVerified = promise.status === 'verified'
-  const canVerify = import.meta.env.DEV && hasReachedStart && (
+  const canOpenPhoto = isLive || import.meta.env.DEV
+  const canVerify = canOpenPhoto && hasReachedStart && (
     (!hasExpired && promise.status === 'pending') ||
     ['evaluating', 'techError', 'techFailed', 'verified', 'unverified'].includes(promise.status)
   )
@@ -52,7 +55,7 @@ export default function PromiseAuthPreview({
 
     if (
       !hasValidTime ||
-      !import.meta.env.DEV ||
+      !canOpenPhoto ||
       currentTime < startsAt ||
       (promise.status === 'pending' && currentTime >= endsAt) ||
       ['cancelled', 'withdrawn', 'permissionBlocked'].includes(promise.status)

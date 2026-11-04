@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: dodu-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/backend.Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: DODU_DB_URL
+        sync: false
+      - key: DODU_DB_USERNAME
+        sync: false
+      - key: DODU_DB_PASSWORD
+        sync: false
+      - key: DODU_ACCESS_CODE_PEPPER
+        generateValue: true
+      - key: DODU_ALLOWED_ORIGINS
+        sync: false
+      - key: DODU_TRUSTED_PROXIES
+        value: ""
+      - key: DODU_PHOTO_STORAGE_PROVIDER
+        value: none
+      - key: DODU_PHOTO_BUCKET
+        value: dodu-photos
+      - key: DODU_SUPABASE_URL
+        sync: false
+      - key: DODU_SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DODU_SWAGGER_ENABLED
+        value: "false"

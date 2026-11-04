@@ -10,7 +10,7 @@ type PromiseManagePageProps = {
   cancelBlockedReason: string
   onBack: () => void
   onEditTime: () => void
-  onCancelPromise: () => string | undefined
+  onCancelPromise: () => string | undefined | Promise<string | undefined>
 }
 
 export default function PromiseManagePage({
@@ -53,8 +53,8 @@ export default function PromiseManagePage({
     dialogRef.current?.close()
   }
 
-  function confirmCancellation() {
-    const error = onCancelPromise()
+  async function confirmCancellation() {
+    const error = await onCancelPromise()
 
     if (error) {
       setCancelError(error)
@@ -175,7 +175,7 @@ export default function PromiseManagePage({
               className="promise-cancel-keep"
               onClick={closeCancelDialog}
             >
-              유지
+              닫기
             </button>
 
             <button
