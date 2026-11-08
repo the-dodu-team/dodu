@@ -3,6 +3,8 @@
   "date": "2026-11-08",
   "sprint": { "id": 36, "name": "SCRUM Sprint 4" },
   "assignee": "mono",
+  "acceptance": "전반 점검·알림 기능 1차 분리·RN 영향 분석 완료. 전체 컨트롤러 분리와 실제 RN 앱 구현은 제외",
+  "remainingSqlControllers": ["PromiseController", "ValidationSurveyController", "PhotoAttemptHistoryController", "PhotoSubmissionController", "PhotoEvaluationResultController", "ParticipantAccessController"],
   "backend": {
     "controllersReviewed": 14,
     "directSqlBefore": 8,

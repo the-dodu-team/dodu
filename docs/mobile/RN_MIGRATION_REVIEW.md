@@ -23,8 +23,6 @@
 | Push | `firebasePush`, `firebaseWorker`, `foregroundPush`, `pushClick` | 웹 Firebase messaging/SW/VAPID는 native 수신기로 재사용하지 않음. Android/iOS 앱 등록·native FCM 토큰, iOS APNs 설정, 전경 표시·백그라운드 수신·탭 이동 연결 필요 |
 | 진입·복귀 | `window.location`, self-report 쿼리, focus/visibility 이벤트 | native navigation/deep link/AppState로 교체. 푸시 클릭에서 받은 promiseId는 서버에서 소유권 재검증 |
 
-## 서버와 이어지는 부분
-
 ## 이번 재사용 기반 보완
 
 - `PromisePayload`를 API 구현 파일에서 공통 타입 파일로 옮기고 기존 경로의 type export는 유지했다. 런타임 API 본문·엔드포인트는 바꾸지 않는다.
