@@ -49,7 +49,7 @@ Notion 페이지가 접근되지 않으면 읽었다고 말하지 않는다. 접
 
 ## 팀 역할과 Jira 기준
 
-Jira 프로젝트는 SCRUM, 보드는 1, 활성 Sprint는 SCRUM Sprint 3(ID 3)이다. 현재 Jira 사이트는 반드시 https://dodu-mobile.atlassian.net 을 사용한다. dodu-app.atlassian.net은 폐기된 잘못된 연결이므로 사용하지 않는다.
+Jira 프로젝트는 SCRUM, 보드는 1이다. 2026-11-08 조회한 활성 Sprint는 SCRUM Sprint 4(ID 36)이며 이후 작업 시 다시 확인한다. 과거 Sprint 3 지시를 새 티켓에 자동 적용하지 않는다. RN 화면 전환은 사용자 지정 Sprint 6 범위다. 현재 Jira 사이트는 반드시 https://dodu-mobile.atlassian.net 을 사용한다. dodu-app.atlassian.net은 폐기된 잘못된 연결이므로 사용하지 않는다.
 
 Jira MCP를 사용할 때는 mcp__codex_apps__atlassian_* 경로와 현재 사이트의 cloud ID를 사용한다. 현재 확인된 cloud ID는 66527eb6-6f88-4f8d-9920-1ea52608f213이다. 다른 Atlassian 연결이 dodu-app을 반환하면 쓰기 작업을 중단하고 로컬 문서에 차단 사유를 기록한다.
 
@@ -125,6 +125,8 @@ feat, fix, docs, refactor, test, chore, build, ci 중 하나를 사용하고 필
 
 Docker/Testcontainers를 사용하는 통합 테스트는 Docker Desktop 엔진과 WSL 상태를 먼저 확인한다. Docker가 실행되지 않으면 통합 테스트를 성공했다고 보고하지 않는다. 실행하지 않은 테스트를 성공으로 기록하지 않는다.
 
+사용자 승인 검증 원칙: 기본은 변경 코드와 직접 영향받는 경로만 테스트한다. 공통 인증·스키마·폭넓은 통합 변경이나 릴리스 근거가 필요한 경우에만 전체 검증한다. 코드 변경·실패·미해결 위험 없이 동일 검증을 반복하지 않는다.
+
 ## 문서·검증 기록
 
 구현이 완료된 범위는 즉시 다음을 갱신한다.
@@ -140,7 +142,7 @@ Docker/Testcontainers를 사용하는 통합 테스트는 Docker Desktop 엔진�
 
 구현 범위마다 대응 Jira 티켓을 확인한다.
 
-- 티켓이 없으면 SCRUM 프로젝트의 Sprint 3에 생성·배정한다.
+- 티켓이 없으면 SCRUM 프로젝트에서 현재 작업의 Sprint를 확인해 생성·배정한다. RN 후속 구현은 Sprint 6 지시를 따른다.
 - 완료 조건과 검증 결과를 모두 충족한 경우에만 Jira를 완료 처리한다.
 - 코드 커밋과 Jira 상태 변경은 실제 범위를 일치시킨다.
 - 담당자가 강민(mono)인 티켓만 강민의 작업 완료 범위로 완료 처리한다.
@@ -154,7 +156,7 @@ Docker/Testcontainers를 사용하는 통합 테스트는 Docker Desktop 엔진�
 
 - 참가자 접근 자격 해시·코드 생성·세션 교체·POST /api/access/enter
 - 약속 생성·조회·수정·취소의 서버 시간 및 KST 날짜 경계 검증
-- 자기보고 대상 판정·조회·제출의 48시간 경계와 소유권 검증
+- 자기보고 대상 판정·조회·제출의 24시간 경계와 소유권 검증
 - 사진 제출 메타데이터 저장과 auth_attempt 연결을 위한 Flyway V2
 - 사진 판정 결과의 현재 attempt·소유권·철회 보호
 - 마감 후 정상 접수 attempt의 내부 기술복구 정책
@@ -162,12 +164,12 @@ Docker/Testcontainers를 사용하는 통합 테스트는 Docker Desktop 엔진�
 
 아직 구현·검증 완료로 간주하지 않는 범위:
 
-- Docker 기반 전체 통합 테스트와 실제 PostgreSQL 마이그레이션 검증
-- 알림 구독·T/T+10/T+20 스케줄러의 운영 연동
-- 외부 사진 저장소·AI 판정 worker의 실제 연동
-- 인증 이력 전체 API와 프런트엔드 화면 연결
+- 최신 코드의 전체 운영 인수 검증(실행한 테스트 범위는 docs/jira/IMPLEMENTATION_STATUS.md 참조)
+- T/T+10/T+20·자기보고 Push의 운영 시점·상태별 QA(기기 전환 Push 수신 보고와 구분)
+- 실제 AI worker의 운영 연결·판정 종단 검증
+- RN 실제 화면·카메라·보안 저장소·native Push 구현 및 Android/iOS 검증(Sprint 6)
 - Figma 기준 전체 화면·로딩·빈 상태·오류 상태 보정
-- 동시 수정·멱등성·지연 결과·철회 후 결과의 전체 통합 시나리오
+- 남은 SQL 직접 실행 컨트롤러의 기능별 리팩토링 및 동시성 경계 보존
 
 이 목록은 현재 코드와 검증 결과를 다시 확인해 갱신한다. 정책 코드만 존재한다고 API·DB·운영 연동이 완료된 것으로 보고하지 않는다.
 

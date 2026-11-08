@@ -6,24 +6,14 @@ Dodu v2.5 Baseline을 바탕으로 시작 시점 개입과 작업환경 인증 �
 
 ## 현재 상태
 
-홈과 약속 작성·수정·확인·기록·인증 화면은 메모리 기반 미리보기입니다. 실제 서버 저장·사진 인증·알림은 실행하지 않으며 새로고침하면 초기화됩니다. 미리보기 상태 전이 테스트는 `npm run test:promise-preview --workspace frontend`로 실행하며 루트 `npm run verify`에도 포함됩니다. Node 내장 테스트를 사용하고 새 의존성을 추가하지 않았습니다. 기기·스크린리더 QA는 별도로 필요합니다.
+2026-11-08 기준 실제 웹 진입점은 `frontend/src/main.tsx`의 `LiveParticipantApp`입니다. 참가자 세션·약속·이력·자기보고·사진 접수와 FCM 연결 코드가 있으며 과거 `App.tsx` 미리보기와 구분합니다. 구현과 운영 검증 결과는 [상태 기록](docs/jira/IMPLEMENTATION_STATUS.md)을 확인합니다.
 
-현재는 Sprint 1 개발환경과 연결 확인 화면까지 준비되어 있습니다.
+- [백엔드 구조·알림 계층 분리 및 남은 범위](docs/architecture/BACKEND_BOUNDARIES.md)
+- [React Native 전환 영향·Sprint 6 작업](docs/mobile/RN_MIGRATION_REVIEW.md)
+- [웹 Push 설정·진단](docs/api/WEB_PUSH_SETUP.md)
+- [접근 보호](docs/security/access-protection.md)
 
-| 준비된 기능 | 내용 |
-|---|---|
-| 개발 실행 | 한 명령으로 Java·React 개발 서버 실행 및 종료 |
-| 연결 확인 | `GET /api/health` 및 준비 화면의 API 연결 확인 |
-| 통합 검증 | 프런트엔드 lint·TypeScript 검사·빌드, Java 테스트·패키징 |
-| 통합 빌드 | React 정적 파일을 Spring Boot JAR에 포함 |
-| 인증 도메인 기반 | 서버 시간 경계·attempt 식별/기록·단일 프로세스 원자적 판정 슬롯 예약 (API/DB 연결 전) |
-| 코드 입력 차단 정책 기반 | 10분 내 실패 10회 → 15분 차단 상태 전이·만료 검증 (인증 API·IP 저장 연결 전, 실제 차단 미적용) |
-
-접근 보호 구현 범위와 미결정 배포/봇 검증 설정은 [접근 보호 문서](docs/security/access-protection.md)를 참조합니다.
-
-참가자 식별, DB, 약속 생성·수정·취소, 알림, 사진 인증·AI 판정, 인증 이력,
-자기보고, 데이터 수집·삭제와 PWA 설치·오프라인·푸시는 아직 구현하지 않았습니다.
-실서비스 배포 및 지원 기기·브라우저 QA도 완료하지 않았습니다.
+기본 검증은 변경 영향 범위로 제한합니다. 전체 `npm run verify`·실제 provider 수신·지원 기기 QA는 서로 다른 검증이며 실행한 범위만 보고합니다.
 
 ## 기술 구성
 
@@ -35,7 +25,7 @@ Dodu v2.5 Baseline을 바탕으로 시작 시점 개입과 작업환경 인증 �
 | 개발 프로세스 | concurrently |
 
 정확한 Node 의존성은 [package-lock.json](package-lock.json), Java 의존성은
-[backend/pom.xml](backend/pom.xml)을 따릅니다. DB·알림 제공자·AI 모델·배포 환경은 미선정입니다.
+[backend/pom.xml](backend/pom.xml)을 따릅니다. DB는 PostgreSQL/Flyway, 사진 저장소는 Supabase, Push는 FCM입니다. 웹 배포는 Vercel, 서버 배포는 Render이며 자격정보는 저장소에 넣지 않습니다.
 
 ## 사전 준비
 

@@ -17,6 +17,14 @@ import static org.mockito.ArgumentMatchers.*;
 
 class DeviceChangeNotificationListenerTests {
     @Test
+    void listenerCanUsePortWithoutFirebase() {
+        DeviceChangePushSender sender = mock(DeviceChangePushSender.class);
+        when(sender.send("synthetic-token")).thenReturn(new DeviceChangePushSender.Result(DeviceChangePushSender.Status.ACCEPTED, null));
+        new DeviceChangeNotificationListener(sender, new SyncTaskExecutor(), false)
+                .afterCommit(new DeviceChangeNotice(List.of("synthetic-token")));
+        verify(sender).send("synthetic-token");
+    }
+    @Test
     void startupReportsOnlyEnabledAndDryRunFlags() {
         Logger logger = (Logger) LoggerFactory.getLogger(com.dodu.notification.config.FcmStartupDiagnostics.class);
         ListAppender<ILoggingEvent> appender = new ListAppender<>(); appender.start(); logger.addAppender(appender);
@@ -35,13 +43,13 @@ class DeviceChangeNotificationListenerTests {
             FirebaseMessaging messaging = mock(FirebaseMessaging.class);
             when(messaging.send(any(Message.class), anyBoolean())).thenReturn("sensitive-provider-message-id");
             var notice = new DeviceChangeNotice(List.of("sensitive-browser-token"));
-            var live = new DeviceChangeNotificationListener(messaging, new SyncTaskExecutor(), false);
+            var live = listener(messaging, new SyncTaskExecutor(), false);
             live.afterCommit(notice);
             String accepted = logs(appender);
             assertTrue(accepted.contains("stage=FCM_ACCEPTED"));
             assertTrue(accepted.contains("trace=" + notice.traceId()));
             appender.list.clear();
-            new DeviceChangeNotificationListener(messaging, new SyncTaskExecutor(), true).afterCommit(notice);
+            listener(messaging, new SyncTaskExecutor(), true).afterCommit(notice);
             assertTrue(logs(appender).contains("stage=VALIDATED"));
             assertFalse(logs(appender).contains("stage=FCM_ACCEPTED"));
             appender.list.clear();
@@ -69,7 +77,7 @@ class DeviceChangeNotificationListenerTests {
     void committedDeviceChangeNotifiesOldDeviceWithoutAskingItToApprove() throws Exception {
         FirebaseMessaging messaging = mock(FirebaseMessaging.class);
         DeviceChangeNotice notice = new DeviceChangeNotice(List.of("synthetic-old-device-token"));
-        new DeviceChangeNotificationListener(messaging, new SyncTaskExecutor(), true).afterCommit(notice);
+        listener(messaging, new SyncTaskExecutor(), true).afterCommit(notice);
         verify(messaging).send(any(Message.class), eq(true));
         assertFalse(notice.toString().contains("synthetic-old-device-token"));
     }
@@ -78,7 +86,10 @@ class DeviceChangeNotificationListenerTests {
         FirebaseMessaging messaging = mock(FirebaseMessaging.class);
         when(messaging.send(any(Message.class), anyBoolean())).thenThrow(new RuntimeException("synthetic-provider-error"));
         var notice = new DeviceChangeNotice(List.of("synthetic-token"));
-        assertDoesNotThrow(() -> new DeviceChangeNotificationListener(messaging, new SyncTaskExecutor(), false).afterCommit(notice));
-        assertDoesNotThrow(() -> new DeviceChangeNotificationListener(messaging, command -> { throw new RuntimeException(); }, false).afterCommit(notice));
+        assertDoesNotThrow(() -> listener(messaging, new SyncTaskExecutor(), false).afterCommit(notice));
+        assertDoesNotThrow(() -> listener(messaging, command -> { throw new RuntimeException(); }, false).afterCommit(notice));
+    }
+    private static DeviceChangeNotificationListener listener(FirebaseMessaging messaging, org.springframework.core.task.TaskExecutor executor, boolean dryRun) {
+        return new DeviceChangeNotificationListener(new FcmDeviceChangePushSender(messaging, dryRun), executor, dryRun);
     }
 }

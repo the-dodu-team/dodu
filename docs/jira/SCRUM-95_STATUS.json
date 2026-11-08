@@ -1,0 +1,30 @@
+{
+  "ticket": "SCRUM-95",
+  "date": "2026-11-08",
+  "sprint": { "id": 36, "name": "SCRUM Sprint 4" },
+  "assignee": "mono",
+  "acceptance": "전반 점검·알림 기능 1차 분리·RN 영향 분석 완료. 전체 컨트롤러 분리와 실제 RN 앱 구현은 제외",
+  "remainingSqlControllers": ["PromiseController", "ValidationSurveyController", "PhotoAttemptHistoryController", "PhotoSubmissionController", "PhotoEvaluationResultController", "ParticipantAccessController"],
+  "backend": {
+    "controllersReviewed": 14,
+    "directSqlBefore": 8,
+    "controllersRefactored": ["NotificationController", "NotificationSubscriptionController"],
+    "directSqlRemaining": 6,
+    "tests": { "classes": 6, "passed": 52, "failed": 0, "errors": 0, "skipped": 0 },
+    "package": "성공",
+    "fullSuiteRerun": false,
+    "liveProviderRetest": false
+  },
+  "nativeReview": "Sprint 6 RN 실행·화면 구현과 별개. 저장소·화면·카메라·업로드·Push 연결 교체 필요",
+  "frontend": {
+    "preparation": ["공통 요청 type", "동기 저장소 계약", "실사용 세션 UUID 주입"],
+    "integrationTestsPassed": 35,
+    "pushTestsPassed": 12,
+    "platformAndApiContracts": "통과",
+    "browserReentry": "합성 API 흐름 통과",
+    "build": "성공",
+    "lint": "오류 없음, 기존 경고 유지",
+    "rnBuildExecuted": false
+  },
+  "allBackendRefactoringComplete": false
+}

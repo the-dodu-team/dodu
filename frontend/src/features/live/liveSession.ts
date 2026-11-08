@@ -1,10 +1,12 @@
-import type { PromisePayload } from '../../api/participantPromiseApi'
+import type { PromisePayload } from '../../shared/apiTypes'
+import type { SyncKeyValueStorage } from '../../platform/storage'
 
 export type PendingWrite =
   | { kind: 'create'; key: string; payload: PromisePayload }
   | { kind: 'reschedule'; id: string; version: number; scheduledAt: string }
   | { kind: 'cancel'; id: string; version: number }
-export function createLiveSession(storage: Storage, deviceStorage: Storage) {
+export function createLiveSession(storage: SyncKeyValueStorage, deviceStorage: SyncKeyValueStorage,
+  randomUuid: () => string = () => crypto.randomUUID()) {
   const tokenKey = 'dodu.live.session.v1'
   const pendingKey = 'dodu.live.pending.v1'
   const deviceKey = 'dodu.live.device.v1'
@@ -14,7 +16,7 @@ export function createLiveSession(storage: Storage, deviceStorage: Storage) {
     clear() { storage.removeItem(tokenKey); storage.removeItem(pendingKey); deviceStorage.removeItem('dodu.participant.session-token') },
     device() {
       let value = deviceStorage.getItem(deviceKey) ?? deviceStorage.getItem('dodu.participant.device-key')
-      if (!value) { value = crypto.randomUUID(); deviceStorage.setItem(deviceKey, value) }
+      if (!value) { value = randomUuid(); deviceStorage.setItem(deviceKey, value) }
       return value
     },
     pending(): PendingWrite | null {

@@ -24,13 +24,13 @@ export type AccessResponse = {
   onboardingCompleted: boolean
 }
 
-export type PromiseRecord = {
-  promiseId: string
+export type PromisePayload = {
   taskTitle: string
   toolType: 'COMPUTER' | 'BOOK'
   scheduledAt: string
-  version: number
 }
+
+export type PromiseRecord = PromisePayload & { promiseId: string; version: number }
 
 export type PromiseHistoryRecord = PromiseRecord & {
   lifecycleStatus: string
