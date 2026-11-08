@@ -1,5 +1,6 @@
 // origin/dev ac2755c의 실행 컨트롤러 기준이다. 미구현 재생성 API는 호출하지 않는다.
-export type PromisePayload = { taskTitle: string; toolType: 'COMPUTER' | 'BOOK'; scheduledAt: string }
+import type { PromisePayload } from '../shared/apiTypes'
+export type { PromisePayload } from '../shared/apiTypes'
 export type PromiseResponse = PromisePayload & { promiseId: string; version: number }
 export type ParticipantState = { expiresAt: string; onboardingCompleted: boolean }
 export type ParticipantSession = ParticipantState & { sessionToken: string }

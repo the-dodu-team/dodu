@@ -25,6 +25,16 @@
 
 ## 서버와 이어지는 부분
 
+## 이번 재사용 기반 보완
+
+- `PromisePayload`를 API 구현 파일에서 공통 타입 파일로 옮기고 기존 경로의 type export는 유지했다. 런타임 API 본문·엔드포인트는 바꾸지 않는다.
+- `SyncKeyValueStorage`를 명시하여 웹 세션이 요구하는 동기 캐시와 비동기 보안 저장소 계약을 구분했다. 메모리 저장소는 동기 계약으로 사용할 수 있다.
+- 실사용 `createLiveSession`의 DOM `Storage` 타입을 구조적 동기 인터페이스로 바꾸고 UUID 생성 함수를 주입 가능하게 했다. 기존 웹 호출은 그대로 동작한다.
+- 이는 native 영구 저장 어댑터가 아니다. RN에서는 보안 저장소의 비동기 읽기·쓰기 완료를 처리하는 앱 부팅/세션 수명 구현이 여전히 필요하다. 비동기 함수를 동기 타입으로 단언하지 않는다.
+- 검증: 저장소/세션 플랫폼 테스트, FE 통합 35건·푸시 12건·API 계약, 타입 검사·빌드·lint, Chrome 합성 재입장 흐름 성공. RN 빌드·실기기 검증 미실행. 기존 lint 경고 유지.
+
+## 서버와 이어지는 부분
+
 - 같은 Firebase 프로젝트에 Android/iOS 앱을 등록할 수 있다. 프로젝트를 무조건 새로 만들 필요는 없다. 서버용 JSON·Storage 자격은 앱에 넣지 않는다.
 - `subscriptionKey`에는 native FCM 등록 토큰을 보낸다. Expo Push 토큰이나 Web Push JSON을 그대로 보내면 현재 FCM 어댑터와 호환되지 않는다. 선택 SDK에 맞춰 계약 확인이 필요하다.
 - 서버의 공통 notification/data는 native에서도 활용할 수 있지만 WebpushConfig의 TTL·Urgency가 Android/APNs 설정을 대체하지 않는다. native 전경 표시·탭 이동·전원/잠금·토큰 회전 QA가 필요하다.

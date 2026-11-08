@@ -14,5 +14,15 @@
     "liveProviderRetest": false
   },
   "nativeReview": "Sprint 6 RN 실행·화면 구현과 별개. 저장소·화면·카메라·업로드·Push 연결 교체 필요",
+  "frontend": {
+    "preparation": ["공통 요청 type", "동기 저장소 계약", "실사용 세션 UUID 주입"],
+    "integrationTestsPassed": 35,
+    "pushTestsPassed": 12,
+    "platformAndApiContracts": "통과",
+    "browserReentry": "합성 API 흐름 통과",
+    "build": "성공",
+    "lint": "오류 없음, 기존 경고 유지",
+    "rnBuildExecuted": false
+  },
   "allBackendRefactoringComplete": false
 }
