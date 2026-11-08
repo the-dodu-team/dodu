@@ -118,6 +118,10 @@ class NotificationControllerIntegrationTests {
         mockMvc.perform(put("/api/participant/notification-subscription").header("Authorization", authorization)
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
         assertEquals(0, jdbc.queryForObject("select count(*) from notification_subscription where participant_id = ? and push_token is not null", Integer.class, previous));
+        UUID current = auth.authenticate(authorization).participant().id();
+        mockMvc.perform(delete("/api/participant/notification-subscription").header("Authorization", first))
+                .andExpect(status().isOk());
+        assertEquals(1, jdbc.queryForObject("select count(*) from notification_subscription where participant_id = ? and push_token is not null and lifecycle_status = 'Active'", Integer.class, current));
     }
 
     @Test
@@ -127,6 +131,18 @@ class NotificationControllerIntegrationTests {
         assertThrows(BusinessException.class, () -> subscriptions.subscribe(stale,
                 new NotificationSubscriptionController.SubscriptionRequest("synthetic-stale-push")));
         assertEquals(0, jdbc.queryForObject("select count(*) from notification_subscription where participant_id = ?", Integer.class, stale.participant().id()));
+    }
+
+    @Test
+    void invalidSubscriptionKeepsCommonErrorContractAndWritesNothing() throws Exception {
+        for (String token : new String[] {"", " ", "x".repeat(4097)}) {
+            mockMvc.perform(put("/api/participant/notification-subscription").header("Authorization", authorization)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"subscriptionKey\":\"" + token + "\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.type").value("VALIDATION"))
+                    .andExpect(jsonPath("$.error.code").value("SUBSCRIPTION_KEY_INVALID"))
+                    .andExpect(jsonPath("$.error.message").value("요청이 올바르지 않아요."));
+        }
     }
 
     @Test

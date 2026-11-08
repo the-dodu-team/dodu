@@ -1,5 +1,12 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-08 / SCRUM-95 아키텍처 점검·알림 계층 분리
+
+- 현황: 컨트롤러 14개 중 SQL 직접 실행 8개. 알림 조회·읽음·구독 2개를 Controller→Service→Repository로 분리. 나머지 6개는 일괄 변경하지 않음. [점검·남은 범위](../architecture/BACKEND_BOUNDARIES.md).
+- 포트: AI·사진 저장소·약속 Push 기존 인터페이스 유지. 기기 전환 리스너의 Firebase 직접 의존만 DeviceChangePushSender/Fcm 어댑터로 분리. 동작·로그·TTL·시험 모드 유지.
+- 검증: 영향 BE 6개 클래스 52건, 실패·오류·건너뜀 0. 패키징 성공. 전체 BE 재실행·운영 provider QA 미실행. SQL·트랜잭션·잠금·공통 오류·응답 스키마 보존.
+- Jira: 올바른 dodu-mobile의 강민 담당 SCRUM-95 생성, 현재 활성 Sprint 4(ID 36) 배정. RN 영향 점검·독립 기반 보완 결과를 함께 기록한 후 완료 조건 확인.
+
 ## 2026-11-05 / SCRUM-76 기기 전환 FCM 발송 진단
 
 - 한계: 브라우저 제어 연결 없음으로 Render 운영 로그를 직접 읽지 못함. 현재 수신 실패 원인·FCM 실제 접수는 확정하지 않음.

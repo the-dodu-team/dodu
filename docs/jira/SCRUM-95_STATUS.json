@@ -1,0 +1,18 @@
+{
+  "ticket": "SCRUM-95",
+  "date": "2026-11-08",
+  "sprint": { "id": 36, "name": "SCRUM Sprint 4" },
+  "assignee": "mono",
+  "backend": {
+    "controllersReviewed": 14,
+    "directSqlBefore": 8,
+    "controllersRefactored": ["NotificationController", "NotificationSubscriptionController"],
+    "directSqlRemaining": 6,
+    "tests": { "classes": 6, "passed": 52, "failed": 0, "errors": 0, "skipped": 0 },
+    "package": "성공",
+    "fullSuiteRerun": false,
+    "liveProviderRetest": false
+  },
+  "nativeReview": "Sprint 6 RN 실행·화면 구현과 별개. 저장소·화면·카메라·업로드·Push 연결 교체 필요",
+  "allBackendRefactoringComplete": false
+}

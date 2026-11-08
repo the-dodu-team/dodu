@@ -1,10 +1,5 @@
 package com.dodu.notification;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingException;
-import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
-import com.google.firebase.messaging.WebpushConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.task.TaskExecutor;
@@ -18,13 +13,13 @@ import org.slf4j.LoggerFactory;
 @ConditionalOnProperty(name = "dodu.push.fcm.enabled", havingValue = "true")
 public class DeviceChangeNotificationListener {
     private static final Logger log = LoggerFactory.getLogger(DeviceChangeNotificationListener.class);
-    private final FirebaseMessaging messaging;
+    private final DeviceChangePushSender sender;
     private final TaskExecutor executor;
     private final boolean dryRun;
-    public DeviceChangeNotificationListener(FirebaseMessaging messaging,
+    public DeviceChangeNotificationListener(DeviceChangePushSender sender,
             @org.springframework.beans.factory.annotation.Qualifier("applicationTaskExecutor") TaskExecutor executor,
             @Value("${dodu.push.fcm.dry-run:false}") boolean dryRun) {
-        this.messaging = messaging; this.executor = executor; this.dryRun = dryRun;
+        this.sender = sender; this.executor = executor; this.dryRun = dryRun;
     }
     @TransactionalEventListener
     public void afterCommit(DeviceChangeNotice notice) {
@@ -43,15 +38,13 @@ public class DeviceChangeNotificationListener {
         for (String token : notice.tokens()) {
             log.info("DODU_DEVICE_PUSH stage=ATTEMPT trace={}", notice.traceId());
             try {
-                messaging.send(Message.builder().setToken(token)
-                        .setNotification(Notification.builder().setTitle("다른 기기에서 로그인했어요")
-                                .setBody("새 기기에서 확인하여 이전 기기의 이용이 종료되었어요.").build())
-                        .putData("type", "SESSION_REPLACED")
-                        .setWebpushConfig(WebpushConfig.builder().putHeader("TTL", "60").build()).build(), dryRun);
-                log.info("DODU_DEVICE_PUSH stage={} trace={}", dryRun ? "VALIDATED" : "FCM_ACCEPTED", notice.traceId());
-            } catch (FirebaseMessagingException failure) {
-                String code = failure.getMessagingErrorCode() == null ? "UNKNOWN" : failure.getMessagingErrorCode().name();
-                log.warn("DODU_DEVICE_PUSH stage=FCM_REJECTED trace={} code={}", notice.traceId(), code);
+                DeviceChangePushSender.Result result = sender.send(token);
+                switch (result.status()) {
+                    case ACCEPTED -> log.info("DODU_DEVICE_PUSH stage=FCM_ACCEPTED trace={}", notice.traceId());
+                    case VALIDATED -> log.info("DODU_DEVICE_PUSH stage=VALIDATED trace={}", notice.traceId());
+                    case REJECTED -> log.warn("DODU_DEVICE_PUSH stage=FCM_REJECTED trace={} code={}", notice.traceId(), result.failureCode());
+                    case FAILED -> log.warn("DODU_DEVICE_PUSH stage=FAILED trace={} code={}", notice.traceId(), result.failureCode());
+                }
             } catch (Exception ignored) {
                 log.warn("DODU_DEVICE_PUSH stage=FAILED trace={} code=SEND_FAILED", notice.traceId());
             }
