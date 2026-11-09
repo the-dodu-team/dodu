@@ -1,14 +1,17 @@
-package com.dodu.intervention;
+package com.dodu.intervention.adapter;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.dodu.intervention.PhotoRetentionWorker;
+import com.dodu.intervention.PhotoStorageRequestException;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -67,7 +70,7 @@ class SupabasePhotoObjectStoreTests {
     @Test
     void retentionDeadlineIsThirtyDaysAfterInterventionEnd() {
         var endsAt = java.time.Instant.parse("2026-11-01T00:00:00Z");
-        assertEquals(endsAt.plus(java.time.Duration.ofDays(30)), PhotoRetentionWorker.deleteDueAt(endsAt));
+        Assertions.assertEquals(endsAt.plus(java.time.Duration.ofDays(30)), PhotoRetentionWorker.deleteDueAt(endsAt));
     }
 
     @Test

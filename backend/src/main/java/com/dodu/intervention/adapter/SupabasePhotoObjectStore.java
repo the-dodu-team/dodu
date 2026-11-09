@@ -1,4 +1,4 @@
-package com.dodu.intervention;
+package com.dodu.intervention.adapter;
 
 import java.io.IOException;
 import java.net.URI;
@@ -6,6 +6,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+
+import com.dodu.intervention.PhotoObjectReader;
+import com.dodu.intervention.PhotoObjectWriter;
+import com.dodu.intervention.PhotoStorageRequestException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

@@ -1,9 +1,11 @@
-package com.dodu.intervention;
+package com.dodu.intervention.adapter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import com.dodu.intervention.PhotoEvaluationRecoveryHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class AiPhotoEvaluationResponseMapperTests {
@@ -15,7 +17,7 @@ class AiPhotoEvaluationResponseMapperTests {
         var laptop = mapper.map(200, "{\"candidates\":[{\"label\":\"laptop\"}],\"model_version\":\"mvp-1\"}");
         var book = mapper.map(200, "{\"label\":\"book\"}");
 
-        assertEquals(PhotoEvaluationRecoveryHandler.Outcome.COMPLETED, laptop.outcome());
+        Assertions.assertEquals(PhotoEvaluationRecoveryHandler.Outcome.COMPLETED, laptop.outcome());
         assertEquals("mvp-1", laptop.modelVersion());
         assertEquals(PhotoEvaluationRecoveryHandler.Outcome.COMPLETED, book.outcome());
     }

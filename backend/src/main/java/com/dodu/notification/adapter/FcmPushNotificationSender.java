@@ -1,5 +1,7 @@
-package com.dodu.notification;
+package com.dodu.notification.adapter;
 
+import com.dodu.notification.NotificationSchedulePolicy;
+import com.dodu.notification.PushNotificationSender;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;

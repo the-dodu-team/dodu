@@ -1,9 +1,12 @@
-package com.dodu.intervention;
+package com.dodu.intervention.adapter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.Map;
+
+import com.dodu.intervention.PhotoObjectReader;
+import com.dodu.intervention.PhotoObjectWriter;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.MapPropertySource;

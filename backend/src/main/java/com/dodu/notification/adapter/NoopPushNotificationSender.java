@@ -1,7 +1,9 @@
-package com.dodu.notification;
+package com.dodu.notification.adapter;
 
 import java.util.UUID;
 
+import com.dodu.notification.NotificationSchedulePolicy;
+import com.dodu.notification.PushNotificationSender;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
