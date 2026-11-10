@@ -1,5 +1,7 @@
 package com.dodu.promise;
 
+import com.dodu.promise.dto.PromiseRequest;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -15,7 +17,7 @@ public final class PromiseIdempotencyKeyPolicy {
         return key;
     }
 
-    public static String fingerprint(PromiseController.PromiseRequest request) {
+    public static String fingerprint(PromiseRequest request) {
         String canonical = String.join("\u001f",
                 request.taskTitle() == null ? "" : request.taskTitle().trim(),
                 request.toolType() == null ? "" : request.toolType().name(),

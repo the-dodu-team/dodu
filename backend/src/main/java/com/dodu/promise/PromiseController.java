@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.List;
 
 import com.dodu.participant.service.ParticipantAuthService;
+import com.dodu.promise.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
@@ -244,12 +245,7 @@ public class PromiseController {
         return authService.authenticate(authorization).participant().id();
     }
 
-    public record PromiseRequest(String taskTitle, PromiseRequestValidator.ToolType toolType, String scheduledAt) { }
-    public record RescheduleRequest(String scheduledAt, long expectedVersion) { }
-    public record VersionRequest(long expectedVersion) { }
-    public record PromiseResponse(UUID promiseId, String taskTitle, PromiseRequestValidator.ToolType toolType, Instant scheduledAt, long version) { }
-    public record PromiseHistoryResponse(UUID promiseId, String taskTitle, PromiseRequestValidator.ToolType toolType,
-                                         Instant scheduledAt, long version, String lifecycleStatus, String finalOutcome) { }
+
     private record StudyRow(UUID id, Instant interventionEndsAt) { }
     private record PromiseRow(String taskTitle, PromiseRequestValidator.ToolType toolType, Instant scheduledAt, long rowVersion, int scheduleVersion, String lifecycleStatus) { }
     private record CreationRequest(UUID promiseId, String requestFingerprint) { }

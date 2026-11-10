@@ -1,5 +1,6 @@
 package com.dodu.intervention;
 
+import com.dodu.intervention.dto.AttemptHistoryResponse;
 import com.dodu.participant.service.ParticipantAuthService;
 import java.time.Instant;
 import java.util.List;
@@ -62,9 +63,5 @@ public class PhotoAttemptHistoryController {
                 rs.getTimestamp("decided_at") == null ? null : rs.getTimestamp("decided_at").toInstant()), promiseId);
     }
 
-    public record AttemptHistoryResponse(UUID attemptId, String toolType, String processingStatus,
-                                         String decisionResult, String rejectionReason,
-                                         String technicalErrorType, String modelVersion,
-                                         Instant requestReceivedAt, Instant validReceivedAt,
-                                         Instant decidedAt) { }
+
 }

@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 import com.dodu.participant.service.ParticipantAuthService;
+import com.dodu.survey.dto.SurveyResponse;
+import com.dodu.survey.dto.SurveySubmission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
@@ -158,8 +160,4 @@ public class ValidationSurveyController {
         return authService.authenticate(authorization).participant().id();
     }
 
-    public record SurveySubmission(Boolean actualStarted, String startOrder, String startDelayBucket, String noStartReason) {}
-    public record SurveyResponse(UUID id, String questionnaireVersion, String lifecycleStatus, String eligibilityStatus,
-                                 Boolean actualStarted, String startOrder, String startDelayBucket, String noStartReason,
-                                 Instant availableAt, Instant expiresAt, Instant submittedAt) {}
 }
