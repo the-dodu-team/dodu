@@ -10,10 +10,19 @@ export function createLiveSession(storage: SyncKeyValueStorage, deviceStorage: S
   const tokenKey = 'dodu.live.session.v1'
   const pendingKey = 'dodu.live.pending.v1'
   const deviceKey = 'dodu.live.device.v1'
+  const migrationKey = 'dodu.live.session.migrated.v1'
+  // 서버 발급 토큰만 보관한다. 이전 탭의 토큰은 한 번만 이전한다.
+  if (!deviceStorage.getItem(migrationKey)) {
+    const previous = storage.getItem(tokenKey) ?? deviceStorage.getItem('dodu.participant.session-token')
+    if (!deviceStorage.getItem(tokenKey) && previous) deviceStorage.setItem(tokenKey, previous)
+    deviceStorage.setItem(migrationKey, '1')
+  }
+  storage.removeItem(tokenKey)
+  deviceStorage.removeItem('dodu.participant.session-token')
   return {
-    token: () => storage.getItem(tokenKey) ?? deviceStorage.getItem('dodu.participant.session-token'),
-    enter(token: string) { storage.setItem(tokenKey, token); storage.removeItem(pendingKey); deviceStorage.removeItem('dodu.participant.session-token') },
-    clear() { storage.removeItem(tokenKey); storage.removeItem(pendingKey); deviceStorage.removeItem('dodu.participant.session-token') },
+    token: () => deviceStorage.getItem(tokenKey),
+    enter(token: string) { deviceStorage.setItem(tokenKey, token); storage.removeItem(pendingKey) },
+    clear() { deviceStorage.removeItem(tokenKey); storage.removeItem(tokenKey); storage.removeItem(pendingKey); deviceStorage.removeItem('dodu.participant.session-token') },
     device() {
       let value = deviceStorage.getItem(deviceKey) ?? deviceStorage.getItem('dodu.participant.device-key')
       if (!value) { value = randomUuid(); deviceStorage.setItem(deviceKey, value) }
