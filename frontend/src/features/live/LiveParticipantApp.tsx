@@ -248,15 +248,22 @@ export default function LiveParticipantApp() {
       else await api.cancel(operation.id, operation.version)
       if (!mounted.current || version !== epoch.current) return undefined
       mark(null); setScreen('home'); setLoaded(false); succeeded = true
-      notify('success', operation.kind === 'create' ? '약속이 저장됐어요.' : operation.kind === 'reschedule' ? '약속 시간이 변경됐어요.' : '약속이 취소됐어요.')
+      // 이전: notify('success', operation.kind === 'create' ? '약속이 저장됐어요.' : operation.kind === 'reschedule' ? '약속 시간이 변경됐어요.' : '약속이 취소됐어요.')
+      let successMessage = '약속이 취소됐어요.'
+      if (operation.kind === 'create') successMessage = '약속이 저장됐어요.'
+      else if (operation.kind === 'reschedule') successMessage = '약속 시간이 변경됐어요.'
+      notify('success', successMessage)
     } catch (reason) {
       if (!mounted.current || version !== epoch.current) return undefined
       if (reason instanceof ParticipantPromiseApiError && !reason.outcomeUnknown) mark(null)
       if (reason instanceof ParticipantPromiseApiError &&
           ['PROMISE_ACTIVE_EXISTS', 'PROMISE_VERSION_CONFLICT'].includes(reason.code)) reconcile = true
       if (reason instanceof ParticipantPromiseApiError && reason.code === 'PROMISE_DATE_ALREADY_USED') {
-        const date = operation.kind === 'create' ? scheduledDate(operation.payload)
-          : operation.kind === 'reschedule' ? scheduledDate({ scheduledAt: operation.scheduledAt }) : ''
+        // 이전: const date = operation.kind === 'create' ? scheduledDate(operation.payload)
+        //   : operation.kind === 'reschedule' ? scheduledDate({ scheduledAt: operation.scheduledAt }) : ''
+        let date = ''
+        if (operation.kind === 'create') date = scheduledDate(operation.payload)
+        else if (operation.kind === 'reschedule') date = scheduledDate({ scheduledAt: operation.scheduledAt })
         if (date) blockedDates.current.add(date)
       }
       fail(reason)
