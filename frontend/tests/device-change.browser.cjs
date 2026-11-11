@@ -19,7 +19,7 @@ async function main() {
         if (!req.postDataJSON().confirmDeviceChange) return route.fulfill({ status: 409, contentType: 'application/json',
           body: JSON.stringify({ status: 'error', error: { code: 'DEVICE_CHANGE_CONFIRMATION_REQUIRED' } }) })
         confirmed++
-        data = envelope({ sessionToken: 'synthetic-new-device-session', onboardingCompleted: true, expiresAt: new Date(Date.now() + 86400000).toISOString() })
+        data = envelope({ sessionToken: 'synthetic-new-device-session', firstEntry: false, onboardingCompleted: true, expiresAt: new Date(Date.now() + 86400000).toISOString() })
       } else if (url.pathname.endsWith('/me')) data = envelope({ onboardingCompleted: true, expiresAt: new Date(Date.now() + 86400000).toISOString() })
       else if (url.pathname.endsWith('/active')) data = null
       else if (url.pathname.endsWith('/history')) data = []
@@ -41,6 +41,7 @@ async function main() {
     await page.locator('.home-page').waitFor()
     assert.equal(confirmed, 1); assert.equal(attempts, 3)
     assert.equal(await page.getByText('Dodu에 오신 걸 환영합니다!', { exact: true }).count(), 0)
+    await page.getByText('어서오세요, 기다리고 있었어요!', { exact: true }).waitFor()
     assert.equal(await page.getByRole('button', { name: '서버 상태 다시 확인' }).count(), 0)
     assert.deepEqual(errors, [])
     console.log('PASS: 새 기기 경고→취소 시 미발급→확인 시 명시 플래그로 입장, JS 오류 0 (합성 API)')

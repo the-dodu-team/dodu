@@ -36,7 +36,8 @@ public class ParticipantSessionController {
         EnterResponse body = new EnterResponse(
                 result.sessionToken(),
                 ApiTime.format(result.expiresAt(), clock),
-                result.onboardingCompleted());
+                // 이전: result.onboardingCompleted());
+                result.onboardingCompleted(), result.firstEntry());
         return ApiResponse.success(body, ApiTime.now(clock));
     }
 }

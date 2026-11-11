@@ -202,9 +202,15 @@ export default function LiveParticipantApp() {
       if (!mounted.current || version !== epoch.current) return
       setDeviceChangeRequired(false); setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
-      // 입장할 때마다 환영 문구 표시. 첫 설정 대상에게만 표시한다.
-      // notify('success', `Dodu에 오신걸 환영합니다!`)
-      if (!result.data.onboardingCompleted) notify('success', 'Dodu에 오신 걸 환영합니다!')
+      // if (!result.data.onboardingCompleted) notify('success', 'Dodu에 오신 걸 환영합니다!')
+      // 구버전 서버가 firstEntry를 보내지 않으면 최초 여부를 추측하지 않는다.
+      // 이전 중첩 삼항식은 Sonar S3358 경고로 분기문으로 분리한다.
+      // result.data.firstEntry === true ? 'Dodu에 오신 걸 환영합니다!'
+      //   : result.data.firstEntry === false ? '어서오세요, 기다리고 있었어요!' : '입장했어요.'
+      let welcomeMessage = '입장했어요.'
+      if (result.data.firstEntry === true) welcomeMessage = 'Dodu에 오신 걸 환영합니다!'
+      else if (result.data.firstEntry === false) welcomeMessage = '어서오세요, 기다리고 있었어요!'
+      notify('success', welcomeMessage)
       setActive(null); setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
       blockedDates.current.clear(); lastReadAt.current = 0
     } catch (reason) {

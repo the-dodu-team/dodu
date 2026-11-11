@@ -16,7 +16,7 @@ async function main() {
     assert.equal(await page.locator('.feedback-toast').count(), 0)
     await page.route('**/api/**', route => {
       const path = new URL(route.request().url()).pathname
-      const data = path.endsWith('/sessions') ? { sessionToken: 'synthetic-welcome-session', onboardingCompleted: false, expiresAt: '2099-01-01T00:00:00Z' }
+      const data = path.endsWith('/sessions') ? { sessionToken: 'synthetic-welcome-session', firstEntry: true, onboardingCompleted: false, expiresAt: '2099-01-01T00:00:00Z' }
         : path.endsWith('/me') ? { onboardingCompleted: false, expiresAt: '2099-01-01T00:00:00Z' }
         : path.endsWith('/active') ? null : []
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify(path.endsWith('/active') || path.endsWith('/history') ? data : { status: 'success', data, serverTime: new Date().toISOString() }) })

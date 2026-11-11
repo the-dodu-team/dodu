@@ -3,7 +3,7 @@ import type { PromisePayload } from '../shared/apiTypes'
 export type { PromisePayload } from '../shared/apiTypes'
 export type PromiseResponse = PromisePayload & { promiseId: string; version: number }
 export type ParticipantState = { expiresAt: string; onboardingCompleted: boolean }
-export type ParticipantSession = ParticipantState & { sessionToken: string }
+export type ParticipantSession = ParticipantState & { sessionToken: string; firstEntry?: boolean }
 export type ApiResult<T> = { data: T; serverTime: string | null }
 export type ApiErrorKind = 'authentication' | 'permission' | 'conflict' | 'network' | 'validation' | 'technical' | 'cancelled'
 

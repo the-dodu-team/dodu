@@ -3,6 +3,7 @@
   "issue": "SCRUM-76",
   "scope": "웹 최상위 오류 경계와 비동기 오류 안내 및 사용자 작업 토스트",
   "verification": { "frontendBuild": "통과", "integrationUi": "35건 통과", "browserFeedback": "통과", "browserReentry": "통과", "lint": "오류 없음, 기존 경고 유지" },
-  "remaining": ["Production 반영", "실기기 및 보조공학 QA"],
+  "entryGreeting": {"source": "서버 참가자 세션 이력", "backendTests": "19건 통과", "frontend": "빌드 및 최초·재방문 브라우저 통과", "sonarS3358": "중첩 삼항식 분기문으로 변경, Sonar 서버 검사 미실행"},
+  "remaining": ["Production BE·FE 반영", "실기기 및 보조공학 QA"],
   "excluded": ["디자인 원본 대조", "백엔드 전체 테스트", "RN 구현"]
 }
