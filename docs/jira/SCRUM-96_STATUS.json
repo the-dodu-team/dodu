@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-11",
+  "issue": "SCRUM-96",
+  "assignee": "mono",
+  "branch": "feat/SCRUM-96-rn-preparation",
+  "base": "origin/dev 695aaf9",
+  "scope": "RN 전환 준비 디렉터리 및 비동기 세션 경계",
+  "checks": {"domFreeTypecheck": "통과", "sessionTests": "4건 통과"},
+  "sprint": {"requested": "Sprint 6", "assigned": false, "reason": "현재 보드에는 Sprint 2·3·4만 존재"},
+  "remaining": ["Sprint 6 생성 후 배정", "RN 앱 골격·런타임 고정", "실제 native 저장소 어댑터", "화면·카메라·FCM·i18n·테마", "Android/iOS 빌드·실기기 QA"]
+}

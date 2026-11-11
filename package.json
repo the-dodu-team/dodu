@@ -6,6 +6,7 @@
   "workspaces": ["frontend"],
   "engines": { "node": ">=22.12.0 <23" },
   "scripts": {
+    "mobile:check": "node scripts/check-mobile.mjs",
     "predev": "node scripts/workflow.mjs check-ports",
     "dev": "concurrently --kill-others --names backend,frontend \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "node scripts/workflow.mjs backend",
