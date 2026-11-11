@@ -134,6 +134,10 @@ export default function LiveParticipantApp() {
       const promise = await api.active(abort.signal)
       if (!mounted.current || version !== epoch.current) return
       setParticipant(me.data); setActive(promise.data); setLoaded(true)
+      // 이전: 이력 조회까지 끝난 finally에서만 busy를 해제하여 홈 조작도 대기했다.
+      // 참가자·활성 약속이 준비되면 홈을 열고 이력은 별도 상태로 불러온다.
+      if (me.serverTime) setServerClock({ value: Date.parse(me.serverTime), measured: performance.now() })
+      setBusy(false)
       try {
         const rows = await createDoduApi(ownerToken!, import.meta.env.VITE_DODU_API_BASE_URL ?? '').listPromiseHistory()
         if (!mounted.current || version !== epoch.current || ownerToken !== session.token()) return
@@ -152,7 +156,8 @@ export default function LiveParticipantApp() {
           return [[row.promiseId, { ...display, status: outcome === 'AuthCompleted' ? 'verified' as const : 'unverified' as const }]]
         })))
       } catch { if (mounted.current && version === epoch.current) setHistoryLoaded(false) }
-      if (me.serverTime) setServerClock({ value: Date.parse(me.serverTime), measured: performance.now() })
+      // 이전: 이력 조회 후 서버 시간을 적용. 이제 핵심 데이터 응답 직후 적용한다.
+      // if (me.serverTime) setServerClock({ value: Date.parse(me.serverTime), measured: performance.now() })
       const unresolved = session.pending()
       // 수정 응답을 잃은 경우 같은 약속의 갱신 버전·시간을 확인한다.
       if (unresolved?.kind === 'reschedule' && promise.data?.promiseId === unresolved.id &&
@@ -318,7 +323,8 @@ export default function LiveParticipantApp() {
   else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={(code, confirmed) => { void login(code, confirmed) }}
     isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} deviceChangeRequired={deviceChangeRequired}
     onCancelDeviceChange={() => { setDeviceChangeRequired(false); setError('') }} />
-  else if (!loaded) page = <ScreenState title="DODU" loading={busy} description={busy ? '약속을 불러오고 있어요' : '약속을 불러오지 못했어요.'}
+  // 이전 description: busy ? '약속을 불러오고 있어요' : '약속을 불러오지 못했어요.'
+  else if (!loaded) page = <ScreenState title="DODU" loading={busy} description={busy ? '로그인 정보를 확인하고 약속을 불러오고 있어요.' : '약속을 불러오지 못했어요.'}
     onRetry={busy ? undefined : () => { void refresh() }} />
   else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow
     onClose={() => { void logout().catch(() => { setError('입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.'); notify('error', '입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.') }) }}
@@ -360,7 +366,8 @@ export default function LiveParticipantApp() {
       records={history} historyState={historyLoaded ? 'ready' : 'unavailable'} onViewAll={() => setScreen('history')} />
   </main>{active && <footer className="live-home-cta"><PromiseAuthPreview promise={asDisplay(active)} isLive onVerify={() => setScreen('photo')} /></footer>}</div>
   return <>
-    <div ref={content} inert={busy} aria-busy={busy}>{participant?.onboardingCompleted && loaded && !closed
+    {/* 이전 inert={busy}: 로딩 상태 안내까지 접근성 트리에서 제외했다. */}
+    <div ref={content} inert={busy && loaded} aria-busy={busy}>{participant?.onboardingCompleted && loaded && !closed
       ? <PermissionRecoveryGate key={currentToken}>{page}</PermissionRecoveryGate> : page}</div>
   </>
 }

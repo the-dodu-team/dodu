@@ -22,7 +22,8 @@
     "test:browser-push": "node tests/push.browser.cjs",
     "test:browser-device": "node tests/device-change.browser.cjs",
     "test:browser-feedback": "node tests/feedback.browser.cjs",
-    "test:browser-permission-gate": "node tests/permission-gate.browser.cjs"
+    "test:browser-permission-gate": "node tests/permission-gate.browser.cjs",
+    "test:browser-login-loading": "node tests/login-loading.browser.cjs"
   },
   "dependencies": {
     "firebase": "12.19.0",
