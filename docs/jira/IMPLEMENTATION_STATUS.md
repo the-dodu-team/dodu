@@ -1,5 +1,11 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-11 / SCRUM-96 RN 전환 준비
+
+- 최신 dev에서 전용 브랜치 분리. mobile 디렉터리에 비동기 보안 저장소 계약·복원·토큰 캐시·설치 ID 유지·저장/삭제 직렬화 추가. 웹 기능 수정 없음.
+- npm run mobile:check: DOM 없는 TypeScript 검사 및 세션 테스트 4건 통과. 실제 RN 앱·native SDK·Android/iOS 빌드 미실행. 상세: [모바일 준비](../../mobile/README.md).
+- 올바른 dodu-mobile Jira에 mono 담당 티켓 생성. Sprint 6은 아직 없어 배정 대기. 전체 모바일 전환 완료로 표시하지 않는다.
+
 ## 2026-11-11 / SCRUM-76 알파 웹 로그인 유지
 
 - 서버 토큰만 localStorage에 보관하고 이전 탭 토큰은 일회 이전. 로그아웃 및 서버 인증 거절 시 삭제 경로 유지.

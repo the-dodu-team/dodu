@@ -10,6 +10,7 @@ Dodu v2.5 Baseline을 바탕으로 시작 시점 개입과 작업환경 인증 �
 
 - [백엔드 구조·알림 계층 분리 및 남은 범위](docs/architecture/BACKEND_BOUNDARIES.md)
 - [React Native 전환 영향·Sprint 6 작업](docs/mobile/RN_MIGRATION_REVIEW.md)
+- [RN 전환 준비·세션 경계 검사](mobile/README.md) — `npm run mobile:check`
 - [웹 Push 설정·진단](docs/api/WEB_PUSH_SETUP.md)
 - [접근 보호](docs/security/access-protection.md)
 
