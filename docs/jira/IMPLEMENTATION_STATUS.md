@@ -1,5 +1,12 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-11 / SCRUM-76 알파 웹 로그인 유지
+
+- 서버 토큰만 localStorage에 보관하고 이전 탭 토큰은 일회 이전. 로그아웃 및 서버 인증 거절 시 삭제 경로 유지.
+- 플랫폼·프런트 빌드·합성 브라우저 재입장 및 기기 변경 검증 통과. 창 종료 후 복원과 저장소 삭제 후 코드 입장·기존 약속 조회 포함.
+- 실제 휴대폰 재설치·운영 검증 미실행. OS 저장소 삭제 후 자동 로그인 보장 불가. 사용자 정정에 따라 코드 로그인 실패 원인은 확정하지 않음.
+- 상세: [알파 세션 유지](../api/ALPHA_SESSION_PERSISTENCE.md). Jira 전체 완료 처리하지 않음.
+
 ## 2026-11-08 / SCRUM-95 RN 영향 분석·재사용 기반 보완
 
 - 분석: 실제 LiveParticipantApp을 기준으로 DOM/CSS/dialog·동기 세션/비동기 보안 저장소·UUID·카메라/압축/File multipart·웹 SW/VAPID/네이티브 FCM·딥링크/AppState 차이를 확인. [RN 전환 검토](../mobile/RN_MIGRATION_REVIEW.md).

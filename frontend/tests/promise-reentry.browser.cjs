@@ -3,9 +3,11 @@ const assert = require('node:assert/strict')
 async function main() {
   const browser = await chromium.launch({ ...(process.env.DODU_CHROME_PATH ? { executablePath: process.env.DODU_CHROME_PATH } : process.platform === 'win32' ? { executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' } : {}), headless: true })
   try {
-    const page = await browser.newPage({ viewport: { width: 375, height: 812 } }); page.setDefaultTimeout(7000)
-    const errors = []; page.on('pageerror', e => errors.push(e.message))
-    await page.addInitScript(() => {
+    const context = await browser.newContext({ viewport: { width: 375, height: 812 } })
+    let page = await context.newPage(); page.setDefaultTimeout(7000)
+    const errors = []; context.on('page', tab => tab.on('pageerror', e => errors.push(e.message)))
+    page.on('pageerror', e => errors.push(e.message))
+    await context.addInitScript(() => {
       Object.defineProperty(window, 'Notification', { configurable: true, value: { permission: 'granted', requestPermission: async () => 'granted' } })
       const permission = new EventTarget(); permission.state = 'granted'
       Object.defineProperty(navigator.permissions, 'query', { configurable: true, value: async () => permission })
@@ -13,7 +15,7 @@ async function main() {
     const now = new Date().toISOString(), envelope = data => ({ status: 'success', data, serverTime: now })
     let row = null, logins = 0, creates = 0, unsubscribes = 0, expired = false
     const activeTokens = []
-    await page.route('**/api/**', async route => {
+    await context.route('**/api/**', async route => {
       const request = route.request(), path = new URL(request.url()).pathname; let data
       if (path.endsWith('/sessions')) {
         assert.equal(request.postDataJSON().code, 'SYNTHETIC123')
@@ -44,6 +46,11 @@ async function main() {
     await page.getByRole('button', { name: '다음으로', exact: true }).click()
     await page.getByRole('button', { name: '약속 저장', exact: true }).click()
     await page.locator('.today-promise-name').getByText('재입장 보존 테스트', { exact: true }).waitFor()
+    await page.close()
+    page = await context.newPage(); page.setDefaultTimeout(7000)
+    await page.goto(process.env.DODU_TEST_BASE_URL || 'http://127.0.0.1:4175')
+    await page.locator('.today-promise-name').getByText('재입장 보존 테스트', { exact: true }).waitFor()
+    assert.equal(logins, 1, 'Closing and reopening must restore the session without code entry')
     await page.getByRole('button', { name: '설정', exact: true }).click()
     await page.getByRole('button', { name: '로그아웃', exact: true }).click()
     await page.getByRole('dialog').getByRole('button', { name: '로그아웃', exact: true }).click()
@@ -54,6 +61,11 @@ async function main() {
     await page.reload()
     await page.locator('.today-promise-name').getByText('재입장 보존 테스트', { exact: true }).waitFor()
     assert.equal(creates, 1)
+    await page.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+    await page.reload()
+    await login()
+    await page.locator('.today-promise-name').getByText('재입장 보존 테스트', { exact: true }).waitFor()
+    assert.equal(creates, 1, 'Re-entry after storage deletion restores the existing server promise')
     expired = true
     await page.reload()
     await page.getByRole('button', { name: '전체 보기', exact: true }).click()
