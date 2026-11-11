@@ -21,7 +21,8 @@
     "test:browser-history": "node tests/single-slot-history.browser.cjs",
     "test:browser-push": "node tests/push.browser.cjs",
     "test:browser-device": "node tests/device-change.browser.cjs",
-    "test:browser-feedback": "node tests/feedback.browser.cjs"
+    "test:browser-feedback": "node tests/feedback.browser.cjs",
+    "test:browser-permission-gate": "node tests/permission-gate.browser.cjs"
   },
   "dependencies": {
     "firebase": "12.19.0",

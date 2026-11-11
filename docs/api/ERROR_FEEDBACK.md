@@ -26,6 +26,8 @@
 
 ## 검증과 한계
 
+- 카메라 권한은 표시 중 주기 재확인하여 change/focus 이벤트 누락 시에도 철회를 반영한다. 조회 미지원 브라우저에서는 사용자가 직접 수행한 카메라 확인을 주기 조회 실패로 취소하지 않는다. permission-gate.browser.cjs에서 초기 차단·복원·이벤트 없는 철회 및 조회 미지원 수동 확인 유지 검증.
+
 - npm run test:integration-ui --workspace frontend: 35건 통과.
 - npm run build --workspace frontend: 성공.
 - DODU_TEST_BASE_URL을 로컬 preview로 지정 후 npm run test:browser-feedback --workspace frontend 및 test:browser-reentry: 통과. 합성 API 로그인 실패, 성공 자동 해제, 실패 닫기, 원문 비노출, 렌더 오류 대체 화면·재접속, 실제 저장 작업의 성공 토스트 확인.
