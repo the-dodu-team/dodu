@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import OnboardingIntroPage from './OnboardingIntroPage'
+import { notify } from '../../components/feedback'
 import OnboardingInstallPage from './OnboardingInstallPage'
 import OnboardingNotificationPage from './OnboardingNotificationPage'
 import OnboardingCameraPage from './OnboardingCameraPage'
@@ -152,8 +153,8 @@ export default function LiveOnboardingFlow({ onClose, onComplete }: { onClose: (
       setPermission(currentPermission); navigate('notification'); return
     }
     pending.current = true; setBusy(true); setCompletionError('')
-    try { await onComplete() }
-    catch { if (mounted.current) setCompletionError('준비 상태를 저장하지 못했어요. 다시 시도해 주세요.') }
+    try { await onComplete(); notify('success', '준비 상태가 저장됐어요.') }
+    catch { if (mounted.current) { setCompletionError('준비 상태를 저장하지 못했어요. 다시 시도해 주세요.'); notify('error', '준비 상태를 저장하지 못했어요. 다시 시도해 주세요.') } }
     finally { pending.current = false; if (mounted.current) setBusy(false) }
   }
   const recovery = platform === 'ios'

@@ -1,4 +1,5 @@
 import { focusScreenHeading } from '../promise/focusScreenHeading'
+import { notify } from '../../components/feedback'
 import LiveSelfReport, { LiveSelfReportEntry } from '../self-report/LiveSelfReport'
 import { createLiveSurveyApi } from '../../api/liveSurveyApi'
 import { createBackendFetch, createDoduApi, DoduApiError } from '../../api/doduApi'
@@ -117,6 +118,7 @@ export default function LiveParticipantApp() {
     if (reason instanceof ParticipantPromiseApiError && reason.code === 'STUDY_PERIOD_ENDED') setClosed(true)
     errorOrigin.current = origin
     setError(errorMessage(reason))
+    if (origin === 'write') notify('error', errorMessage(reason))
   }
   function mark(value: PendingWrite | null) { session.mark(value); setPending(value) }
   async function refresh() {
@@ -200,6 +202,7 @@ export default function LiveParticipantApp() {
       if (!mounted.current || version !== epoch.current) return
       setDeviceChangeRequired(false); setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
+      notify('success', '입장했어요.')
       setActive(null); setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
       blockedDates.current.clear(); lastReadAt.current = 0
     } catch (reason) {
@@ -217,13 +220,13 @@ export default function LiveParticipantApp() {
     if (running.current) return undefined
     if (pending && JSON.stringify(pending) !== JSON.stringify(operation)) {
       const message = errorMessage(new ParticipantPromiseApiError('REQUEST_IN_PROGRESS', 409))
-      setError(message); return message
+      setError(message); notify('error', message); return message
     }
     if (operation.kind === 'create' && !pending) {
       const blocked = creationBlockCode(operation.payload, clockNow(), Boolean(active), blockedDates.current)
       if (blocked) {
         const message = errorMessage(new ParticipantPromiseApiError(blocked, 409))
-        setError(message); return message
+        setError(message); notify('error', message); return message
       }
     }
     running.current = true; const version = ++epoch.current
@@ -237,6 +240,7 @@ export default function LiveParticipantApp() {
       else await api.cancel(operation.id, operation.version)
       if (!mounted.current || version !== epoch.current) return undefined
       mark(null); setScreen('home'); setLoaded(false); succeeded = true
+      notify('success', operation.kind === 'create' ? '약속이 저장됐어요.' : operation.kind === 'reschedule' ? '약속 시간이 변경됐어요.' : '약속이 취소됐어요.')
     } catch (reason) {
       if (!mounted.current || version !== epoch.current) return undefined
       if (reason instanceof ParticipantPromiseApiError && !reason.outcomeUnknown) mark(null)
@@ -276,6 +280,7 @@ export default function LiveParticipantApp() {
     setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false); setError('')
     setOnboardingDismissed(false); setSurveyId(null); setScreen('home')
     blockedDates.current.clear(); lastReadAt.current = 0
+    notify('success', '로그아웃했어요.')
   }
   // 실제 화면 전환 때만 제목으로 이동한다. 시계 갱신과 서버 재조회는 포커스를 빼앗지 않는다.
   const visibleScreen = closed ? 'closed'
@@ -301,7 +306,7 @@ export default function LiveParticipantApp() {
   else if (!loaded) page = <ScreenState title="DODU" loading={busy} description={busy ? '약속을 불러오고 있어요' : '약속을 불러오지 못했어요.'}
     onRetry={busy ? undefined : () => { void refresh() }} />
   else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow
-    onClose={() => { void logout().catch(() => setError('입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.')) }}
+    onClose={() => { void logout().catch(() => { setError('입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.'); notify('error', '입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.') }) }}
     onComplete={async () => {
       await dataApi.completeOnboarding()
       setParticipant(current => current ? { ...current, onboardingCompleted: true } : current)

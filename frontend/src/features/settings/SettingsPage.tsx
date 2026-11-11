@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import ScreenHeader from '../../components/ScreenHeader'
+import { notify } from '../../components/feedback'
 
 export default function SettingsPage({ onBack, onLogout, notificationConnection }: {
   onBack: () => void; onLogout: () => Promise<void>; notificationConnection?: ReactNode
@@ -17,7 +18,7 @@ export default function SettingsPage({ onBack, onLogout, notificationConnection 
     if (pending.current) return
     pending.current = true; setBusy(true); setError('')
     try { await onLogout() }
-    catch { setError('로그아웃하지 못했어요. 연결 상태를 확인한 뒤 다시 시도해 주세요.') }
+    catch { const message = '로그아웃하지 못했어요. 연결 상태를 확인한 뒤 다시 시도해 주세요.'; setError(message); notify('error', message) }
     finally { pending.current = false; setBusy(false) }
   }
   return <main className="screen-page settings-page">

@@ -5,6 +5,7 @@ import type { LiveSurveyApi } from '../../api/liveSurveyApi'
 import { SurveyApiError } from '../../api/validationSurveyApi'
 import { SelfReportPage, ReportReminder } from './ReportScreens'
 import ScreenState from '../../components/ScreenState'
+import { notify } from '../../components/feedback'
 import { cleanAnswers, completeAnswers } from './selfReportModel'
 import type { ReportAnswers, ReportTarget } from './selfReportModel'
 
@@ -60,13 +61,14 @@ export function LiveSelfReportEntry({ api, onOpen, targets = {} }: { api: LiveSu
   async function skipReminder() {
     if (!reminder || skipping.current) return
     skipping.current = true; setSkipBusy(true); setSkipError('')
-    try { await api.skip(reminder); setReminder(null); setId(null); setRevision(value => value + 1) }
+    try { await api.skip(reminder); notify('success', '자기보고를 건너뛰었어요.'); setReminder(null); setId(null); setRevision(value => value + 1) }
     catch {
       try {
         const latest = await api.get(reminder)
         if (!canOpenLiveSurvey(latest, api.now())) { setReminder(null); setId(null); setRevision(value => value + 1); return }
       } catch { /* Do not expose transport errors or questionnaire data. */ }
       setSkipError('처리 결과를 확인하지 못했어요. 다시 확인하거나 잠시 후 시도해 주세요.')
+      notify('error', '처리 결과를 확인하지 못했어요. 다시 확인해 주세요.')
     }
     finally { skipping.current = false; setSkipBusy(false) }
   }
@@ -112,20 +114,20 @@ export default function LiveSelfReport({ api, promiseId, target, onHome }: {
     if (saving.current || uncertain.current || phase !== 'ready' || !row || !canOpenLiveSurvey(row, api.now())) return
     if (answers && !completeAnswers(answers)) return
     saving.current = true
-    sessionStorage.setItem(journalKey, 'pending')
     setPhase('saving')
     try {
+      sessionStorage.setItem(journalKey, 'pending')
       const result = answers
         ? await api.submit(promiseId, encodeLiveAnswers(cleanAnswers(answers)))
         : await api.skip(promiseId)
       const expected = answers ? 'Submitted' : 'Skipped'
       if (result.lifecycleStatus !== expected) throw new Error('Unexpected survey state')
       sessionStorage.removeItem(journalKey)
-      if (active.current) onHome()
+      if (active.current) { notify('success', answers ? '응답이 저장됐어요.' : '자기보고를 건너뛰었어요.'); onHome() }
     } catch {
       // 응답이 불명확하면 서버 재조회만 허용하여 중복 저장을 방지한다.
       uncertain.current = true
-      if (active.current) setPhase('uncertain')
+      if (active.current) { setPhase('uncertain'); notify('error', '저장 결과를 확인하지 못했어요. 다시 제출하기 전에 처리 상태를 확인해 주세요.') }
     } finally { saving.current = false }
   }
   const open = row !== null && canOpenLiveSurvey(row, api.now())

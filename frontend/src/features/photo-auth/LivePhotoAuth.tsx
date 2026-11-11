@@ -7,6 +7,7 @@ import { photoPresentation, photoCanSubmit } from './livePhotoPresentation'
 import { PhotoSummary, PhotoTimeChip, PhotoComputerGuide } from './PhotoVisuals'
 import { ToolPicture } from './PhotoAuthMockFlow'
 import ScreenHeader from '../../components/ScreenHeader'
+import { notify } from '../../components/feedback'
 import { formatAuthWindow } from '../promise/promiseHistory'
 import cameraIcon from '../../assets/final-icons/camera.svg'
 import checkIcon from '../../assets/final-icons/check.svg'
@@ -81,17 +82,19 @@ export default function LivePhotoAuth({ api, promise, onClose, getNow = Date.now
     try {
       const response = await api.submitPhoto(promise.promiseId, file,
         promise.tool === 'computer' ? 'COMPUTER' : 'BOOK', requestId.current)
+      notify('success', '사진이 접수됐어요. 인증 결과를 확인하고 있어요.')
       setStatus(response.processingStatus); setRefresh(previous => previous + 1)
     } catch (cause) {
       const code = cause instanceof DoduApiError ? cause.response.error.code : ''
       if (code === 'PHOTO_EVALUATION_IN_PROGRESS') { setStatus('Evaluating'); setRefresh(previous => previous + 1) }
-      else if (code === 'PHOTO_WINDOW_CLOSED') setStatus('WINDOW_CLOSED')
+      else if (code === 'PHOTO_WINDOW_CLOSED') { setStatus('WINDOW_CLOSED'); notify('error', '사진을 제출할 수 있는 시간이 지났어요.') }
       else {
         setStatus('CHECK_FAILED')
         if (code === 'PHOTO_ALREADY_USED_ON_ANOTHER_DAY') { setFile(null); setPreview(''); requestId.current = null }
         setError(code === 'PHOTO_ALREADY_USED_ON_ANOTHER_DAY'
           ? '다른 날 사용한 사진이에요. 지금 작업도구를 다시 촬영해 주세요.'
           : '사진 제출 결과를 확인하지 못했어요. 처리 상태를 먼저 확인해 주세요.')
+        notify('error', code === 'PHOTO_ALREADY_USED_ON_ANOTHER_DAY' ? '다른 날 사용한 사진이에요. 다시 촬영해 주세요.' : '사진 제출 결과를 확인하지 못했어요. 처리 상태를 먼저 확인해 주세요.')
       }
     } finally { setIsSubmitting(false); working.current = false }
   }
@@ -99,7 +102,7 @@ export default function LivePhotoAuth({ api, promise, onClose, getNow = Date.now
     if (!selected || locked || working.current) return
     working.current = true; requestId.current = null; setFile(null); setPreview(''); setError(''); setStatus('COMPRESSING')
     try { setFile(await compressPhotoForUpload(selected)); setStatus('READY') }
-    catch { setStatus('READY'); setError('사진을 준비하지 못했어요. JPG 또는 PNG 사진을 다시 선택해 주세요.') }
+    catch { setStatus('READY'); setError('사진을 준비하지 못했어요. JPG 또는 PNG 사진을 다시 선택해 주세요.'); notify('error', '사진을 준비하지 못했어요. JPG 또는 PNG 사진을 다시 선택해 주세요.') }
     finally { working.current = false }
   }
   function retryRead() { setStatus('CHECKING'); setRefresh(previous => previous + 1) }

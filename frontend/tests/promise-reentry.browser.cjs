@@ -46,6 +46,7 @@ async function main() {
     await page.getByRole('button', { name: '다음으로', exact: true }).click()
     await page.getByRole('button', { name: '약속 저장', exact: true }).click()
     await page.locator('.today-promise-name').getByText('재입장 보존 테스트', { exact: true }).waitFor()
+    await page.getByText('약속이 저장됐어요.', { exact: true }).waitFor()
     await page.close()
     page = await context.newPage(); page.setDefaultTimeout(7000)
     await page.goto(process.env.DODU_TEST_BASE_URL || 'http://127.0.0.1:4175')
