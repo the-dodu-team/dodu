@@ -202,7 +202,9 @@ export default function LiveParticipantApp() {
       if (!mounted.current || version !== epoch.current) return
       setDeviceChangeRequired(false); setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
-      notify('success', '입장했어요.')
+      // 입장할 때마다 환영 문구 표시. 첫 설정 대상에게만 표시한다.
+      // notify('success', `Dodu에 오신걸 환영합니다!`)
+      if (!result.data.onboardingCompleted) notify('success', 'Dodu에 오신 걸 환영합니다!')
       setActive(null); setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
       blockedDates.current.clear(); lastReadAt.current = 0
     } catch (reason) {

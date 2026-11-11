@@ -40,6 +40,7 @@ async function main() {
     await dialog.getByRole('button', { name: '확인', exact: true }).click()
     await page.locator('.home-page').waitFor()
     assert.equal(confirmed, 1); assert.equal(attempts, 3)
+    assert.equal(await page.getByText('Dodu에 오신 걸 환영합니다!', { exact: true }).count(), 0)
     assert.equal(await page.getByRole('button', { name: '서버 상태 다시 확인' }).count(), 0)
     assert.deepEqual(errors, [])
     console.log('PASS: 새 기기 경고→취소 시 미발급→확인 시 명시 플래그로 입장, JS 오류 0 (합성 API)')
