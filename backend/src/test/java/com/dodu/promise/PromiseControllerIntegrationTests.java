@@ -117,6 +117,32 @@ class PromiseControllerIntegrationTests {
     }
 
     @Test
+    void scheduleAfterStudyEndReturnsValidation400AndDoesNotPersist() throws Exception {
+        jdbc.update("update study_period set intervention_ends_at = ? where id = (select study_period_id from participant where id = ?)",
+                timestamp(Instant.now().plusSeconds(600)), participantId);
+        String body = "{\"taskTitle\":\"validation test\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
+        mockMvc.perform(post("/api/promises").header("Authorization", authorization)
+                        .header("Idempotency-Key", "after-study-end").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("error"))
+                .andExpect(jsonPath("$.error.type").value("VALIDATION"))
+                .andExpect(jsonPath("$.error.code").value("PROMISE_SCHEDULE_AFTER_STUDY_END"))
+                .andExpect(jsonPath("$.serverTime").exists());
+        assertEquals(0, jdbc.queryForObject("select count(*) from promise where participant_id = ?", Integer.class, participantId));
+        assertEquals(0, jdbc.queryForObject("select count(*) from promise_creation_request where participant_id = ?", Integer.class, participantId));
+    }
+
+    @Test
+    void invalidTitleReturnsValidation400InsteadOfInternalError() throws Exception {
+        String body = "{\"taskTitle\":\"  \",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
+        mockMvc.perform(post("/api/promises").header("Authorization", authorization)
+                        .header("Idempotency-Key", "invalid-title").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.type").value("VALIDATION"))
+                .andExpect(jsonPath("$.error.code").value("INVALID_TASK_TITLE"));
+    }
+
+    @Test
     void sameKeyReturnsTheSamePromiseAndDifferentBodyConflicts() throws Exception {
         String first = "{\"taskTitle\":\"integration task\",\"toolType\":\"BOOK\",\"scheduledAt\":\""
                 + scheduledAt + "\"}";
