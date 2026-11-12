@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-11",
+  "integration": {"date": "2026-11-12", "prs": [43,45], "backendTests": 41, "frontendUiTests": 35, "browserFlows": 4, "result": "통과", "production": "미확인"},
+  "issue": "SCRUM-76",
+  "scope": "웹 최상위 오류 경계와 비동기 오류 안내 및 사용자 작업 토스트",
+  "loginLoading": {"behavior": "로그인 후 별도 데이터 조회 화면, 핵심 데이터 로드 후 홈 조작 허용", "validation": "빌드·지연 응답 로딩 및 재입장 브라우저 통과, lint 오류 없음(기존 경고)", "deployment": "운영 QA 미실행"},
+  "verification": { "frontendBuild": "통과", "integrationUi": "35건 통과", "browserFeedback": "통과", "browserReentry": "통과", "lint": "오류 없음, 기존 경고 유지" },
+  "entryGreeting": {"source": "서버 참가자 세션 이력", "backendTests": "19건 통과", "frontend": "빌드 및 최초·재방문 브라우저 통과", "sonarS3358": "중첩 삼항식 분기문으로 변경, Sonar 서버 검사 미실행"},
+  "remaining": ["Production BE·FE 반영", "실기기 및 보조공학 QA"],
+  "excluded": ["디자인 원본 대조", "백엔드 전체 테스트", "RN 구현"]
+}

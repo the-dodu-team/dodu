@@ -26,7 +26,7 @@ export default function PermissionRecoveryGate({ children }: { children: ReactNo
   const content = useRef<HTMLDivElement>(null)
   useEffect(() => {
     let disposed = false, cameraStatus: PermissionStatus | undefined
-    async function read() {
+    async function read(periodic = false) {
       const version = ++generation.current
       setNotification(controller.read())
       if (!window.isSecureContext) { setCamera('insecure'); return }
@@ -39,14 +39,20 @@ export default function PermissionRecoveryGate({ children }: { children: ReactNo
         setCamera(status.state === 'prompt' ? 'default' : status.state)
       } catch {
         // Unsupported query APIs cannot prove permission. Recheck through a user gesture.
-        if (!disposed && version === generation.current) setCamera('default')
+        // 직접 권한 확인에 성공한 미지원 브라우저를 주기 조회 실패만으로 다시 차단하지 않는다.
+        // 이전: if (!disposed && version === generation.current) setCamera('default')
+        if (!disposed && version === generation.current && !periodic) setCamera('default')
       }
     }
     function refresh() { if (!disposed && document.visibilityState === 'visible' && !pending.current) void read() }
     refresh()
     window.addEventListener('focus', refresh); window.addEventListener('pageshow', refresh)
     document.addEventListener('visibilitychange', refresh)
-    const timer = window.setInterval(() => { if (!disposed && document.visibilityState === 'visible') setNotification(controller.read()) }, 1000)
+    // 이전: 알림만 주기 확인하여 카메라 change/focus 누락 시 이전 허용 상태가 남았다.
+    // const timer = window.setInterval(() => { if (!disposed && document.visibilityState === 'visible') setNotification(controller.read()) }, 1000)
+    const timer = window.setInterval(() => {
+      if (!disposed && document.visibilityState === 'visible' && !pending.current) void read(true)
+    }, 1000)
     return () => {
       disposed = true; generation.current++
       window.clearInterval(timer)

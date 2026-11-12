@@ -45,7 +45,8 @@ public class ParticipantEntryService {
     private static final int MAX_ATTEMPTS = 2;
 
     /** 입장 결과. {@code sessionToken}은 이 시점에만 원문으로 존재합니다. */
-    public record EnterResult(String sessionToken, Instant expiresAt, boolean onboardingCompleted) {
+    // 이전 응답: EnterResult(String sessionToken, Instant expiresAt, boolean onboardingCompleted)
+    public record EnterResult(String sessionToken, Instant expiresAt, boolean onboardingCompleted, boolean firstEntry) {
     }
 
     private final ParticipantAccessRepository repository;
@@ -117,6 +118,7 @@ public class ParticipantEntryService {
         }
 
         UUID participantId = credential.participantId();
+        boolean firstEntry = !repository.hasEntryHistory(participantId);
         boolean replacing = repository.hasOtherActiveSession(participantId, deviceKeyHash, now);
         if (replacing && !confirmed) {
             throw new BusinessException(ErrorType.CONFLICT, "DEVICE_CHANGE_CONFIRMATION_REQUIRED",
@@ -133,7 +135,9 @@ public class ParticipantEntryService {
         String token = SessionToken.generate(random);
         repository.insertSession(participantId, deviceId, secretHasher.hash(token), now, accessEndsAt);
 
-        return new EnterResult(token, accessEndsAt, credential.onboardingCompletedAt() != null);
+        // 이전: 온보딩 여부만 반환. 최초 입장 인사는 온보딩과 별도 이력으로 판정한다.
+        // return new EnterResult(token, accessEndsAt, credential.onboardingCompletedAt() != null);
+        return new EnterResult(token, accessEndsAt, credential.onboardingCompletedAt() != null, firstEntry);
     }
 
     private UUID upsertDevice(UUID participantId, String deviceKeyHash, Instant now) {

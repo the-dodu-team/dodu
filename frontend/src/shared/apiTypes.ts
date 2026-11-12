@@ -19,6 +19,7 @@ export type ApiErrorEnvelope = {
 }
 
 export type AccessResponse = {
+  firstEntry?: boolean
   sessionToken: string
   expiresAt: string
   onboardingCompleted: boolean

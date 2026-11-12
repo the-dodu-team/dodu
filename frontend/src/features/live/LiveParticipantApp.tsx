@@ -1,4 +1,5 @@
 import { focusScreenHeading } from '../promise/focusScreenHeading'
+import { notify } from '../../components/feedback'
 import LiveSelfReport, { LiveSelfReportEntry } from '../self-report/LiveSelfReport'
 import { createLiveSurveyApi } from '../../api/liveSurveyApi'
 import { createBackendFetch, createDoduApi, DoduApiError } from '../../api/doduApi'
@@ -117,6 +118,7 @@ export default function LiveParticipantApp() {
     if (reason instanceof ParticipantPromiseApiError && reason.code === 'STUDY_PERIOD_ENDED') setClosed(true)
     errorOrigin.current = origin
     setError(errorMessage(reason))
+    if (origin === 'write') notify('error', errorMessage(reason))
   }
   function mark(value: PendingWrite | null) { session.mark(value); setPending(value) }
   async function refresh() {
@@ -132,6 +134,10 @@ export default function LiveParticipantApp() {
       const promise = await api.active(abort.signal)
       if (!mounted.current || version !== epoch.current) return
       setParticipant(me.data); setActive(promise.data); setLoaded(true)
+      // 이전: 이력 조회까지 끝난 finally에서만 busy를 해제하여 홈 조작도 대기했다.
+      // 참가자·활성 약속이 준비되면 홈을 열고 이력은 별도 상태로 불러온다.
+      if (me.serverTime) setServerClock({ value: Date.parse(me.serverTime), measured: performance.now() })
+      setBusy(false)
       try {
         const rows = await createDoduApi(ownerToken!, import.meta.env.VITE_DODU_API_BASE_URL ?? '').listPromiseHistory()
         if (!mounted.current || version !== epoch.current || ownerToken !== session.token()) return
@@ -150,7 +156,8 @@ export default function LiveParticipantApp() {
           return [[row.promiseId, { ...display, status: outcome === 'AuthCompleted' ? 'verified' as const : 'unverified' as const }]]
         })))
       } catch { if (mounted.current && version === epoch.current) setHistoryLoaded(false) }
-      if (me.serverTime) setServerClock({ value: Date.parse(me.serverTime), measured: performance.now() })
+      // 이전: 이력 조회 후 서버 시간을 적용. 이제 핵심 데이터 응답 직후 적용한다.
+      // if (me.serverTime) setServerClock({ value: Date.parse(me.serverTime), measured: performance.now() })
       const unresolved = session.pending()
       // 수정 응답을 잃은 경우 같은 약속의 갱신 버전·시간을 확인한다.
       if (unresolved?.kind === 'reschedule' && promise.data?.promiseId === unresolved.id &&
@@ -200,6 +207,15 @@ export default function LiveParticipantApp() {
       if (!mounted.current || version !== epoch.current) return
       setDeviceChangeRequired(false); setOnboardingDismissed(false); session.enter(result.data.sessionToken)
       setParticipant(result.data); setScreen('home'); setPending(null)
+      // if (!result.data.onboardingCompleted) notify('success', 'Dodu에 오신 걸 환영합니다!')
+      // 구버전 서버가 firstEntry를 보내지 않으면 최초 여부를 추측하지 않는다.
+      // 이전 중첩 삼항식은 Sonar S3358 경고로 분기문으로 분리한다.
+      // result.data.firstEntry === true ? 'Dodu에 오신 걸 환영합니다!'
+      //   : result.data.firstEntry === false ? '어서오세요, 기다리고 있었어요!' : '입장했어요.'
+      let welcomeMessage = '입장했어요.'
+      if (result.data.firstEntry === true) welcomeMessage = 'Dodu에 오신 걸 환영합니다!'
+      else if (result.data.firstEntry === false) welcomeMessage = '어서오세요, 기다리고 있었어요!'
+      notify('success', welcomeMessage)
       setActive(null); setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false)
       blockedDates.current.clear(); lastReadAt.current = 0
     } catch (reason) {
@@ -217,13 +233,13 @@ export default function LiveParticipantApp() {
     if (running.current) return undefined
     if (pending && JSON.stringify(pending) !== JSON.stringify(operation)) {
       const message = errorMessage(new ParticipantPromiseApiError('REQUEST_IN_PROGRESS', 409))
-      setError(message); return message
+      setError(message); notify('error', message); return message
     }
     if (operation.kind === 'create' && !pending) {
       const blocked = creationBlockCode(operation.payload, clockNow(), Boolean(active), blockedDates.current)
       if (blocked) {
         const message = errorMessage(new ParticipantPromiseApiError(blocked, 409))
-        setError(message); return message
+        setError(message); notify('error', message); return message
       }
     }
     running.current = true; const version = ++epoch.current
@@ -237,14 +253,22 @@ export default function LiveParticipantApp() {
       else await api.cancel(operation.id, operation.version)
       if (!mounted.current || version !== epoch.current) return undefined
       mark(null); setScreen('home'); setLoaded(false); succeeded = true
+      // 이전: notify('success', operation.kind === 'create' ? '약속이 저장됐어요.' : operation.kind === 'reschedule' ? '약속 시간이 변경됐어요.' : '약속이 취소됐어요.')
+      let successMessage = '약속이 취소됐어요.'
+      if (operation.kind === 'create') successMessage = '약속이 저장됐어요.'
+      else if (operation.kind === 'reschedule') successMessage = '약속 시간이 변경됐어요.'
+      notify('success', successMessage)
     } catch (reason) {
       if (!mounted.current || version !== epoch.current) return undefined
       if (reason instanceof ParticipantPromiseApiError && !reason.outcomeUnknown) mark(null)
       if (reason instanceof ParticipantPromiseApiError &&
           ['PROMISE_ACTIVE_EXISTS', 'PROMISE_VERSION_CONFLICT'].includes(reason.code)) reconcile = true
       if (reason instanceof ParticipantPromiseApiError && reason.code === 'PROMISE_DATE_ALREADY_USED') {
-        const date = operation.kind === 'create' ? scheduledDate(operation.payload)
-          : operation.kind === 'reschedule' ? scheduledDate({ scheduledAt: operation.scheduledAt }) : ''
+        // 이전: const date = operation.kind === 'create' ? scheduledDate(operation.payload)
+        //   : operation.kind === 'reschedule' ? scheduledDate({ scheduledAt: operation.scheduledAt }) : ''
+        let date = ''
+        if (operation.kind === 'create') date = scheduledDate(operation.payload)
+        else if (operation.kind === 'reschedule') date = scheduledDate({ scheduledAt: operation.scheduledAt })
         if (date) blockedDates.current.add(date)
       }
       fail(reason)
@@ -276,6 +300,7 @@ export default function LiveParticipantApp() {
     setHistory([]); setSavedHistory([]); setReportTargets({}); setHistoryLoaded(false); setLoaded(false); setError('')
     setOnboardingDismissed(false); setSurveyId(null); setScreen('home')
     blockedDates.current.clear(); lastReadAt.current = 0
+    notify('success', '로그아웃했어요.')
   }
   // 실제 화면 전환 때만 제목으로 이동한다. 시계 갱신과 서버 재조회는 포커스를 빼앗지 않는다.
   const visibleScreen = closed ? 'closed'
@@ -298,10 +323,11 @@ export default function LiveParticipantApp() {
   else if (!participant && !session.token()) page = <ParticipantEntryPage onSubmit={(code, confirmed) => { void login(code, confirmed) }}
     isSubmitting={busy} errorMessage={error} onClearError={() => setError('')} deviceChangeRequired={deviceChangeRequired}
     onCancelDeviceChange={() => { setDeviceChangeRequired(false); setError('') }} />
-  else if (!loaded) page = <ScreenState title="DODU" loading={busy} description={busy ? '약속을 불러오고 있어요' : '약속을 불러오지 못했어요.'}
+  // 이전 description: busy ? '약속을 불러오고 있어요' : '약속을 불러오지 못했어요.'
+  else if (!loaded) page = <ScreenState title="DODU" loading={busy} description={busy ? '로그인 정보를 확인하고 약속을 불러오고 있어요.' : '약속을 불러오지 못했어요.'}
     onRetry={busy ? undefined : () => { void refresh() }} />
   else if (participant && !participant.onboardingCompleted && !onboardingDismissed) page = <LiveOnboardingFlow
-    onClose={() => { void logout().catch(() => setError('입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.')) }}
+    onClose={() => { void logout().catch(() => { setError('입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.'); notify('error', '입장 화면으로 돌아가지 못했어요. 다시 시도해 주세요.') }) }}
     onComplete={async () => {
       await dataApi.completeOnboarding()
       setParticipant(current => current ? { ...current, onboardingCompleted: true } : current)
@@ -340,7 +366,8 @@ export default function LiveParticipantApp() {
       records={history} historyState={historyLoaded ? 'ready' : 'unavailable'} onViewAll={() => setScreen('history')} />
   </main>{active && <footer className="live-home-cta"><PromiseAuthPreview promise={asDisplay(active)} isLive onVerify={() => setScreen('photo')} /></footer>}</div>
   return <>
-    <div ref={content} inert={busy} aria-busy={busy}>{participant?.onboardingCompleted && loaded && !closed
+    {/* 이전 inert={busy}: 로딩 상태 안내까지 접근성 트리에서 제외했다. */}
+    <div ref={content} inert={busy && loaded} aria-busy={busy}>{participant?.onboardingCompleted && loaded && !closed
       ? <PermissionRecoveryGate key={currentToken}>{page}</PermissionRecoveryGate> : page}</div>
   </>
 }
