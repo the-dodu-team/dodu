@@ -41,9 +41,13 @@ assert.equal(initialTime('2026-11-13T12:32:01+09:00','2026-11-13T12:35:00+09:00'
 const directTimeHtml = renderToStaticMarkup(React.createElement(TimePage, {
   getNow:()=>Date.parse('2026-11-13T23:58:59+09:00'), onBack(){},onNext(){}
 }))
-assert.match(directTimeHtml, /id="promise-fixed-date"[^>]*readOnly=""[^>]*value="2026-11-14"/)
+assert.ok(!directTimeHtml.includes('promise-fixed-date'))
+assert.ok(!directTimeHtml.includes('promise-direct-time'))
+assert.match(directTimeHtml, /id="promise-selected-time"[^>]*type="time"/)
 assert.match(directTimeHtml, /type="time"[^>]*step="60"[^>]*value="00:04"/)
-assert.ok(!directTimeHtml.includes('promise-date-chips'))
+assert.ok(directTimeHtml.includes('promise-date-chips'))
+assert.ok(directTimeHtml.includes('promise-time-wheel'))
+assert.match(directTimeHtml, /aria-pressed="true" disabled=""/)
 const NativeDate = Date
 let current = NativeDate.parse('2026-10-18T12:05:00+09:00')
 global.Date = class extends NativeDate {

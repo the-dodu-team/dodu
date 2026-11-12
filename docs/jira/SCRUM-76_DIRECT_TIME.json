@@ -1,7 +1,7 @@
 {
   "ticket": "SCRUM-76",
   "date": "2026-11-13",
-  "scope": "약속 생성: 현재 +6분 기본값, 날짜 읽기 전용, 시간 직접 입력",
+  "scope": "약속 생성: 기존 시작 시간 필드 직접 입력, 기존 날짜 칩·휠 배치 유지, 현재 +6분 기본값·날짜 변경 불가",
   "verification": ["home-history 실제 소스·React 마크업 테스트 통과", "frontend build 통과"],
   "remaining": ["Vercel Production 반영", "모바일 실기기 시간 입력 확인"],
   "status": "구현·로컬 검증 완료, 운영 확인 필요"
