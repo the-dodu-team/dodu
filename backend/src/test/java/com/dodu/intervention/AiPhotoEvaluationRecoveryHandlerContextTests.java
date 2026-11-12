@@ -13,10 +13,11 @@ class AiPhotoEvaluationRecoveryHandlerContextTests {
     @Test
     void enabledWorkerStartsWithInjectedConstructorAndOptionalStorage() {
         try (var context = context(true)) {
-            context.registerBean(ObjectMapper.class, () -> new ObjectMapper());
+            // Production uses Jackson 3; no Jackson 2 ObjectMapper bean is supplied here.
             context.refresh();
             assertSame(context.getBean(AiPhotoEvaluationRecoveryHandler.class),
                     context.getBean(PhotoEvaluationRecoveryHandler.class));
+            assertEquals(0, context.getBeansOfType(ObjectMapper.class).size());
         }
     }
 
