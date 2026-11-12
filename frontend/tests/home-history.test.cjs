@@ -32,6 +32,18 @@ assert.equal(getInterventionEndError(officialEnd - 30 * 60_000 - 1, officialEnd)
 assert.equal(getInterventionEndError(officialEnd - 30 * 60_000 + 1, officialEnd), '행동검증 종료시간 30분 전부터는 약속을 생성할 수 없어요')
 assert.notEqual(getInterventionEndError(officialEnd, officialEnd), '')
 const TimePage = load(root + '/src/features/promise/PromiseTimePage.tsx').default
+const { chooseInitialPromiseTime } = load(root + '/src/features/promise/chooseInitialPromiseTime.ts')
+const initialTime = (now, initialValue = '') => chooseInitialPromiseTime({now:Date.parse(now),initialValue,isEditing:false,isBlocked:()=>false})
+assert.equal(initialTime('2026-11-13T12:32:01+09:00'), '2026-11-13T03:38:00.000Z')
+assert.equal(initialTime('2026-11-13T23:58:59+09:00'), '2026-11-13T15:04:00.000Z')
+assert.equal(initialTime('2026-11-13T12:32:01+09:00','2026-11-13T12:45:00+09:00'), '2026-11-13T03:45:00.000Z')
+assert.equal(initialTime('2026-11-13T12:32:01+09:00','2026-11-13T12:35:00+09:00'), '2026-11-13T03:38:00.000Z')
+const directTimeHtml = renderToStaticMarkup(React.createElement(TimePage, {
+  getNow:()=>Date.parse('2026-11-13T23:58:59+09:00'), onBack(){},onNext(){}
+}))
+assert.match(directTimeHtml, /id="promise-fixed-date"[^>]*readOnly=""[^>]*value="2026-11-14"/)
+assert.match(directTimeHtml, /type="time"[^>]*step="60"[^>]*value="00:04"/)
+assert.ok(!directTimeHtml.includes('promise-date-chips'))
 const NativeDate = Date
 let current = NativeDate.parse('2026-10-18T12:05:00+09:00')
 global.Date = class extends NativeDate {
