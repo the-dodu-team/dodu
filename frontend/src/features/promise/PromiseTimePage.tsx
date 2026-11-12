@@ -62,6 +62,11 @@ function TimeWheel({
   const initialIndex = useRef(Math.max(0, options.indexOf(value)))
 
   useEffect(() => {
+    const index = options.indexOf(value)
+    if (wheelRef.current && index >= 0) wheelRef.current.scrollTop = index * 44
+  }, [value])
+
+  useEffect(() => {
     const wheel = wheelRef.current
     if (wheel) wheel.scrollTop = initialIndex.current * 44
 
@@ -313,9 +318,19 @@ export default function PromiseTimePage({
                 <input
                   id="promise-selected-time"
                   className="promise-time-display"
-                  value={displayValue}
+                  type={isEditing ? 'text' : 'time'}
+                  step={60}
+                  value={isEditing ? displayValue : `${String(hour24).padStart(2, '0')}:${minute}`}
                   placeholder="날짜와 시간을 선택해 주세요"
-                  readOnly
+                  readOnly={isEditing}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    if (!/^\d{2}:\d{2}$/.test(value)) { setSelected(false); return }
+                    const [hours, minutes] = value.split(':').map(Number)
+                    setPeriod(hours >= 12 ? '오후' : '오전')
+                    setHour(String(hours % 12 || 12)); setMinute(String(minutes).padStart(2, '0'))
+                    setSelected(true)
+                  }}
                   aria-invalid={Boolean(errorMessage)}
                   aria-describedby="promise-time-error promise-time-guide"
                 />
@@ -330,25 +345,7 @@ export default function PromiseTimePage({
               </p>
             </div>
 
-            {!isEditing && <div className="promise-name-box">
-              <label htmlFor="promise-fixed-date">시작 날짜 (자동 설정)</label>
-              <input id="promise-fixed-date" className="promise-time-display" value={date} readOnly />
-              <label htmlFor="promise-direct-time">시작 시간 입력</label>
-              <input id="promise-direct-time" className="promise-time-display" type="time" step={60}
-                value={`${String(hour24).padStart(2, '0')}:${minute}`}
-                aria-invalid={Boolean(errorMessage)} aria-describedby="promise-time-error promise-time-guide"
-                onChange={(event) => {
-                  const value = event.target.value
-                  if (!/^\d{2}:\d{2}$/.test(value)) { setSelected(false); return }
-                  const [hours, minutes] = value.split(':').map(Number)
-                  setPeriod(hours >= 12 ? '오후' : '오전')
-                  setHour(String(hours % 12 || 12)); setMinute(String(minutes).padStart(2, '0'))
-                  setSelected(true)
-                }} />
-            </div>}
-
-            {/* 기존 날짜 선택·휠은 수정 화면에서 유지한다. 생성 화면은 날짜 고정·시간 직접 입력으로 전환. */}
-            {isEditing && <div
+            <div
               className="promise-date-chips"
               role="group"
               aria-label="시작 날짜"
@@ -365,6 +362,7 @@ export default function PromiseTimePage({
                       : 'promise-date-chip'
                   }
                   aria-pressed={item === date}
+                  disabled={!isEditing}
                   // 기존 disabled는 클릭 안내까지 막으므로 사용 불가 상태를 따로 표시한다.
                   data-unavailable={Boolean(getDateBlockedReason?.(item) || isDateUnavailable?.(item))}
                   aria-label={dateLabel(item) + (getDateBlockedReason?.(item) || isDateUnavailable?.(item) ? ', 생성 불가, 사유 확인' : '')}
@@ -380,7 +378,7 @@ export default function PromiseTimePage({
                   {dateLabel(item)}
                 </button>
               ))}
-            </div>}
+            </div>
 
             {dateError && (
               <p id="promise-date-error" className="promise-date-error" role="alert">
@@ -388,7 +386,7 @@ export default function PromiseTimePage({
               </p>
             )}
 
-            {isEditing && <div className="promise-time-wheel">
+            <div className="promise-time-wheel">
               <TimeWheel
                 label="오전·오후"
                 options={['오전', '오후']}
@@ -413,8 +411,9 @@ export default function PromiseTimePage({
 
               <TimeWheel
                 label="분"
-                options={Array.from({ length: 12 }, (_, index) =>
-                  String(index * 5).padStart(2, '0'),
+                // 기존 수정 휠은 5분 단위 유지. 생성은 직접 입력과 동일한 1분 단위.
+                options={Array.from({ length: isEditing ? 12 : 60 }, (_, index) =>
+                  String(isEditing ? index * 5 : index).padStart(2, '0'),
                 )}
                 value={minute}
                 onChange={(value) => {
@@ -422,7 +421,7 @@ export default function PromiseTimePage({
                   setSelected(true)
                 }}
               />
-            </div>}
+            </div>
 
             <div id="promise-time-guide" className="promise-time-guide">
               <p>현재 시각 +5분 ~ +72시간 사이로 정할 수 있어요.</p>
