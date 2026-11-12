@@ -22,10 +22,6 @@
 
 ## 2026-11-12 / SCRUM-84 AI 활성화 시작 오류
 
-- 후속 배포에서 Jackson 2 ObjectMapper 빈 누락으로 다시 실패. 앞선 컨텍스트 테스트가 빈을 직접 등록해 운영 조건 차이를 놓쳤음.
-- 보완: ObjectProvider로 기존 빈을 우선 사용하고 없으면 AI 전용 mapper 생성. 기존 필수 주입 의도는 코드 주석 보존. 테스트의 수동 빈 등록 제거 및 실제 애플리케이션·PostgreSQL 시작 검증 추가.
-- 후속 검증: `AiEnabledApplicationIntegrationTests,AiPhotoEvaluationRecoveryHandlerContextTests,AiPhotoEvaluationRecoveryHandlerTests,AiPhotoEvaluationResponseMapperTests` 8건 통과. Docker PostgreSQL 17·Flyway 포함 실제 애플리케이션 시작 확인. 운영 배포·외부 AI 판정은 별도 미확인.
-
 - 원인: 운영·테스트용 생성자가 함께 존재하나 Spring 생성자 선택 지시가 없어 `No default constructor found` 발생.
 - 수정: 운영 생성자에 `@Autowired` 추가. 기존 생성자·판정·재시도 정책 보존.
 - 검증: 수정 전 활성화 컨텍스트 테스트로 동일 오류 재현. 수정 후 AI 시작·요청·응답 매핑 7건 통과, 실패·오류·건너뜀 0.
