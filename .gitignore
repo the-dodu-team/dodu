@@ -25,6 +25,7 @@ node_modules/
 *.pfx
 /ai_model_for_dodu/
 /dinov2-base-fastapi-ut/
+/dinov2-base-vercel-ut/
 
 # Secret material: keep protocol field names in source, but never track values/files.
 **/API_KEY*
