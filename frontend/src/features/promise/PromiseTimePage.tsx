@@ -1,4 +1,5 @@
 import { chooseInitialPromiseTime } from './chooseInitialPromiseTime'
+import { parsePromiseTimeInput } from './parsePromiseTimeInput'
 import { formatPromiseDateTime } from './formatPromise'
 import { useEffect, useRef, useState } from 'react'
 import arrowLeftIcon from '../../assets/icons/arrow-left.svg'
@@ -186,6 +187,10 @@ export default function PromiseTimePage({
   const [period, setPeriod] = useState(initial.period)
   const [hour, setHour] = useState(initial.hour)
   const [minute, setMinute] = useState(initial.minute)
+  const [timeInput, setTimeInput] = useState(() => {
+    const hours = Number(initial.hour) % 12 + (initial.period === '오후' ? 12 : 0)
+    return `${String(hours).padStart(2, '0')}:${initial.minute}`
+  })
   const [selected, setSelected] = useState(initial.selected)
   const [now, setNow] = useState(getNow)
   const [checkedDate, setCheckedDate] = useState(initial.date)
@@ -211,7 +216,7 @@ export default function PromiseTimePage({
   const dateError = checkedDate === date ? getDateBlockedReason?.(date) ?? '' : ''
 
   const errorMessage = !selected
-    ? ''
+    ? '시간을 24시간 형식으로 입력해 주세요. 예: 13:08 또는 1308'
     : !Number.isFinite(timestamp)
       ? '날짜와 시간을 다시 선택해 주세요.'
       : timestamp < now + 5 * MINUTE
@@ -321,16 +326,23 @@ export default function PromiseTimePage({
                   id="promise-selected-time"
                   aria-label={`시작 시간 ${displayValue}`}
                   className="promise-time-display"
-                  type="time"
-                  step={60}
-                  value={`${String(hour24).padStart(2, '0')}:${minute}`}
-                  placeholder="날짜와 시간을 선택해 주세요"
+                  // 기존 type="time"은 Android에서 기본 시간 선택창을 열어 직접 입력을 막을 수 있었다.
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={5}
+                  value={timeInput}
+                  placeholder="예: 13:08 또는 1308"
+                  onBlur={() => {
+                    const parsed = parsePromiseTimeInput(timeInput)
+                    if (parsed) setTimeInput(parsed.formatted)
+                  }}
                   onChange={(event) => {
-                    const value = event.target.value
-                    if (!/^\d{2}:\d{2}$/.test(value)) { setSelected(false); return }
-                    const [hours, minutes] = value.split(':').map(Number)
-                    setPeriod(hours >= 12 ? '오후' : '오전')
-                    setHour(String(hours % 12 || 12)); setMinute(String(minutes).padStart(2, '0'))
+                    setTimeInput(event.target.value)
+                    const parsed = parsePromiseTimeInput(event.target.value)
+                    if (!parsed) { setSelected(false); return }
+                    setPeriod(parsed.hour >= 12 ? '오후' : '오전')
+                    setHour(String(parsed.hour % 12 || 12)); setMinute(String(parsed.minute).padStart(2, '0'))
                     setSelected(true)
                   }}
                   aria-invalid={Boolean(errorMessage)}
