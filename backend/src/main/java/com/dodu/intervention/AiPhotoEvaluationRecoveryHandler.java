@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +24,7 @@ public final class AiPhotoEvaluationRecoveryHandler implements PhotoEvaluationRe
     private final URI endpoint;
     private final String apiKey;
 
+    @Autowired
     public AiPhotoEvaluationRecoveryHandler(ObjectMapper objectMapper,
                                             ObjectProvider<PhotoObjectReader> photoObjectReaders) {
         String configuredEndpoint = System.getenv().getOrDefault("DODU_AI_ENDPOINT", "");
