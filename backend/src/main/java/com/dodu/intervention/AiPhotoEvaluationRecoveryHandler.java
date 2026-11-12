@@ -25,11 +25,13 @@ public final class AiPhotoEvaluationRecoveryHandler implements PhotoEvaluationRe
     private final String apiKey;
 
     @Autowired
-    public AiPhotoEvaluationRecoveryHandler(ObjectMapper objectMapper,
+    // Previously required a Jackson 2 bean directly. Boot's web JSON mapper may be Jackson 3.
+    public AiPhotoEvaluationRecoveryHandler(ObjectProvider<ObjectMapper> objectMappers,
                                             ObjectProvider<PhotoObjectReader> photoObjectReaders) {
         String configuredEndpoint = System.getenv().getOrDefault("DODU_AI_ENDPOINT", "");
         this.client = HttpClient.newBuilder().connectTimeout(REQUEST_TIMEOUT).build();
-        this.responseMapper = new AiPhotoEvaluationResponseMapper(objectMapper);
+        // Keep the existing AI response parser isolated from the web mapper configuration.
+        this.responseMapper = new AiPhotoEvaluationResponseMapper(objectMappers.getIfAvailable(ObjectMapper::new));
         this.photoObjectReader = photoObjectReaders.getIfAvailable();
         this.endpoint = configuredEndpoint.isBlank() ? null : URI.create(configuredEndpoint);
         this.apiKey = System.getenv().getOrDefault("DODU_AI_API_KEY", "");
