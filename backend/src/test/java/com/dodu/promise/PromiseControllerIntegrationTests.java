@@ -133,6 +133,23 @@ class PromiseControllerIntegrationTests {
     }
 
     @Test
+    void keepTechnicalTestOpenOnlyChangesTargetPeriod() throws Exception {
+        UUID targetId = UUID.randomUUID();
+        jdbc.update("insert into study_period(id, code, intervention_ends_at) values (?, ?, ?)",
+                targetId, "technical-smoke-20261104", timestamp(Instant.now().minusSeconds(60)));
+        Instant otherEnd = jdbc.queryForObject("select intervention_ends_at from study_period where id = (select study_period_id from participant where id = ?)",
+                Timestamp.class, participantId).toInstant();
+        String sql = java.nio.file.Files.readString(java.nio.file.Path.of(System.getProperty("basedir"), "..", "scripts", "keep-technical-test-open.sql"));
+        jdbc.execute(sql);
+        jdbc.execute(sql); // 동일 스크립트 재실행도 데이터 재발급 없이 안전해야 한다.
+        assertEquals(Instant.parse("2099-12-31T14:59:00Z"),
+                jdbc.queryForObject("select intervention_ends_at from study_period where id = ?", Timestamp.class, targetId).toInstant());
+        assertEquals(otherEnd, jdbc.queryForObject("select intervention_ends_at from study_period where id = (select study_period_id from participant where id = ?)", Timestamp.class, participantId).toInstant());
+        assertEquals(1, jdbc.queryForObject("select count(*) from participant_session where participant_id = ?", Integer.class, participantId));
+        jdbc.update("delete from study_period where id = ?", targetId);
+    }
+
+    @Test
     void invalidTitleReturnsValidation400InsteadOfInternalError() throws Exception {
         String body = "{\"taskTitle\":\"  \",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
         mockMvc.perform(post("/api/promises").header("Authorization", authorization)

@@ -2,9 +2,11 @@
 
 ## 2026-11-12 / SCRUM-76 약속 생성 검증 오류 500 수정
 
+- 후속 사용자 승인: 기술 테스트 계속 개방. 전용 연구에 한해 2099-12-31 23:59 KST로 설정하는 재실행 가능한 SQL 준비. 별도 Docker DB 테스트 1건 통과. 실제 운영 SQL 실행은 미실행(작업 세션의 직접 실행 경로 미확보, 서비스 DB 연결과 구분).
+
 - 운영 로그 원인: PROMISE_SCHEDULE_AFTER_STUDY_END. 검증 예외가 일반 500으로 오분류됨. 약속 전용 처리기로 400 VALIDATION·오류 코드 반환.
 - 검증: Docker PostgreSQL 영향 테스트 21건, 실패·오류·건너뜀 0. 잘못된 작업명 및 종료 초과 요청·미저장 검증 포함.
-- 사용자 테스트 기간 연장 요청, 새 종료 시각 대기. 운영 날짜·세션 미변경. Render 배포·운영 QA 필요. [상세](../api/PROMISE_VALIDATION_RESPONSE.md).
+- 운영 날짜·세션 미변경. Render 배포·기간 SQL 실행·운영 QA 필요. [상세](../api/PROMISE_VALIDATION_RESPONSE.md).
 
 ## 2026-11-11 / SCRUM-76 알파 웹 로그인 유지
 
