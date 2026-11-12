@@ -1,5 +1,6 @@
 {
   "date": "2026-11-11",
+  "integration": {"date": "2026-11-12", "prs": [43,45], "backendTests": 41, "frontendUiTests": 35, "browserFlows": 4, "result": "통과", "production": "미확인"},
   "issue": "SCRUM-76",
   "scope": "웹 최상위 오류 경계와 비동기 오류 안내 및 사용자 작업 토스트",
   "loginLoading": {"behavior": "로그인 후 별도 데이터 조회 화면, 핵심 데이터 로드 후 홈 조작 허용", "validation": "빌드·지연 응답 로딩 및 재입장 브라우저 통과, lint 오류 없음(기존 경고)", "deployment": "운영 QA 미실행"},
