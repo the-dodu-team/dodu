@@ -8,6 +8,8 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 const KST_OFFSET = 9 * HOUR
+// 기존 휠 구현은 보존하되 화면에서는 직접 입력만 사용한다.
+const SHOW_TIME_WHEEL = false
 
 function dateKey(timestamp: number) {
   return new Date(timestamp + KST_OFFSET).toISOString().slice(0, 10)
@@ -317,12 +319,12 @@ export default function PromiseTimePage({
 
                 <input
                   id="promise-selected-time"
+                  aria-label={`시작 시간 ${displayValue}`}
                   className="promise-time-display"
-                  type={isEditing ? 'text' : 'time'}
+                  type="time"
                   step={60}
-                  value={isEditing ? displayValue : `${String(hour24).padStart(2, '0')}:${minute}`}
+                  value={`${String(hour24).padStart(2, '0')}:${minute}`}
                   placeholder="날짜와 시간을 선택해 주세요"
-                  readOnly={isEditing}
                   onChange={(event) => {
                     const value = event.target.value
                     if (!/^\d{2}:\d{2}$/.test(value)) { setSelected(false); return }
@@ -386,7 +388,7 @@ export default function PromiseTimePage({
               </p>
             )}
 
-            <div className="promise-time-wheel">
+            {SHOW_TIME_WHEEL && <div className="promise-time-wheel">
               <TimeWheel
                 label="오전·오후"
                 options={['오전', '오후']}
@@ -421,7 +423,7 @@ export default function PromiseTimePage({
                   setSelected(true)
                 }}
               />
-            </div>
+            </div>}
 
             <div id="promise-time-guide" className="promise-time-guide">
               <p>현재 시각 +5분 ~ +72시간 사이로 정할 수 있어요.</p>

@@ -46,7 +46,7 @@ assert.ok(!directTimeHtml.includes('promise-direct-time'))
 assert.match(directTimeHtml, /id="promise-selected-time"[^>]*type="time"/)
 assert.match(directTimeHtml, /type="time"[^>]*step="60"[^>]*value="00:04"/)
 assert.ok(directTimeHtml.includes('promise-date-chips'))
-assert.ok(directTimeHtml.includes('promise-time-wheel'))
+assert.ok(!directTimeHtml.includes('promise-time-wheel'))
 assert.match(directTimeHtml, /aria-pressed="true" disabled=""/)
 const NativeDate = Date
 let current = NativeDate.parse('2026-10-18T12:05:00+09:00')
