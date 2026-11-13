@@ -66,7 +66,7 @@ public class ValidationSurveyController {
                        vs.available_at, vs.expires_at, vs.submitted_at
                   from validation_survey vs
                   join promise p on p.id = vs.promise_id
-                 where vs.promise_id = ? and p.participant_id = ?
+                 where vs.promise_id = ? and p.participant_id = ? and p.superseded_by_promise_id is null
                 """, rs -> {
                     if (!rs.next()) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
                     return new SurveyResponse(
@@ -91,7 +91,7 @@ public class ValidationSurveyController {
                 update validation_survey vs
                    set lifecycle_status = 'Skipped', skipped_at = ?
                  where vs.promise_id = ?
-                   and exists (select 1 from promise p where p.id = vs.promise_id and p.participant_id = ?)
+                   and exists (select 1 from promise p where p.id = vs.promise_id and p.participant_id = ? and p.superseded_by_promise_id is null)
                    and vs.lifecycle_status in ('Pending', 'Prompted', 'Reminded')
                    and vs.available_at is not null and vs.expires_at is not null
                    and ? >= vs.available_at and ? < vs.expires_at
@@ -116,7 +116,7 @@ public class ValidationSurveyController {
                     select vs.id, vs.questionnaire_version, vs.lifecycle_status, vs.eligibility_status,
                            vs.available_at, vs.expires_at
                       from validation_survey vs join promise p on p.id = vs.promise_id
-                     where vs.promise_id = ? and p.participant_id = ? for update
+                     where vs.promise_id = ? and p.participant_id = ? and p.superseded_by_promise_id is null for update
                     """)) {
                 statement.setObject(1, promiseId);
                 statement.setObject(2, participantId);

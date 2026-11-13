@@ -145,6 +145,7 @@ public class NotificationDeliveryService {
                   join promise p on p.id = vs.promise_id
                   join participant part on part.id = p.participant_id
                  where p.lifecycle_status in ('AuthCompleted', 'AuthIncomplete')
+                   and p.superseded_by_promise_id is null
                    and part.lifecycle_status <> 'Withdrawn'
                    and vs.lifecycle_status in ('Pending', 'Prompted')
                    and vs.available_at is not null and vs.expires_at is not null

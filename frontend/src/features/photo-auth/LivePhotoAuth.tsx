@@ -145,7 +145,9 @@ export default function LivePhotoAuth({ api, promise, onClose, getNow = Date.now
         <p>{status === 'COMPRESSING' ? '사진을 준비하고 있어요' : '사진 처리 상태를 확인하고 있어요'}</p></div>}
       {error && <p className="final-photo-error" role="alert">{error}</p>}
     </div>}
-    <input ref={picker} className="visually-hidden" aria-label="작업도구 사진 선택" type="file" accept="image/jpeg,image/png" capture="environment"
+    {/* 이전: capture="environment" — 휴대폰에서 카메라만 열려 갤러리 선택이 막혔다.
+        capture를 빼면 기기 선택창에서 카메라 촬영과 갤러리 선택을 모두 사용할 수 있다. */}
+    <input ref={picker} className="visually-hidden" aria-label="작업도구 사진 선택" type="file" accept="image/jpeg,image/png"
       disabled={locked} onChange={event => { void selectPhoto(event.target.files?.[0]); event.target.value = '' }} />
     <footer className="photo-footer">
       {!result && stage !== 'loading' && Number.isFinite(startsAt) && <p>{stage === 'ready'

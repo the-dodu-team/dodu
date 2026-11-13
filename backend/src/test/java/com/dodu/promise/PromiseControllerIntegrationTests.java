@@ -208,14 +208,73 @@ class PromiseControllerIntegrationTests {
     }
 
     @Test
-    void completedPromiseFreesTheSlotForAnotherPromiseOnSameKstDate() throws Exception {
+    void finishedPromiseBlocksSameKstDateUnlessItFailed() throws Exception {
+        // 이전 기대값(2026-11-05 승인): 종료된 약속은 같은 날짜에도 새 약속을 허용했다.
+        // 2026-11-13 사용자 지시: 하루 1약속, 인증 미완료·기술 실패만 같은 날짜 재생성 허용.
         String body = "{\"taskTitle\":\"repeat task\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
-        String first = extractPromiseId(createWithKey(body, "repeat-1"));
-        jdbc.update("update promise set lifecycle_status = 'AuthCompleted', final_outcome = 'AuthCompleted' where id = ?", UUID.fromString(first));
-        String second = extractPromiseId(createWithKey(body, "repeat-2"));
-        assertTrue(!first.equals(second));
-        assertEquals(2, jdbc.queryForObject("select count(*) from promise where participant_id = ?", Integer.class, participantId));
-        assertEquals(1, jdbc.queryForObject("select count(*) from promise where participant_id = ? and lifecycle_status = 'Scheduled'", Integer.class, participantId));
+        for (String outcome : new String[] {"AuthCompleted", "Cancelled", "Withdrawn"}) {
+            jdbc.update("delete from promise_creation_request where participant_id = ?", participantId);
+            jdbc.update("delete from promise where participant_id = ?", participantId);
+            String first = extractPromiseId(createWithKey(body, "repeat-1-" + outcome));
+            jdbc.update("update promise set lifecycle_status = ?, final_outcome = ? where id = ?",
+                    "AuthCompleted".equals(outcome) ? "AuthCompleted" : "Closed", outcome, UUID.fromString(first));
+            mockMvc.perform(post("/api/promises").header("Authorization", authorization)
+                            .header("Idempotency-Key", "repeat-2-" + outcome)
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error.code").value("PROMISE_DATE_ALREADY_USED"));
+            assertEquals(1, jdbc.queryForObject("select count(*) from promise where participant_id = ?", Integer.class, participantId));
+        }
+    }
+
+    @Test
+    void failedPromiseCanBeRecreatedOnSameDateAndIsHiddenFromHistory() throws Exception {
+        String body = "{\"taskTitle\":\"retry task\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
+        for (String outcome : new String[] {"AuthIncomplete", "TechFailed"}) {
+            jdbc.update("delete from promise_creation_request where participant_id = ?", participantId);
+            jdbc.update("update promise set superseded_by_promise_id = null where participant_id = ?", participantId);
+            jdbc.update("delete from promise where participant_id = ?", participantId);
+            UUID failed = UUID.fromString(extractPromiseId(createWithKey(body, "retry-1-" + outcome)));
+            jdbc.update("update promise set lifecycle_status = ?, final_outcome = ? where id = ?",
+                    "AuthIncomplete".equals(outcome) ? "AuthIncomplete" : "Closed", outcome, failed);
+            mockMvc.perform(get("/api/promises/history").header("Authorization", authorization))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
+            UUID recreated = UUID.fromString(extractPromiseId(createWithKey(body, "retry-2-" + outcome)));
+            assertEquals(recreated, jdbc.queryForObject("select superseded_by_promise_id from promise where id = ?", UUID.class, failed));
+            assertEquals(failed, jdbc.queryForObject("select source_promise_id from promise where id = ?", UUID.class, recreated));
+            assertEquals("RECREATED", jdbc.queryForObject("select creation_type from promise where id = ?", String.class, recreated));
+            mockMvc.perform(get("/api/promises/history").header("Authorization", authorization))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        }
+    }
+
+    @Test
+    void failedPromiseSurveyIsHiddenAfterSameDateRecreation() throws Exception {
+        Instant now = Instant.now();
+        UUID expired = insertHistoryPromise("expired same day", now.minusSeconds(3600), "Scheduled", null);
+        String recreateAt = now.plusSeconds(600).truncatedTo(ChronoUnit.SECONDS).toString();
+        boolean sameDate = now.minusSeconds(3600).atZone(ZoneId.of("Asia/Seoul")).toLocalDate()
+                .equals(now.plusSeconds(600).atZone(ZoneId.of("Asia/Seoul")).toLocalDate());
+        org.junit.jupiter.api.Assumptions.assumeTrue(sameDate, "KST 자정 경계에서는 같은 날짜 조건을 만들 수 없다");
+        String body = "{\"taskTitle\":\"after expiry\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + recreateAt + "\"}";
+        createWithKey(body, "survey-hide");
+        assertEquals(1, jdbc.queryForObject("select count(*) from validation_survey where promise_id = ?", Integer.class, expired));
+        mockMvc.perform(get("/api/promises/" + expired + "/validation-survey").header("Authorization", authorization))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void rescheduleIntoAlreadyUsedDateIsRejected() throws Exception {
+        Instant now = Instant.now();
+        Instant target = now.plusSeconds(86_400).truncatedTo(ChronoUnit.SECONDS);
+        org.junit.jupiter.api.Assumptions.assumeTrue(!target.atZone(ZoneId.of("Asia/Seoul")).toLocalDate()
+                .equals(OffsetDateTime.parse(scheduledAt).toInstant().atZone(ZoneId.of("Asia/Seoul")).toLocalDate()));
+        insertHistoryPromise("verified target date", target, "AuthCompleted", "AuthCompleted");
+        String body = "{\"taskTitle\":\"move task\",\"toolType\":\"BOOK\",\"scheduledAt\":\"" + scheduledAt + "\"}";
+        String id = extractPromiseId(createWithKey(body, "move-1"));
+        var result = reschedule(id, "{\"scheduledAt\":\"" + target + "\",\"expectedVersion\":0}");
+        assertEquals(409, result.getResponse().getStatus());
+        assertTrue(result.getResponse().getContentAsString().contains("PROMISE_DATE_ALREADY_USED"));
     }
 
     @Test

@@ -7,7 +7,7 @@ const messages: Record<string, string> = {
   ACCESS_REVOKED: '서비스 접근이 종료되었어요. 확인이 필요하면 운영자에게 문의해 주세요.',
   SESSION_REPLACED: '다른 기기에서 입장했어요. 이 기기에서 사용하려면 다시 입장해 주세요.',
   PROMISE_ACTIVE_EXISTS: '진행 중인 약속이 있어요. 홈에서 기존 약속을 확인해 주세요.',
-  PROMISE_DATE_ALREADY_USED: '이미 약속을 만든 날짜예요. 다른 날짜를 선택해 주세요.',
+  PROMISE_DATE_ALREADY_USED: '하루에 약속은 1개만 만들 수 있어요. 다른 날짜를 선택해 주세요.',
   PROMISE_NOT_MODIFIABLE: '시작 시간이 지나 수정·취소할 수 없어요.',
   PROMISE_RESCHEDULE_LIMIT_REACHED: '시작 시간을 이미 1번 수정했어요.',
   PROMISE_SCHEDULE_TOO_SOON: '저장 시점부터 최소 5분 뒤로 시작 시간을 다시 선택해 주세요.',
@@ -43,9 +43,19 @@ export function creationBlockCode(payload: PromisePayload, now: number, active: 
   if (active) return 'PROMISE_ACTIVE_EXISTS'
   const starts = Date.parse(payload.scheduledAt)
   if (!Number.isFinite(starts)) return 'DATETIME_OFFSET_REQUIRED'
-  // A finished promise releases the single active slot, including on the same KST date.
-  void blockedDates
+  // 이전(2026-11-05): 종료된 약속은 같은 KST 날짜에도 새 약속을 허용했다.
+  // 하루 1약속: 서버가 이미 사용 중이라고 응답한 날짜는 다시 보내지 않는다.
+  if (blockedDates.has(scheduledDate(payload))) return 'PROMISE_DATE_ALREADY_USED'
   if (starts < now + 5 * 60000) return 'PROMISE_SCHEDULE_TOO_SOON'
   if (starts > now + 72 * 3600000) return 'PROMISE_SCHEDULE_TOO_FAR'
   return null
+}
+
+// 하루 1약속. 인증 미완료·기술 실패로 끝난 날짜만 다시 만들 수 있다. 최종 판단은 서버가 한다.
+const REPLACEABLE_STATUSES = new Set(['unverified', 'technical'])
+export function dailyPromiseBlockReason(date: string, records: { date: string; status: string }[], blockedDates: Set<string>): string {
+  if (blockedDates.has(date) || records.some(record => record.date === date && !REPLACEABLE_STATUSES.has(record.status))) {
+    return messages.PROMISE_DATE_ALREADY_USED
+  }
+  return ''
 }

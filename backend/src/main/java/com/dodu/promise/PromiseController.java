@@ -33,9 +33,12 @@ public class PromiseController {
     private final PromiseRequestValidator validator = new PromiseRequestValidator();
     private final ParticipantAuthService authService;
     private final PromiseLifecycleService lifecycle;
+    private final PromiseDailySlotService dailySlots;
 
-    public PromiseController(JdbcTemplate jdbc, Clock clock, ParticipantAuthService authService, PromiseLifecycleService lifecycle) {
+    public PromiseController(JdbcTemplate jdbc, Clock clock, ParticipantAuthService authService, PromiseLifecycleService lifecycle,
+                             PromiseDailySlotService dailySlots) {
         this.jdbc = jdbc;
+        this.dailySlots = dailySlots;
         this.clock = clock;
         this.authService = authService;
         this.lifecycle = lifecycle;
@@ -90,11 +93,16 @@ public class PromiseController {
         if (jdbc.queryForObject("select count(*) from promise where participant_id = ? and lifecycle_status in ('Scheduled','AuthAvailable','Evaluating')", Long.class, participantId) > 0)
             throw error(HttpStatus.CONFLICT, "PROMISE_ACTIVE_EXISTS");
         var date = valid.scheduledAt().atZone(KST).toLocalDate();
+        // 하루 1약속. 그 날 약속이 인증 미완료·기술 실패로 끝났을 때만 다시 만들 수 있다.
+        var replaced = dailySlots.claim(participantId, date, null);
         UUID policyId = jdbc.queryForObject("select id from policy_version where effective_from <= ? order by effective_from desc limit 1", UUID.class, timestamp(now));
         if (policyId == null) throw error(HttpStatus.SERVICE_UNAVAILABLE, "POLICY_UNAVAILABLE");
         UUID promiseId = UUID.randomUUID();
-        jdbc.update("insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst, tool_type, creation_type, lifecycle_status, auth_window_ends_at) values (?, ?, ?, ?, ?, ?, ?, 'NORMAL', 'Scheduled', ?)",
-                promiseId, participantId, policyId, valid.taskTitle(), timestamp(valid.scheduledAt()), date, valid.toolType().name(), timestamp(valid.scheduledAt().plusSeconds(1800)));
+        jdbc.update("insert into promise(id, participant_id, policy_version_id, task_title, scheduled_at, scheduled_date_kst, tool_type, creation_type, source_promise_id, lifecycle_status, auth_window_ends_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Scheduled', ?)",
+                promiseId, participantId, policyId, valid.taskTitle(), timestamp(valid.scheduledAt()), date, valid.toolType().name(),
+                replaced.isEmpty() ? "NORMAL" : "RECREATED", replaced.isEmpty() ? null : replaced.get(0),
+                timestamp(valid.scheduledAt().plusSeconds(1800)));
+        dailySlots.supersede(replaced, promiseId, now);
         jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?) on conflict (participant_id, scheduled_date_kst) do nothing", participantId, date, timestamp(now));
         jdbc.update("update promise_creation_request set promise_id = ? where participant_id = ? and idempotency_key = ?",
                 promiseId, participantId, key);
@@ -151,6 +159,7 @@ public class PromiseController {
                         select id, task_title, tool_type, scheduled_at, row_version, lifecycle_status, final_outcome
                           from promise p
                          where participant_id = ?
+                           and superseded_by_promise_id is null
                            and (
                                lifecycle_status in ('Closed', 'AuthCompleted', 'AuthIncomplete')
                                or (lifecycle_status in ('Scheduled', 'AuthAvailable') and auth_window_ends_at <= ?
@@ -191,6 +200,7 @@ public class PromiseController {
         var valid = validator.validate(new PromiseRequestValidator.Request(current.taskTitle(), current.toolType(), request.scheduledAt()), now, study.interventionEndsAt());
         var currentDate = current.scheduledAt().atZone(KST).toLocalDate();
         var nextDate = valid.scheduledAt().atZone(KST).toLocalDate();
+        var replaced = nextDate.equals(currentDate) ? java.util.List.<UUID>of() : dailySlots.claim(participantId, nextDate, promiseId);
         if (!nextDate.equals(currentDate)) {
             jdbc.update("insert into promise_date_usage(participant_id, scheduled_date_kst, first_used_at) values (?, ?, ?) on conflict (participant_id, scheduled_date_kst) do nothing",
                     participantId, nextDate, timestamp(now));
@@ -199,6 +209,7 @@ public class PromiseController {
                 promiseId, current.scheduleVersion(), timestamp(current.scheduledAt()), timestamp(valid.scheduledAt()), current.scheduledAt().atZone(KST).toLocalDate(), valid.scheduledAt().atZone(KST).toLocalDate(), timestamp(now));
         jdbc.update("update promise set scheduled_at = ?, scheduled_date_kst = ?, auth_window_ends_at = ?, schedule_version = schedule_version + 1, row_version = row_version + 1, updated_at = ? where id = ? and row_version = ?",
                 timestamp(valid.scheduledAt()), valid.scheduledAt().atZone(KST).toLocalDate(), timestamp(valid.scheduledAt().plusSeconds(1800)), timestamp(now), promiseId, request.expectedVersion());
+        dailySlots.supersede(replaced, promiseId, now);
         return new PromiseResponse(promiseId, current.taskTitle(), current.toolType(), valid.scheduledAt(), request.expectedVersion() + 1);
     }
 

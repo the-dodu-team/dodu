@@ -8,8 +8,6 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 const KST_OFFSET = 9 * HOUR
-// 기존 휠 구현은 보존하되 화면에서는 직접 입력만 사용한다.
-const SHOW_TIME_WHEEL = false
 
 function dateKey(timestamp: number) {
   return new Date(timestamp + KST_OFFSET).toISOString().slice(0, 10)
@@ -32,7 +30,7 @@ function getInitialParts(value: string, now = Date.now()) {
   // 미선택 상태에서 휠이 보여줄 기본 위치.
   const timestamp = Number.isFinite(parsed)
     ? parsed
-    : Math.floor((now + 6 * MINUTE) / MINUTE) * MINUTE
+    : Math.ceil((now + 5 * MINUTE) / (5 * MINUTE)) * 5 * MINUTE
 
   const kst = new Date(timestamp + KST_OFFSET)
   const hour = kst.getUTCHours()
@@ -62,11 +60,6 @@ function TimeWheel({
   const wheelRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const initialIndex = useRef(Math.max(0, options.indexOf(value)))
-
-  useEffect(() => {
-    const index = options.indexOf(value)
-    if (wheelRef.current && index >= 0) wheelRef.current.scrollTop = index * 44
-  }, [value])
 
   useEffect(() => {
     const wheel = wheelRef.current
@@ -215,7 +208,7 @@ export default function PromiseTimePage({
     : !Number.isFinite(timestamp)
       ? '날짜와 시간을 다시 선택해 주세요.'
       : timestamp < now + 5 * MINUTE
-        ? `지금부터 5분 이후로 정할 수 있어요. ${earliestTimeLabel(Math.ceil((now + 5 * MINUTE) / MINUTE) * MINUTE, today)}부터 선택해 주세요.`
+        ? `지금부터 5분 이후로 정할 수 있어요. ${earliestTimeLabel(Math.ceil((now + 5 * MINUTE) / (5 * MINUTE)) * 5 * MINUTE, today)}부터 선택해 주세요.`
         : timestamp > now + 72 * HOUR
           ? '지금부터 72시간 이내로 정해 주세요.'
           : getInterventionEndError(timestamp, interventionEndsAt)
@@ -270,7 +263,7 @@ export default function PromiseTimePage({
             event.preventDefault()
 
             // 제출 순간에도 시간 범위를 다시 확인한다.
-            const current = getNow()
+            const current = Date.now()
             setNow(current)
 
             if (getDateBlockedReason?.(date)) {
@@ -319,20 +312,10 @@ export default function PromiseTimePage({
 
                 <input
                   id="promise-selected-time"
-                  aria-label={`시작 시간 ${displayValue}`}
                   className="promise-time-display"
-                  type="time"
-                  step={60}
-                  value={`${String(hour24).padStart(2, '0')}:${minute}`}
+                  value={displayValue}
                   placeholder="날짜와 시간을 선택해 주세요"
-                  onChange={(event) => {
-                    const value = event.target.value
-                    if (!/^\d{2}:\d{2}$/.test(value)) { setSelected(false); return }
-                    const [hours, minutes] = value.split(':').map(Number)
-                    setPeriod(hours >= 12 ? '오후' : '오전')
-                    setHour(String(hours % 12 || 12)); setMinute(String(minutes).padStart(2, '0'))
-                    setSelected(true)
-                  }}
+                  readOnly
                   aria-invalid={Boolean(errorMessage)}
                   aria-describedby="promise-time-error promise-time-guide"
                 />
@@ -364,7 +347,6 @@ export default function PromiseTimePage({
                       : 'promise-date-chip'
                   }
                   aria-pressed={item === date}
-                  disabled={!isEditing}
                   // 기존 disabled는 클릭 안내까지 막으므로 사용 불가 상태를 따로 표시한다.
                   data-unavailable={Boolean(getDateBlockedReason?.(item) || isDateUnavailable?.(item))}
                   aria-label={dateLabel(item) + (getDateBlockedReason?.(item) || isDateUnavailable?.(item) ? ', 생성 불가, 사유 확인' : '')}
@@ -388,7 +370,7 @@ export default function PromiseTimePage({
               </p>
             )}
 
-            {SHOW_TIME_WHEEL && <div className="promise-time-wheel">
+            <div className="promise-time-wheel">
               <TimeWheel
                 label="오전·오후"
                 options={['오전', '오후']}
@@ -413,9 +395,8 @@ export default function PromiseTimePage({
 
               <TimeWheel
                 label="분"
-                // 기존 수정 휠은 5분 단위 유지. 생성은 직접 입력과 동일한 1분 단위.
-                options={Array.from({ length: isEditing ? 12 : 60 }, (_, index) =>
-                  String(isEditing ? index * 5 : index).padStart(2, '0'),
+                options={Array.from({ length: 12 }, (_, index) =>
+                  String(index * 5).padStart(2, '0'),
                 )}
                 value={minute}
                 onChange={(value) => {
@@ -423,7 +404,7 @@ export default function PromiseTimePage({
                   setSelected(true)
                 }}
               />
-            </div>}
+            </div>
 
             <div id="promise-time-guide" className="promise-time-guide">
               <p>현재 시각 +5분 ~ +72시간 사이로 정할 수 있어요.</p>

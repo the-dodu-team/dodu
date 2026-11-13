@@ -34,20 +34,19 @@ assert.notEqual(getInterventionEndError(officialEnd, officialEnd), '')
 const TimePage = load(root + '/src/features/promise/PromiseTimePage.tsx').default
 const { chooseInitialPromiseTime } = load(root + '/src/features/promise/chooseInitialPromiseTime.ts')
 const initialTime = (now, initialValue = '') => chooseInitialPromiseTime({now:Date.parse(now),initialValue,isEditing:false,isBlocked:()=>false})
-assert.equal(initialTime('2026-11-13T12:32:01+09:00'), '2026-11-13T03:38:00.000Z')
-assert.equal(initialTime('2026-11-13T23:58:59+09:00'), '2026-11-13T15:04:00.000Z')
-assert.equal(initialTime('2026-11-13T12:32:01+09:00','2026-11-13T12:45:00+09:00'), '2026-11-13T03:45:00.000Z')
-assert.equal(initialTime('2026-11-13T12:32:01+09:00','2026-11-13T12:35:00+09:00'), '2026-11-13T03:38:00.000Z')
-const directTimeHtml = renderToStaticMarkup(React.createElement(TimePage, {
+// 최초 휠 구현으로 롤백: 미선택이면 기본값은 화면에서 현재+5분을 5분 단위로 올려 계산한다.
+assert.equal(initialTime('2026-11-13T12:32:01+09:00'), '')
+assert.equal(initialTime('2026-11-13T12:32:01+09:00','2026-11-13T12:45:00+09:00'), '2026-11-13T12:45:00+09:00')
+const wheelTimeHtml = renderToStaticMarkup(React.createElement(TimePage, {
   getNow:()=>Date.parse('2026-11-13T23:58:59+09:00'), onBack(){},onNext(){}
 }))
-assert.ok(!directTimeHtml.includes('promise-fixed-date'))
-assert.ok(!directTimeHtml.includes('promise-direct-time'))
-assert.match(directTimeHtml, /id="promise-selected-time"[^>]*type="time"/)
-assert.match(directTimeHtml, /type="time"[^>]*step="60"[^>]*value="00:04"/)
-assert.ok(directTimeHtml.includes('promise-date-chips'))
-assert.ok(!directTimeHtml.includes('promise-time-wheel'))
-assert.match(directTimeHtml, /aria-pressed="true" disabled=""/)
+assert.match(wheelTimeHtml, /id="promise-selected-time"[^>]*readOnly=""|id="promise-selected-time"[^>]*readonly=""/)
+assert.ok(!wheelTimeHtml.includes('type="time"'))
+assert.ok(wheelTimeHtml.includes('promise-date-chips'))
+assert.ok(wheelTimeHtml.includes('promise-time-wheel'))
+assert.ok(!/aria-pressed="true" disabled=""/.test(wheelTimeHtml))
+assert.match(wheelTimeHtml, /aria-label="05분"[^>]*aria-pressed="true"/)
+assert.ok(!wheelTimeHtml.includes('aria-label="04분"'))
 const NativeDate = Date
 let current = NativeDate.parse('2026-10-18T12:05:00+09:00')
 global.Date = class extends NativeDate {
