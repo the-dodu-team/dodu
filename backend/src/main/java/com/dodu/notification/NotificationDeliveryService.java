@@ -72,10 +72,14 @@ public class NotificationDeliveryService {
                     Boolean.class, promise.promiseId());
             for (NotificationSchedulePolicy.DueNotification due : policy.due(
                     promise.scheduledAt(), promise.scheduleVersion(), now)) {
+                String dispatchKey = promise.promiseId() + ":" + due.scheduleVersion() + ":" + due.type().name();
+                // 이전 식: Evaluating이면 continue만 해서, 판정이 끝난 뒤 다음 실행에서 늦게 생성됐다(R-27).
+                // if (due.type() != NotificationSchedulePolicy.NotificationType.START && evaluating) { continue; }
                 if (due.type() != NotificationSchedulePolicy.NotificationType.START && evaluating) {
+                    markSkippedWhileEvaluating(promise, due, dispatchKey, now);
                     continue;
                 }
-                String dispatchKey = promise.promiseId() + ":" + due.scheduleVersion() + ":" + due.type().name();
+                if (wasSkippedWhileEvaluating(dispatchKey)) continue;
                 created += insertInApp(promise, due, dispatchKey, now);
                 created += insertPush(promise, due, dispatchKey, now);
             }
@@ -193,6 +197,30 @@ public class NotificationDeliveryService {
                 on conflict (dispatch_key, channel) do nothing
                 """, promise.participantId(), promise.promiseId(), due.scheduleVersion(), due.type().name(),
                 dispatchKey, timestamp(due.scheduledAt()), timestamp(now));
+    }
+
+    /**
+     * Evaluating 중이라 건너뛴 리마인더를 SUPPRESSED 앱 알림 행으로 남긴다.
+     * 참가자 알림 목록은 SENT만 보이므로 노출되지 않고, 같은 dispatch_key로 늦게 다시 만들어지지 않는다.
+     */
+    private void markSkippedWhileEvaluating(PromiseRow promise, NotificationSchedulePolicy.DueNotification due,
+                                            String dispatchKey, Instant now) {
+        jdbc.update("""
+                insert into notification_delivery
+                    (participant_id, promise_id, schedule_version, notification_type, channel,
+                     dispatch_key, lifecycle_status, scheduled_at, failure_code)
+                values (?, ?, ?, ?, 'IN_APP', ?, 'SUPPRESSED', ?, 'EVALUATING')
+                on conflict (dispatch_key, channel) do nothing
+                """, promise.participantId(), promise.promiseId(), due.scheduleVersion(), due.type().name(),
+                dispatchKey, timestamp(due.scheduledAt()));
+    }
+
+    private boolean wasSkippedWhileEvaluating(String dispatchKey) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                select exists(select 1 from notification_delivery
+                               where dispatch_key = ? and channel = 'IN_APP'
+                                 and lifecycle_status = 'SUPPRESSED' and failure_code = 'EVALUATING')
+                """, Boolean.class, dispatchKey));
     }
 
     private int insertPush(PromiseRow promise, NotificationSchedulePolicy.DueNotification due,

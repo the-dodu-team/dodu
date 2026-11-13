@@ -77,6 +77,8 @@ public class PhotoEvaluationResultController {
                             + "final_outcome = null, updated_at = ? where id = ? and participant_id = ? "
                             + "and lifecycle_status <> 'Cancelled' and final_outcome is distinct from 'Withdrawn'",
                     Timestamp.from(now), Timestamp.from(now), promiseId, participantId);
+            // 인증 완료도 실제 시작 자기보고 대상이다(R-36). 이전에는 AuthIncomplete만 설문이 생성됐다.
+            com.dodu.survey.CompletedPromiseSurveyOpener.open(jdbc, promiseId);
         } else if (request.result() == Result.TECH_ERROR) {
             jdbc.update("update promise set lifecycle_status = 'Closed', final_outcome = 'TechFailed', "
                             + "closed_at = ?, updated_at = ? where id = ? and participant_id = ? "

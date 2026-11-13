@@ -130,6 +130,8 @@ public class PhotoEvaluationRecoveryWorker {
                  where id = ? and lifecycle_status <> 'Cancelled'
                    and final_outcome is distinct from 'Withdrawn'
                 """, timestamp(now), timestamp(now), job.promiseId());
+        // 복구 경로로 인증 완료된 약속도 자기보고 설문을 만든다(R-36).
+        com.dodu.survey.CompletedPromiseSurveyOpener.open(jdbc, job.promiseId());
         mark(job.jobId(), "SUCCEEDED", null, null, now);
     }
 

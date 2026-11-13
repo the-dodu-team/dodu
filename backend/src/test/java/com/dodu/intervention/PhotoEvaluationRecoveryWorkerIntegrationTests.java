@@ -48,6 +48,8 @@ class PhotoEvaluationRecoveryWorkerIntegrationTests {
         assertEquals("SUCCEEDED", status(fixture.jobId()));
         assertEquals("Completed", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
         assertEquals("AuthCompleted", value("select lifecycle_status from promise where id = ?", fixture.promiseId()));
+        // R-36: 복구 경로로 인증 완료돼도 실제 시작 자기보고 설문이 생성된다.
+        assertEquals("AuthCompleted", value("select eligibility_status from validation_survey where promise_id = ?", fixture.promiseId()));
     }
 
     @Test
