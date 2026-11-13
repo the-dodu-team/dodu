@@ -145,6 +145,29 @@ class NotificationDeliveryServiceIntegrationTests {
                 "select failure_code from notification_delivery where dispatch_key = 'test-key-2'", String.class));
     }
 
+    @Test
+    void failedSurveyReminderRetryIsSuppressedAfterPromiseIsSuperseded() {
+        Fixture fixture = fixture(SCHEDULED_AT.plusSeconds(2 * 60 * 60));
+        Instant now = SCHEDULED_AT.plusSeconds(10 * 60 * 60);
+        jdbc.update("update promise set lifecycle_status = 'AuthIncomplete', final_outcome = 'AuthIncomplete', superseded_by_promise_id = id where id = ?",
+                fixture.promiseId());
+        jdbc.update("insert into validation_survey(promise_id, questionnaire_version, lifecycle_status, eligibility_status, available_at, expires_at) values (?, 'v2.5.2', 'Reminded', 'AuthIncomplete', ?, ?)",
+                fixture.promiseId(), Timestamp.from(now.minusSeconds(600)), Timestamp.from(now.plusSeconds(86_400)));
+        jdbc.update("""
+            insert into notification_delivery
+                (participant_id, promise_id, schedule_version, notification_type, channel,
+                 dispatch_key, lifecycle_status, scheduled_at, attempt_count, next_attempt_at)
+            values (?, ?, 1, 'SURVEY_REMINDER', 'PUSH', 'test-key-superseded', 'FAILED', ?, 1, ?)
+            """, fixture.participantId(), fixture.promiseId(), Timestamp.from(now.minusSeconds(600)), Timestamp.from(now.minusSeconds(60)));
+
+        service.dispatchDueNotifications(now);
+
+        assertEquals("SUPPRESSED", jdbc.queryForObject(
+                "select lifecycle_status from notification_delivery where dispatch_key = 'test-key-superseded'", String.class));
+        assertEquals("PROMISE_SUPERSEDED", jdbc.queryForObject(
+                "select failure_code from notification_delivery where dispatch_key = 'test-key-superseded'", String.class));
+    }
+
     private Fixture fixture(Instant interventionEndsAt) {
         String suffix = UUID.randomUUID().toString();
         UUID studyId = UUID.randomUUID();

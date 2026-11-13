@@ -189,6 +189,11 @@ export default function PromiseTimePage({
   }, [getNow])
 
   const isEditing = mode === 'edit'
+  const minuteOptions = Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, '0'))
+  if (!minuteOptions.includes(initial.minute)) {
+    minuteOptions.push(initial.minute)
+    minuteOptions.sort()
+  }
   const today = dateKey(now)
   const dates = Array.from({ length: 4 }, (_, index) =>
     dateKey(now + index * DAY),
@@ -262,8 +267,9 @@ export default function PromiseTimePage({
           onSubmit={(event) => {
             event.preventDefault()
 
-            // 제출 순간에도 시간 범위를 다시 확인한다.
-            const current = Date.now()
+            // 제출 순간에도 시간 범위를 다시 확인한다. 버튼 판단과 같은 시각 기준(getNow)을 쓴다.
+            // 이전: const current = Date.now()
+            const current = getNow()
             setNow(current)
 
             if (getDateBlockedReason?.(date)) {
@@ -395,9 +401,8 @@ export default function PromiseTimePage({
 
               <TimeWheel
                 label="분"
-                options={Array.from({ length: 12 }, (_, index) =>
-                  String(index * 5).padStart(2, '0'),
-                )}
+                // 5분 단위 휠. 직접 입력 기간에 저장된 분(예: 38)은 선택지로 보존한다.
+                options={minuteOptions}
                 value={minute}
                 onChange={(value) => {
                   setMinute(value)

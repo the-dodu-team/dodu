@@ -47,6 +47,12 @@ assert.ok(wheelTimeHtml.includes('promise-time-wheel'))
 assert.ok(!/aria-pressed="true" disabled=""/.test(wheelTimeHtml))
 assert.match(wheelTimeHtml, /aria-label="05분"[^>]*aria-pressed="true"/)
 assert.ok(!wheelTimeHtml.includes('aria-label="04분"'))
+// 직접 입력 기간에 저장된 1분 단위 시각은 수정 휠에서도 선택지로 보존한다.
+const legacyMinuteHtml = renderToStaticMarkup(React.createElement(TimePage, {
+  getNow:()=>Date.parse('2026-11-13T09:00:00+09:00'), initialValue:'2026-11-13T12:38:00+09:00', mode:'edit', onBack(){},onNext(){}
+}))
+assert.match(legacyMinuteHtml, /aria-label="38분"[^>]*aria-pressed="true"[^>]*tabindex="0"|aria-label="38분"[^>]*aria-pressed="true"[^>]*tabIndex="0"/)
+assert.ok(legacyMinuteHtml.includes('aria-label="35분"') && legacyMinuteHtml.includes('aria-label="40분"'))
 const NativeDate = Date
 let current = NativeDate.parse('2026-10-18T12:05:00+09:00')
 global.Date = class extends NativeDate {

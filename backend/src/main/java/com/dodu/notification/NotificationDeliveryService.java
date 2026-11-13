@@ -214,7 +214,7 @@ public class NotificationDeliveryService {
         DeliveryState s = jdbc.queryForObject("""
                 select part.lifecycle_status as participant_status,
                        p.lifecycle_status as promise_status, p.schedule_version,
-                       p.auth_window_ends_at,
+                       p.auth_window_ends_at, p.superseded_by_promise_id is not null as superseded,
                        vs.lifecycle_status as survey_status, vs.expires_at as survey_expires_at
                   from promise p
                   join participant part on part.id = p.participant_id
@@ -227,9 +227,12 @@ public class NotificationDeliveryService {
                                 ? null : rs.getTimestamp("auth_window_ends_at").toInstant(),
                         rs.getString("survey_status"),
                         rs.getTimestamp("survey_expires_at") == null
-                                ? null : rs.getTimestamp("survey_expires_at").toInstant()),
+                                ? null : rs.getTimestamp("survey_expires_at").toInstant(),
+                        rs.getBoolean("superseded")),
                 push.promiseId());
         if ("Withdrawn".equals(s.participantStatus())) return "PARTICIPANT_WITHDRAWN";
+        // 같은 날짜 재생성으로 대체된 약속은 재시도 발송도 막는다.
+        if (s.superseded()) return "PROMISE_SUPERSEDED";
 
         if (push.type() == NotificationSchedulePolicy.NotificationType.SURVEY_REMINDER) {
             if (s.surveyExpiresAt() == null || !now.isBefore(s.surveyExpiresAt())) return "SURVEY_EXPIRED";
@@ -261,5 +264,6 @@ public class NotificationDeliveryService {
                            int scheduleVersion, int attemptCount) { }
 
     private record DeliveryState(String participantStatus, String promiseStatus, int scheduleVersion,
-                                 Instant authWindowEndsAt, String surveyStatus, Instant surveyExpiresAt) { }
+                                 Instant authWindowEndsAt, String surveyStatus, Instant surveyExpiresAt,
+                                 boolean superseded) { }
 }

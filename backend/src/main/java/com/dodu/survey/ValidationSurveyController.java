@@ -48,7 +48,8 @@ public class ValidationSurveyController {
                 update validation_survey
                    set lifecycle_status = 'Prompted', prompted_at = coalesce(prompted_at, ?)
                  where promise_id = ? and lifecycle_status = 'Pending'
-                   and exists (select 1 from promise p where p.id = promise_id and p.participant_id = ?)
+                   and exists (select 1 from promise p where p.id = promise_id and p.participant_id = ?
+                               and p.superseded_by_promise_id is null)
                    and available_at is not null and expires_at is not null
                    and ? >= available_at and ? < expires_at
                 """, java.sql.Timestamp.from(now), promiseId, participantId, java.sql.Timestamp.from(now), java.sql.Timestamp.from(now));
@@ -56,7 +57,8 @@ public class ValidationSurveyController {
                 update validation_survey
                    set lifecycle_status = 'Expired'
                  where promise_id = ?
-                   and exists (select 1 from promise p where p.id = promise_id and p.participant_id = ?)
+                   and exists (select 1 from promise p where p.id = promise_id and p.participant_id = ?
+                               and p.superseded_by_promise_id is null)
                    and lifecycle_status in ('Pending', 'Prompted', 'Reminded')
                    and expires_at is not null and expires_at <= ?
                 """, promiseId, participantId, java.sql.Timestamp.from(now));
