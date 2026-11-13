@@ -7,13 +7,13 @@ import homeIcon from '../../assets/icons/home-outline.svg'
 
 type OnboardingInstallPageProps = {
   onNext: () => void
-  onBack: () => void
+  /** 최초 디자인 롤백으로 헤더의 이전 단계 버튼은 표시하지 않는다. */
+  onBack?: () => void
   onClose: () => void
 }
 
 export default function OnboardingInstallPage({
   onNext,
-  onBack,
   onClose,
 }: OnboardingInstallPageProps) {
   const [showNotice, setShowNotice] = useState(false)
@@ -21,9 +21,7 @@ export default function OnboardingInstallPage({
   return (
     <div className="onboarding-page">
       <header className="onboarding-header">
-        <button type="button" className="onboarding-close" aria-label="이전 단계로" onClick={onBack}>
-          <span aria-hidden="true">←</span>
-        </button>
+        {/* 최초 온보딩 디자인으로 롤백: 헤더에는 닫기 버튼만 둔다(이전 단계 버튼 제거). */}
         <button
           type="button"
           className="onboarding-close"
@@ -98,8 +96,8 @@ export default function OnboardingInstallPage({
             </ol>
 
             <p className="onboarding-install-note">
-              홈 화면의 DODU 아이콘으로 다시 열어 주세요.
-              코드 입력 화면이 나타나면 참가자 코드를 입력해 주세요.
+              브라우저에서 입력한 정보는 홈 화면 앱으로 이어지지 않아요.
+              홈 화면 앱에서 참가자 코드를 한 번 더 입력해 주세요.
             </p>
           </div>
         </div>
@@ -120,9 +118,10 @@ export default function OnboardingInstallPage({
         <button
           type="button"
           className="onboarding-next"
-          onClick={() => { if (showNotice) onNext(); else setShowNotice(true) }}
+          // 최초 디자인 문구를 유지한다. 홈 화면 앱으로 열린 경우에만 다음 단계로 이동한다.
+          onClick={() => { setShowNotice(true); onNext() }}
         >
-          {showNotice ? '다음으로' : '홈 화면에 추가했어요'}
+          홈 화면에 추가했어요
         </button>
       </footer>
     </div>

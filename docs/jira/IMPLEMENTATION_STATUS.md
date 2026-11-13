@@ -1,5 +1,19 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-13 / SCRUM-76 PR #51 리뷰 반영
+
+- CodeRabbit 4건 모두 타당 판단 후 반영: 제출 검증 시각 `getNow` 통일, 1분 단위 기존 시각 휠 보존, 대체 약속 설문 상태 변경 차단, 대체 약속 설문 알림 재시도 억제(`PROMISE_SUPERSEDED`).
+- 검증: BE 관련 통합 50건(신규 2건) 통과, FE home-history·participant-promise-api·build 통과.
+
+## 2026-11-13 / SCRUM-76 온보딩·시간 선택 롤백, 갤러리, 하루 1약속
+
+- 온보딩: 처음 디자인(닫기 버튼만 있는 헤더, 처음 설치 안내 문구, iPhone 안내 상시 표시)으로 롤백. 권한 요청·거절 안내 로직 유지.
+- 시작 시간: 처음 휠 방식(날짜 칩 + 5분 단위 휠, 현재+5분 올림 기본값)으로 롤백. 앞선 직접 입력 기록(아래 3건)은 이 기록으로 대체.
+- 사진: `capture` 제거로 휴대폰 갤러리 선택 허용.
+- 하루 1약속(BE+FE): 같은 KST 날짜 생성·날짜 변경은 409 `PROMISE_DATE_ALREADY_USED`. 인증 미완료·기술 실패 날짜만 재생성 가능, 이전 실패 약속은 V11 `superseded_by_promise_id`로 이력·설문·설문 알림에서 제외.
+- 검증: JDK 21 + Docker로 BE 전체 테스트 288건 통과(신규 통합 4건·정책 단위 2건 포함, 건너뜀 0). FE build, home-history·participant-promise-api(14)·camera/notification permission·final-design·live-participant·photo-auth·photo-compression 통과. 로컬 미리보기로 온보딩·휠·차단 날짜 안내 확인.
+- 미실행: 실제 휴대폰 갤러리 선택, 운영 DB V11 적용, 배포 미확인. Jira 상태 변경 없음.
+
 ## 2026-11-13 / SCRUM-76 시간 휠 비활성화
 
 - 사용자 요청으로 생성·수정 화면 모두 기존 시작 시간 필드 직접 입력만 사용. 휠 코드는 비활성 플래그와 주석으로 보존.

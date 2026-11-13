@@ -17,7 +17,7 @@ function load(file) {
   return mod.exports
 }
 const { createParticipantPromiseApi, classifyParticipantPromiseError, ParticipantPromiseApiError } = load(path.resolve(__dirname, '../src/api/participantPromiseApi.ts'))
-const { promiseErrorMessage, creationBlockCode } = load(path.resolve(__dirname, '../src/features/live/promiseFeedback.ts'))
+const { promiseErrorMessage, creationBlockCode, dailyPromiseBlockReason } = load(path.resolve(__dirname, '../src/features/live/promiseFeedback.ts'))
 const { createParticipantPromiseController } = load(path.resolve(__dirname, '../src/api/participantPromiseController.ts'))
 const payload = { taskTitle: '작업', toolType: 'COMPUTER', scheduledAt: '2026-11-02T09:00:00+09:00' }
 const saved = { ...payload, promiseId: 'test-promise', version: 0 }
@@ -62,8 +62,21 @@ test('저장 시 5분·72시간 경계와 활성 약속·서버가 거절한 KST
   assert.equal(creationBlockCode(at(72 * 3600000), now, false, new Set()), null)
   assert.equal(creationBlockCode(at(72 * 3600000 + 1), now, false, new Set()), 'PROMISE_SCHEDULE_TOO_FAR')
   assert.equal(creationBlockCode(at(600000), now, true, new Set()), 'PROMISE_ACTIVE_EXISTS')
-  assert.equal(creationBlockCode(at(600000), now, false, new Set(['2026-11-05'])), null)
+  // 하루 1약속: 서버가 사용 중이라고 응답한 KST 날짜는 다시 보내지 않는다.
+  assert.equal(creationBlockCode(at(600000), now, false, new Set(['2026-11-05'])), 'PROMISE_DATE_ALREADY_USED')
   assert.equal(creationBlockCode(at(24 * 3600000), now, false, new Set(['2026-11-05'])), null)
+})
+
+test('하루 1약속은 인증 미완료·기술 실패 날짜만 다시 열어 준다', () => {
+  const none = new Set()
+  for (const status of ['verified', 'cancelled', 'withdrawn', 'unknown']) {
+    assert.match(dailyPromiseBlockReason('2026-11-05', [{ date: '2026-11-05', status }], none), /하루에 약속은 1개/)
+  }
+  for (const status of ['unverified', 'technical']) {
+    assert.equal(dailyPromiseBlockReason('2026-11-05', [{ date: '2026-11-05', status }], none), '')
+  }
+  assert.equal(dailyPromiseBlockReason('2026-11-06', [{ date: '2026-11-05', status: 'verified' }], none), '')
+  assert.match(dailyPromiseBlockReason('2026-11-06', [], new Set(['2026-11-06'])), /하루에 약속은 1개/)
 })
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
 

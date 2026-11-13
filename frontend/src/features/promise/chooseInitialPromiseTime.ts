@@ -13,10 +13,8 @@ export function chooseInitialPromiseTime({ initialValue, now, isEditing, isBlock
   const dateKey = (time: number) => new Date(time + 9 * 60 * minute).toISOString().slice(0, 10)
   if (isEditing) return initialValue
   const previous = Date.parse(initialValue)
-  // 이전 5분 단위 올림: Math.ceil((now + 5 * minute) / (5 * minute)) * 5 * minute
-  const first = Number.isFinite(previous) && previous >= now + 5 * minute
-    ? previous : Math.floor((now + 6 * minute) / minute) * minute
-  if (!isBlocked(dateKey(first))) return new Date(first).toISOString()
+  const first = Number.isFinite(previous) ? previous : Math.ceil((now + 5 * minute) / (5 * minute)) * 5 * minute
+  if (!isBlocked(dateKey(first))) return initialValue
   for (let offset = 1; offset <= 3; offset++) {
     const desired = first + offset * day
     const dayStart = Date.parse(dateKey(desired) + 'T00:00:00+09:00')

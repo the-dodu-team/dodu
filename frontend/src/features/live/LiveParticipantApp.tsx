@@ -35,7 +35,7 @@ import { formatPromiseDateTime } from '../promise/formatPromise'
 import type { PreviewPromise, PromiseTool } from '../promise/types'
 import { createLiveSession } from './liveSession'
 import type { PendingWrite } from './liveSession'
-import { promiseErrorMessage as errorMessage, creationBlockCode, scheduledDate } from './promiseFeedback'
+import { promiseErrorMessage as errorMessage, creationBlockCode, dailyPromiseBlockReason, scheduledDate } from './promiseFeedback'
 import '../home/home-states.css'
 
 type Screen = 'home' | 'name' | 'time' | 'tool' | 'confirm' | 'manage' | 'edit' | 'photo' | 'history' | 'settings'
@@ -278,6 +278,7 @@ export default function LiveParticipantApp() {
       if (mounted.current && version === epoch.current) { setBusy(false); if ((succeeded || reconcile) && session.token()) void refresh() }
     }
   }
+  const dateBlockedReason = (date: string) => dailyPromiseBlockReason(date, savedHistory, blockedDates.current)
   const clockNow = () => serverClock ? serverClock.value + performance.now() - serverClock.measured : Date.now()
   const home = useCallback(() => {
     setError(''); setScreen('home'); setSurveyId(null)
@@ -345,14 +346,14 @@ export default function LiveParticipantApp() {
     ? <HistoryPage records={history} savedRecords={savedHistory} canCreate={!active && !pending} onBack={home} onCreate={() => setScreen('name')} />
     : <ScreenState title="약속 기록" description="기록을 불러오지 못했어요." onBack={home} onRetry={() => { void refresh() }} />
   else if (screen === 'name') page = <PromiseTaskNamePage initialValue={taskName} onBack={home} onNext={value => { setTaskName(value); setScreen('time') }} />
-  else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt}
+  else if (screen === 'time') page = <PromiseTimePage getNow={clockNow} initialValue={scheduledAt} getDateBlockedReason={dateBlockedReason}
     onBack={value => { setError(''); setScheduledAt(value); setScreen('name') }}
     onNext={value => { setError(''); setScheduledAt(value); setScreen('tool') }} />
   else if (screen === 'tool') page = <PromiseToolPage initialValue={tool} onBack={() => setScreen('time')} onNext={value => { setTool(value); setScreen('confirm') }} />
   else if (screen === 'confirm') page = <PromiseConfirmPage taskName={taskName} scheduledAt={scheduledAt} tool={tool} errorMessage={pending ? '' : error} onBack={() => { setError(''); setScreen('tool') }} onSave={() => {
     void write(pending?.kind === 'create' ? pending : { kind: 'create', key: crypto.randomUUID(), payload: { taskTitle: taskName, toolType: tool === 'book' ? 'BOOK' : 'COMPUTER', scheduledAt } })
   }} />
-  else if (screen === 'edit' && active) page = <PromiseTimePage getNow={clockNow} initialValue={active.scheduledAt} mode="edit" saveError={error} onBack={() => setScreen('manage')} onNext={value => { void write({ kind: 'reschedule', id: active.promiseId, version: active.version, scheduledAt: value }) }} />
+  else if (screen === 'edit' && active) page = <PromiseTimePage getNow={clockNow} initialValue={active.scheduledAt} mode="edit" saveError={error} getDateBlockedReason={dateBlockedReason} onBack={() => setScreen('manage')} onNext={value => { void write({ kind: 'reschedule', id: active.promiseId, version: active.version, scheduledAt: value }) }} />
   else if (screen === 'manage' && active) page = <PromiseManagePage promise={asDisplay(active)} onBack={home} onEditTime={() => setScreen('edit')}
     editBlockedReason={modifyAllowed ? '' : '시작 시간이 지나 수정·취소할 수 없어요.'}
     cancelBlockedReason={modifyAllowed ? '' : '시작 시간이 지나 수정·취소할 수 없어요.'}
