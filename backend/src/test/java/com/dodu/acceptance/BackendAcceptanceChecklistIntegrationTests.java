@@ -151,10 +151,32 @@ class BackendAcceptanceChecklistIntegrationTests {
         assertEquals(0, deliveries(promise, "REMINDER_10", "IN_APP"),
                 "Evaluating 중 생략한 T+10 리마인더가 T+15에 늦게 생성되면 안 된다");
         assertEquals(0, deliveries(promise, "REMINDER_10", "PUSH"));
-        assertEquals(1, count("select count(*) from notification_delivery where promise_id = ? and notification_type = 'REMINDER_10' and lifecycle_status = 'SUPPRESSED' and failure_code = 'EVALUATING'", promise));
+        // 생략 기록은 IN_APP·PUSH 채널마다 하나씩 남는다(이전 기대값: IN_APP 1건).
+        assertEquals(2, count("select count(*) from notification_delivery where promise_id = ? and notification_type = 'REMINDER_10' and lifecycle_status = 'SUPPRESSED' and failure_code = 'EVALUATING'", promise));
         // 생략 이후 판정이 끝났다면 T+20 리마인더는 정상 발송된다.
         notifications.dispatchDueNotifications(t.plus(Duration.ofMinutes(20)));
         assertEquals(1, deliveries(promise, "REMINDER_20", "IN_APP"));
+    }
+
+    // R-27(3): 앱 알림이 이미 SENT인 리마인더도 판정 중에 생략되면, 판정 종료 후 새 구독으로 PUSH가 늦게 생기지 않는다.
+    @Test
+    void r27_reminderSkippedWhileEvaluatingIsNotPushedAfterNewSubscription() {
+        Participant p = participant();
+        Instant t = BASE.plus(Duration.ofHours(1));
+        UUID promise = promise(p, t, "Scheduled");
+
+        notifications.dispatchDueNotifications(t.plus(Duration.ofMinutes(10)));
+        assertEquals(1, deliveries(promise, "REMINDER_10", "IN_APP"));
+
+        UUID attempt = attempt(promise, t.plus(Duration.ofMinutes(11)), "Evaluating");
+        notifications.dispatchDueNotifications(t.plus(Duration.ofMinutes(12)));
+
+        jdbc.update("update auth_attempt set processing_status = 'Rejected', decided_at = ? where id = ?",
+                Timestamp.from(t.plus(Duration.ofMinutes(13))), attempt);
+        subscribe(p);
+        notifications.dispatchDueNotifications(t.plus(Duration.ofMinutes(15)));
+        assertEquals(0, deliveries(promise, "REMINDER_10", "PUSH"),
+                "판정 중 생략한 T+10은 이후 새 구독이 생겨도 PUSH로 늦게 생성되면 안 된다");
     }
 
     // R-28: T부터 T+30분 직전까지 접수, T+30분부터 거절.
@@ -189,14 +211,16 @@ class BackendAcceptanceChecklistIntegrationTests {
     @Test
     void r29_lateAiResultForAcceptedPhotoIsApplied() throws Exception {
         Participant p = participant();
-        Instant t = Instant.now().minus(Duration.ofMinutes(30)).plusSeconds(3);
+        // 사진 API가 실제 시각을 쓰므로, 부하로 지연돼도 마감 전에 접수되도록 5초 여유를 둔다.
+        Instant t = Instant.now().minus(Duration.ofMinutes(30)).plusSeconds(5);
         UUID promise = promise(p, t, "Scheduled");
         String attemptId = attemptIdOf(submitPhoto(p, promise).andExpect(status().isOk()));
         Instant receivedAt = jdbc.queryForObject("select valid_received_at from auth_attempt where id = ?",
                 Timestamp.class, UUID.fromString(attemptId)).toInstant();
         assertTrue(receivedAt.isBefore(t.plus(Duration.ofMinutes(30))));
 
-        Thread.sleep(Duration.between(Instant.now(), t.plus(Duration.ofMinutes(30))).toMillis() + 500);
+        // 이미 마감이 지났으면 음수가 되어 Thread.sleep이 예외를 던지므로 0 이상으로 제한한다.
+        Thread.sleep(Math.max(0, Duration.between(Instant.now(), t.plus(Duration.ofMinutes(30))).toMillis() + 500));
         assertTrue(Instant.now().isAfter(t.plus(Duration.ofMinutes(30))));
         mockMvc.perform(post("/api/promises/" + promise + "/photo-attempts/" + attemptId + "/result")
                         .header("Authorization", p.auth()).contentType(MediaType.APPLICATION_JSON)

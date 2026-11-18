@@ -200,25 +200,30 @@ public class NotificationDeliveryService {
     }
 
     /**
-     * Evaluating 중이라 건너뛴 리마인더를 SUPPRESSED 앱 알림 행으로 남긴다.
-     * 참가자 알림 목록은 SENT만 보이므로 노출되지 않고, 같은 dispatch_key로 늦게 다시 만들어지지 않는다.
+     * Evaluating 중이라 건너뛴 리마인더를 채널별 SUPPRESSED 행으로 남긴다.
+     * 참가자 알림 목록은 SENT만, 발송은 SCHEDULED/FAILED만 다루므로 노출·발송되지 않는다.
+     * 같은 dispatch_key의 IN_APP·PUSH 자리를 모두 차지해, 판정 종료 후나 구독이 새로 생긴 뒤에도
+     * 어느 채널로든 늦게 생성되지 않는다. 겹친 스케줄러 실행도 유니크 제약에서 대기한 뒤 충돌로 끝난다.
+     * (이전: IN_APP 행만 남겨, 이미 SENT인 IN_APP이 있거나 실행이 겹치면 PUSH가 늦게 생성될 수 있었다.)
      */
     private void markSkippedWhileEvaluating(PromiseRow promise, NotificationSchedulePolicy.DueNotification due,
                                             String dispatchKey, Instant now) {
-        jdbc.update("""
-                insert into notification_delivery
-                    (participant_id, promise_id, schedule_version, notification_type, channel,
-                     dispatch_key, lifecycle_status, scheduled_at, failure_code)
-                values (?, ?, ?, ?, 'IN_APP', ?, 'SUPPRESSED', ?, 'EVALUATING')
-                on conflict (dispatch_key, channel) do nothing
-                """, promise.participantId(), promise.promiseId(), due.scheduleVersion(), due.type().name(),
-                dispatchKey, timestamp(due.scheduledAt()));
+        for (String channel : List.of("IN_APP", "PUSH")) {
+            jdbc.update("""
+                    insert into notification_delivery
+                        (participant_id, promise_id, schedule_version, notification_type, channel,
+                         dispatch_key, lifecycle_status, scheduled_at, failure_code)
+                    values (?, ?, ?, ?, ?, ?, 'SUPPRESSED', ?, 'EVALUATING')
+                    on conflict (dispatch_key, channel) do nothing
+                    """, promise.participantId(), promise.promiseId(), due.scheduleVersion(), due.type().name(),
+                    channel, dispatchKey, timestamp(due.scheduledAt()));
+        }
     }
 
     private boolean wasSkippedWhileEvaluating(String dispatchKey) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 select exists(select 1 from notification_delivery
-                               where dispatch_key = ? and channel = 'IN_APP'
+                               where dispatch_key = ?
                                  and lifecycle_status = 'SUPPRESSED' and failure_code = 'EVALUATING')
                 """, Boolean.class, dispatchKey));
     }
