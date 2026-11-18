@@ -1,0 +1,9 @@
+{
+  "date": "2026-11-12",
+  "issue": "SCRUM-76",
+  "cause": "PROMISE_SCHEDULE_AFTER_STUDY_END 검증 예외가 일반 서버 오류로 변환됨",
+  "change": "약속 컨트롤러 한정 검증 예외 처리기로 400 VALIDATION 반환",
+  "verification": {"backendTests": 21, "failures": 0, "errors": 0, "skipped": 0, "dockerPostgres": true},
+  "periodExtension": {"requested": true, "newEndAt": "2099-12-31T23:59:00+09:00", "scope": "technical-smoke-20261104만", "applied": true, "evidence": "사용자 SQL 결과: 개입 2099-12-31 23:59, 접근 2100-01-02 23:59 KST"},
+  "remaining": ["Render 배포 및 운영 QA"]
+}

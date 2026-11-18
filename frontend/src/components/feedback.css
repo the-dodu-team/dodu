@@ -1,0 +1,9 @@
+.toast-region {position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(398px, calc(100% - 32px)); z-index: 10000; pointer-events: none;}
+.toast-region[popover] {top: auto; right: auto; margin: 0; padding: 0; border: 0; background: transparent; overflow: visible;}
+.feedback-toast {display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; box-shadow: 0 4px 20px #161a2926; background: #161a29; color: #fff; pointer-events: auto; font-size: 14px; line-height: 1.5;}
+.feedback-toast span {flex: 1; overflow-wrap: anywhere;}
+.feedback-toast.is-error {background: #a32629;}
+.feedback-toast button {background: transparent; color: inherit; padding: 8px; min-width: 44px; min-height: 44px; flex-shrink: 0;}
+.feedback-toast button:focus-visible {outline: 2px solid currentColor; outline-offset: 2px;}
+.app-error-fallback {max-width: 430px; padding: 48px 24px;}
+.app-error-fallback h1 {font-size: 24px;}

@@ -91,6 +91,7 @@ class ParticipantEntryIntegrationTest {
 
         assertEquals(43, result.sessionToken().length());
         assertFalse(result.onboardingCompleted());
+        assertTrue(result.firstEntry());
         assertEquals(NOW.plusSeconds(30L * 24 * 3600), result.expiresAt());
         assertEquals(1, count("select count(*) from participant_session where lifecycle_status = 'Active'"));
         // 원문 토큰·코드·기기 키는 어디에도 저장되지 않습니다.
@@ -140,12 +141,20 @@ class ParticipantEntryIntegrationTest {
     void reentryFromSameDeviceReusesDeviceRow() {
         String code = seedParticipant(accessEnd(30));
 
-        service.enter(code, DEVICE_A);
-        service.enter(code, DEVICE_A);
+        assertTrue(service.enter(code, DEVICE_A).firstEntry());
+        assertFalse(service.enter(code, DEVICE_A).firstEntry());
 
         assertEquals(1, count("select count(*) from participant_device"));
         assertEquals(1, count("select count(*) from participant_session where lifecycle_status = 'Active'"));
         assertEquals(1, count("select count(*) from participant_session where lifecycle_status = 'Ended'"));
+    }
+
+    @Test
+    void firstEntryIsParticipantHistoryNotDeviceOrOnboarding() {
+        String code = seedParticipant(accessEnd(30));
+        assertTrue(service.enter(code, DEVICE_A).firstEntry());
+        assertFalse(service.enter(code, DEVICE_B, true).firstEntry());
+        assertFalse(service.enter(code, DEVICE_B).onboardingCompleted());
     }
 
     @Test

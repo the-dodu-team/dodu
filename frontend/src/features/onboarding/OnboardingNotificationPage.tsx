@@ -9,7 +9,8 @@ type OnboardingNotificationPageProps = {
   requestDisabled?: boolean
   requestBusy?: boolean
   onRequest: () => void
-  onBack: () => void
+  /** 최초 디자인 롤백으로 헤더의 이전 단계 버튼은 표시하지 않는다. */
+  onBack?: () => void
   onClose: () => void
 }
 
@@ -17,15 +18,12 @@ export default function OnboardingNotificationPage({
   totalSteps, isDenied, recoveryText, attempt, onRequest,
   requestDisabled = false,
   requestBusy = false,
-  onBack,
   onClose,
 }: OnboardingNotificationPageProps) {
   return (
     <div className="onboarding-page">
       <header className="onboarding-header">
-        <button type="button" className="onboarding-close" aria-label="이전 단계로" onClick={onBack}>
-          <span aria-hidden="true">←</span>
-        </button>
+        {/* 최초 온보딩 디자인으로 롤백: 헤더에는 닫기 버튼만 둔다(이전 단계 버튼 제거). */}
         <button
           type="button"
           className="onboarding-close"

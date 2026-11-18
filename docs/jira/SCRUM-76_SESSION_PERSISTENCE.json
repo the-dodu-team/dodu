@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-11",
+  "issue": "SCRUM-76",
+  "scope": "알파 웹 세션 영구 저장 및 삭제 후 코드 재입장 회귀 검증",
+  "checks": {"platform": "통과", "frontendBuild": "통과", "syntheticBrowserReentry": "통과", "syntheticBrowserDeviceChange": "통과"},
+  "remaining": ["실제 모바일 아이콘 삭제·재설치 QA", "Production 반영", "알파 이후 인증 저장 방식 검토"],
+  "limitation": "OS가 삭제한 인증 저장소의 무인 복원은 보장하지 않음. 코드 로그인 실패는 사용자 정정으로 미확정."
+}

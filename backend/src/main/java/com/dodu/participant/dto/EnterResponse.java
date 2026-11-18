@@ -7,5 +7,6 @@ package com.dodu.participant.dto;
  * @param expiresAt 세션 만료 시각(+09:00)
  * @param onboardingCompleted false면 온보딩(S02-1), true면 홈(S03)으로 이동
  */
-public record EnterResponse(String sessionToken, String expiresAt, boolean onboardingCompleted) {
+// 이전: EnterResponse(String sessionToken, String expiresAt, boolean onboardingCompleted)
+public record EnterResponse(String sessionToken, String expiresAt, boolean onboardingCompleted, boolean firstEntry) {
 }

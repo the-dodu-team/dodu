@@ -196,6 +196,12 @@ public class ParticipantAccessRepository {
                 .update();
     }
 
+    /** 참가자 잠금 안에서 확인한다. 종료된 세션도 재입장 이력에 포함한다. */
+    public boolean hasEntryHistory(UUID participantId) {
+        return jdbc.sql("select exists(select 1 from participant_session where participant_id = :id)")
+                .param("id", participantId).query(Boolean.class).single();
+    }
+
     public UUID insertSession(
             UUID participantId, UUID deviceId, String tokenHash, Instant now, Instant expiresAt) {
         return jdbc.sql("""

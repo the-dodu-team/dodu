@@ -29,7 +29,7 @@ public class InAppSurveyReminderService {
                    and exists (select 1 from promise p join participant u on u.id = p.participant_id
                                 join participant_session s on s.participant_id = u.id
                                 join study_period sp on sp.id = u.study_period_id
-                                where p.id = vs.promise_id and u.id = ? and s.id = ?
+                                where p.id = vs.promise_id and p.superseded_by_promise_id is null and u.id = ? and s.id = ?
                                   and u.withdrawn_at is null and u.access_disabled_at is null
                                   and s.lifecycle_status = 'Active' and s.revoked_at is null
                                   and s.expires_at > ? and (sp.access_ends_at is null or sp.access_ends_at > ?))

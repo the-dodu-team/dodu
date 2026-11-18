@@ -106,6 +106,17 @@ class ValidationSurveyControllerIntegrationTests {
     }
 
     @Test
+    void supersededPromiseSurveyIsNotFoundAndKeepsItsState() throws Exception {
+        jdbc.update("update promise set superseded_by_promise_id = id where id = ?", promiseId);
+        mockMvc.perform(get("/api/promises/" + promiseId + "/validation-survey").header("Authorization", authorization))
+                .andExpect(status().isNotFound());
+        assertEquals("Pending", jdbc.queryForObject("select lifecycle_status from validation_survey where promise_id = ?", String.class, promiseId));
+        assertEquals(0, jdbc.queryForObject("select count(*) from validation_survey where promise_id = ? and prompted_at is not null", Integer.class, promiseId));
+        mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey/skip").header("Authorization", authorization))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void submitPersistsTimestampsAndReturnsSubmittedSurvey() throws Exception {
         mockMvc.perform(post("/api/promises/" + promiseId + "/validation-survey")
                         .header("Authorization", authorization)
