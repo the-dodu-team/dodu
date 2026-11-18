@@ -1,8 +1,10 @@
-package com.dodu.intervention;
+package com.dodu.intervention.adapter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.dodu.intervention.PhotoEvaluationRecoveryHandler;
+import com.dodu.intervention.PhotoObjectReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -13,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -45,7 +48,7 @@ class AiPhotoEvaluationRecoveryHandlerTests {
                 endpoint(), "test-secret", HttpClient.newHttpClient());
         var result = handler.recover(job());
 
-        assertEquals(PhotoEvaluationRecoveryHandler.Outcome.COMPLETED, result.outcome());
+        Assertions.assertEquals(PhotoEvaluationRecoveryHandler.Outcome.COMPLETED, result.outcome());
         assertEquals("dinov2-base-prototype", result.modelVersion());
         assertEquals("test-secret", receivedKey.get());
         assertTrue(requestBody.get().contains("name=\"files\""));

@@ -1,8 +1,9 @@
-package com.dodu.intervention;
+package com.dodu.intervention.adapter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import com.dodu.intervention.PhotoEvaluationRecoveryHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.junit.jupiter.api.Test;

@@ -1,5 +1,6 @@
-package com.dodu.notification;
+package com.dodu.notification.adapter;
 
+import com.dodu.notification.DeviceChangePushSender;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;

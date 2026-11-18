@@ -1,5 +1,8 @@
-package com.dodu.notification;
+package com.dodu.notification.adapter;
 
+import com.dodu.notification.DeviceChangeNotice;
+import com.dodu.notification.DeviceChangeNotificationListener;
+import com.dodu.notification.DeviceChangePushSender;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -13,7 +16,6 @@ import org.springframework.core.task.SyncTaskExecutor;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 
 class DeviceChangeNotificationListenerTests {
     @Test

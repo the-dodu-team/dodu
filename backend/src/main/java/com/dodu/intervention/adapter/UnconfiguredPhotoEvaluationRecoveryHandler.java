@@ -1,5 +1,6 @@
-package com.dodu.intervention;
+package com.dodu.intervention.adapter;
 
+import com.dodu.intervention.PhotoEvaluationRecoveryHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 

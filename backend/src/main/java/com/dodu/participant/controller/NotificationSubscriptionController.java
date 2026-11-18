@@ -5,6 +5,8 @@ import com.dodu.participant.domain.SessionContext;
 import com.dodu.notification.NotificationSubscriptionService;
 import com.dodu.notification.NotificationSubscriptionService.SubscriptionResult;
 import java.time.Clock;
+
+import com.dodu.participant.dto.SubscriptionRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,5 +34,4 @@ public class NotificationSubscriptionController {
     public ApiResponse<SubscriptionResult> unsubscribe(SessionContext context) {
         return ApiResponse.success(service.unsubscribe(context), ApiTime.now(clock));
     }
-    public record SubscriptionRequest(String subscriptionKey) { }
 }
