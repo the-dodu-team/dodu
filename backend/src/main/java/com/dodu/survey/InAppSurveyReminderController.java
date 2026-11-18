@@ -5,6 +5,8 @@ import com.dodu.common.api.ApiTime;
 import com.dodu.participant.service.ParticipantAuthService;
 import java.time.Clock;
 import java.util.UUID;
+
+import com.dodu.survey.dto.ReminderResponse;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -22,10 +24,9 @@ public class InAppSurveyReminderController {
 
     @PostMapping("/api/promises/{promiseId}/validation-survey/inapp-reminder")
     public ApiResponse<ReminderResponse> claim(@PathVariable UUID promiseId,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
+                                               @RequestHeader(value = "Authorization", required = false) String authorization) {
         boolean show = service.claim(promiseId, auth.authenticate(authorization));
         return ApiResponse.success(new ReminderResponse(show), ApiTime.now(clock));
     }
 
-    public record ReminderResponse(boolean show) { }
 }

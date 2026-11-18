@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+import com.dodu.intervention.dto.PhotoAttemptResponse;
 import com.dodu.participant.service.ParticipantAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -223,7 +224,6 @@ public class PhotoSubmissionController {
         }
     }
 
-    public record PhotoAttemptResponse(UUID attemptId, UUID promiseId, String processingStatus, Instant receivedAt) { }
     public record ErrorResponse(String code) { }
     private record PromiseRow(Instant scheduledAt, LocalDate scheduledDateKst, String lifecycleStatus, Instant interventionEndsAt) { }
     private record ExistingAttempt(UUID id, String requestFingerprint, String processingStatus, Instant requestReceivedAt) { }

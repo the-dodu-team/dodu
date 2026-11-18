@@ -1,5 +1,6 @@
-package com.dodu.intervention;
+package com.dodu.intervention.adapter;
 
+import com.dodu.intervention.PhotoEvaluationRecoveryHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;

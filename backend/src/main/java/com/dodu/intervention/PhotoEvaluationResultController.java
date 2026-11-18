@@ -5,6 +5,9 @@ import java.time.Instant;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+import com.dodu.intervention.domain.Result;
+import com.dodu.intervention.dto.ResultRequest;
+import com.dodu.intervention.dto.ResultResponse;
 import com.dodu.participant.service.ParticipantAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.dodu.access.AccessCredentialHasher;
 
 @RestController
 @Tag(name = "사진 인증")
@@ -95,7 +97,4 @@ public class PhotoEvaluationResultController {
         return new ResponseStatusException(status, code);
     }
 
-    public enum Result { COMPLETED, REJECTED, TECH_ERROR }
-    public record ResultRequest(Result result, String rejectionReason, String technicalErrorType, String modelVersion) { }
-    public record ResultResponse(UUID attemptId, UUID promiseId, String processingStatus, String decisionResult, Instant decidedAt) { }
 }

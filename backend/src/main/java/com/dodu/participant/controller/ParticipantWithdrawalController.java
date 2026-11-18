@@ -4,6 +4,7 @@ import com.dodu.common.api.ApiResponse;
 import com.dodu.common.api.ApiTime;
 import com.dodu.operator.service.OperatorAccessService;
 import com.dodu.participant.domain.SessionContext;
+import com.dodu.participant.dto.WithdrawalResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Clock;
@@ -38,6 +39,4 @@ public class ParticipantWithdrawalController {
                 result.deactivatedSubscriptions(), requestedAt), ApiTime.now(clock));
     }
 
-    public record WithdrawalResponse(String lifecycleStatus, int endedSessions,
-                                     int deactivatedSubscriptions, Instant requestedAt) { }
 }

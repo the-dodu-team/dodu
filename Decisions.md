@@ -1,5 +1,13 @@
 # 개발 결정 기록
 
+## DEV-20261118-02 — SCRUM-95 DTO·adapter 분리 브랜치 최신 dev 반영
+
+- 배경: `refactor/SCRUM-95-controller-boundaries`(컨트롤러 중첩 DTO를 `dto` 패키지로, 외부 연동을 `adapter` 패키지로 이동)가 dev보다 28커밋 뒤처져 있었다. 그 사이 dev에 추가된 `AiPhotoEvaluationRecoveryHandlerContextTests`가 이동 전 패키지의 AI 처리기를 참조해 합친 코드의 테스트 컴파일이 실패했다.
+- 선택: 강제 push 없이 최신 dev를 merge하고, 해당 테스트를 다른 AI 처리기 테스트와 같은 `intervention.adapter` 패키지로 옮겨 인터페이스(`PhotoEvaluationRecoveryHandler`)만 import한다. 테스트 내용은 바꾸지 않았다.
+- 대안: rebase는 이미 원격에 올라간 브랜치의 이력을 바꿔 강제 push가 필요하므로 선택하지 않았다.
+- 영향: 동작 변경 없음. 진행 중인 SCRUM-84(AI 도구 비교)는 이 브랜치 머지 후 `adapter/AiPhotoEvaluationResponseMapper`, `dto/ResultRequest` 위치에 다시 적용한다.
+- 검증: JDK 21·Docker(Testcontainers PostgreSQL 16)로 백엔드 전체 테스트 290건 통과(실패·오류·건너뜀 0).
+
 ## DEV-20261113-03 — PR #51 CodeRabbit 리뷰 반영
 
 - 배경: CodeRabbit이 PR #51에 4건을 지적했다. 각 건을 현재 코드로 재현 경로를 확인한 뒤 모두 타당하다고 판단했다.

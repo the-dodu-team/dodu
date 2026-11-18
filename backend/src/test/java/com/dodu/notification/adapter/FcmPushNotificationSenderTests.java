@@ -1,4 +1,4 @@
-package com.dodu.notification;
+package com.dodu.notification.adapter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -10,6 +10,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.dodu.notification.NotificationSchedulePolicy;
+import com.dodu.notification.PushNotificationSender;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -21,6 +23,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
+
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -41,7 +45,7 @@ class FcmPushNotificationSenderTests {
 
         var result = sender.send(participantId, promiseId, NotificationSchedulePolicy.NotificationType.START);
 
-        assertEquals(PushNotificationSender.Status.UNDELIVERABLE, result.status());
+        Assertions.assertEquals(PushNotificationSender.Status.UNDELIVERABLE, result.status());
         assertEquals("UNREGISTERED", result.failureCode());
         verify(jdbc).update(contains("push_token = null"), any(Timestamp.class), any(UUID.class));
     }

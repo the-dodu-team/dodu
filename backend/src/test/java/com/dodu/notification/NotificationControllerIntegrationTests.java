@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.dodu.participant.domain.SecretHasher;
+import com.dodu.participant.dto.SubscriptionRequest;
 import com.dodu.participant.service.ParticipantAuthService;
 import com.dodu.participant.controller.NotificationSubscriptionController;
 import com.dodu.common.exception.BusinessException;
@@ -129,7 +130,7 @@ class NotificationControllerIntegrationTests {
         var stale = auth.authenticate(authorization);
         jdbc.update("update participant_session set lifecycle_status = 'Revoked', revoked_at = now() where id = ?", stale.session().id());
         assertThrows(BusinessException.class, () -> subscriptions.subscribe(stale,
-                new NotificationSubscriptionController.SubscriptionRequest("synthetic-stale-push")));
+                new SubscriptionRequest("synthetic-stale-push")));
         assertEquals(0, jdbc.queryForObject("select count(*) from notification_subscription where participant_id = ?", Integer.class, stale.participant().id()));
     }
 
