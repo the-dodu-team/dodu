@@ -1,5 +1,12 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-19 / SCRUM-84 AI mapper 수정 재적용
+
+- 원인: #47이 11/13 디자인 롤백 중 잘못 되돌려져 AI 활성화 Render 배포가 Jackson 2 `ObjectMapper` 빈 누락으로 계속 시작 실패. 운영은 #51 이전 빌드에 머무름(화면 번들 문구로 판단).
+- 조치: `0e5340e` cherry-pick, AI 활성화 시작 통합 테스트를 `intervention.adapter`로 이동.
+- 검증: AI 관련 10건 통과(실제 PostgreSQL 17 AI 활성화 시작 포함).
+- 남은 확인: 머지 후 Render 배포 성공, 운영 V11 적용, 실제 사진 AI 판정. Jira 상태 변경 없음.
+
 ## 2026-11-13 / SCRUM-76 PR #51 리뷰 반영
 
 - CodeRabbit 4건 모두 타당 판단 후 반영: 제출 검증 시각 `getNow` 통일, 1분 단위 기존 시각 휠 보존, 대체 약속 설문 상태 변경 차단, 대체 약속 설문 알림 재시도 억제(`PROMISE_SUPERSEDED`).
@@ -35,6 +42,10 @@
 - 남은 범위: Vercel Production 반영 및 모바일 시간 입력 실기기 확인. 전체 티켓 완료 아님.
 
 ## 2026-11-12 / SCRUM-84 AI 활성화 시작 오류
+
+- 후속 배포에서 Jackson 2 ObjectMapper 빈 누락으로 다시 실패. 앞선 컨텍스트 테스트가 빈을 직접 등록해 운영 조건 차이를 놓쳤음.
+- 보완: ObjectProvider로 기존 빈을 우선 사용하고 없으면 AI 전용 mapper 생성. 기존 필수 주입 의도는 코드 주석 보존. 테스트의 수동 빈 등록 제거 및 실제 애플리케이션·PostgreSQL 시작 검증 추가.
+- 후속 검증: `AiEnabledApplicationIntegrationTests,AiPhotoEvaluationRecoveryHandlerContextTests,AiPhotoEvaluationRecoveryHandlerTests,AiPhotoEvaluationResponseMapperTests` 8건 통과. Docker PostgreSQL 17·Flyway 포함 실제 애플리케이션 시작 확인. 운영 배포·외부 AI 판정은 별도 미확인.
 
 - 원인: 운영·테스트용 생성자가 함께 존재하나 Spring 생성자 선택 지시가 없어 `No default constructor found` 발생.
 - 수정: 운영 생성자에 `@Autowired` 추가. 기존 생성자·판정·재시도 정책 보존.
