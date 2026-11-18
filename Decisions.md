@@ -1,5 +1,13 @@
 # 개발 결정 기록
 
+## DEV-20261119-01 — SCRUM-84 AI 파서 mapper 수정(#47) 재적용
+
+- 배경: PR #47(`0e5340e`, AI 활성화 시 Jackson 2 `ObjectMapper` 빈이 없어도 시작)이 11/13 01:26 `a3f0756`에서 되돌려졌다. 담당자 확인 결과 디자인 롤백 의도였으나, 되돌림 커밋은 #47 파일만 변경했다(화면 파일 없음). 이후 `DODU_AI_ENABLED=true`인 Render 배포가 모두 `No qualifying bean of type 'com.fasterxml.jackson.databind.ObjectMapper'`로 시작 실패했다(11/18 배포 로그 확인). 운영 화면 번들에 #51 문구가 없고 #51에서 지운 문구가 남아 있어, 운영은 #47 포함·#51 이전 빌드에 머물러 있는 것으로 판단했다.
+- 선택: `0e5340e`를 원 작성자 그대로 cherry-pick한다. SCRUM-95 이동에 맞춰 `AiEnabledApplicationIntegrationTests`를 `intervention.adapter` 패키지로 옮긴다. 코드·판정 정책은 #47과 동일하다.
+- 대안: Render에서 AI를 끄면 배포는 되지만 사진 판정이 재시도 후 기술 실패로 끝나므로 선택하지 않았다. 전역 Jackson 2 빈 등록·Jackson 3 전환은 웹 JSON 설정 영향이 커서 #47 결정대로 제외했다.
+- 영향: 머지·배포 후 #51 이후 dev 변경(하루 1약속·갤러리·온보딩 롤백·SCRUM-95 등)이 운영에 함께 반영된다. 운영 DB에 V11이 적용된다.
+- 검증: JDK 21·Docker로 AI 관련 10건 통과(실제 애플리케이션·PostgreSQL 17 AI 활성화 시작, 컨텍스트 2, 처리기 2, 응답 매핑 3, 복구 워커 통합 2). 동일 결함은 로컬 서버 기동(AI 활성화)으로 수정 전 재현했다. Render 배포 성공·실제 AI 판정은 머지 후 확인 필요.
+
 ## DEV-20261118-02 — SCRUM-95 DTO·adapter 분리 브랜치 최신 dev 반영
 
 - 배경: `refactor/SCRUM-95-controller-boundaries`(컨트롤러 중첩 DTO를 `dto` 패키지로, 외부 연동을 `adapter` 패키지로 이동)가 dev보다 28커밋 뒤처져 있었다. 그 사이 dev에 추가된 `AiPhotoEvaluationRecoveryHandlerContextTests`가 이동 전 패키지의 AI 처리기를 참조해 합친 코드의 테스트 컴파일이 실패했다.

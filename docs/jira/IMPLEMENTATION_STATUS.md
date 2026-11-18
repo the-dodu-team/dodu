@@ -1,5 +1,12 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-19 / SCRUM-84 AI mapper 수정 재적용
+
+- 원인: #47이 11/13 디자인 롤백 중 잘못 되돌려져 AI 활성화 Render 배포가 Jackson 2 `ObjectMapper` 빈 누락으로 계속 시작 실패. 운영은 #51 이전 빌드에 머무름(화면 번들 문구로 판단).
+- 조치: `0e5340e` cherry-pick, AI 활성화 시작 통합 테스트를 `intervention.adapter`로 이동.
+- 검증: AI 관련 10건 통과(실제 PostgreSQL 17 AI 활성화 시작 포함).
+- 남은 확인: 머지 후 Render 배포 성공, 운영 V11 적용, 실제 사진 AI 판정. Jira 상태 변경 없음.
+
 ## 2026-11-13 / SCRUM-76 PR #51 리뷰 반영
 
 - CodeRabbit 4건 모두 타당 판단 후 반영: 제출 검증 시각 `getNow` 통일, 1분 단위 기존 시각 휠 보존, 대체 약속 설문 상태 변경 차단, 대체 약속 설문 알림 재시도 억제(`PROMISE_SUPERSEDED`).
