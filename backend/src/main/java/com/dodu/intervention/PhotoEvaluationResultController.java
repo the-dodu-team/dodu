@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+import com.dodu.intervention.domain.PhotoToolMatchPolicy;
 import com.dodu.intervention.domain.Result;
 import com.dodu.intervention.dto.ResultRequest;
 import com.dodu.intervention.dto.ResultResponse;
@@ -53,7 +54,25 @@ public class PhotoEvaluationResultController {
         if (request == null || request.result() == null) {
             throw error(HttpStatus.BAD_REQUEST, "RESULT_REQUIRED");
         }
-        String nextStatus = switch (request.result()) {
+        // 완료 결과는 AI가 본 물건(label)이 약속 도구와 같을 때만 완료로 저장한다.
+        // 이전에는 COMPLETED를 그대로 저장해 책 약속에 노트북 사진도 인증 완료됐다.
+        Result result = request.result();
+        String rejectionReason = request.rejectionReason();
+        if (result == Result.COMPLETED) {
+            if (request.detectedLabel() == null || request.detectedLabel().isBlank()) {
+                throw error(HttpStatus.BAD_REQUEST, "DETECTED_LABEL_REQUIRED");
+            }
+            String promiseTool = jdbc.query("select tool_type from promise where id = ? and participant_id = ?",
+                    rs -> rs.next() ? rs.getString("tool_type") : null, promiseId, participantId);
+            if (promiseTool == null) {
+                throw error(HttpStatus.CONFLICT, "ATTEMPT_NOT_CURRENT_OR_WITHDRAWN");
+            }
+            if (!PhotoToolMatchPolicy.matches(promiseTool, request.detectedLabel())) {
+                result = Result.REJECTED;
+                rejectionReason = PhotoToolMatchPolicy.TOOL_MISMATCH;
+            }
+        }
+        String nextStatus = switch (result) {
             case COMPLETED -> "Completed";
             case REJECTED -> "Rejected";
             case TECH_ERROR -> "TechFailed";
@@ -69,26 +88,26 @@ public class PhotoEvaluationResultController {
                                   and a.valid_received_at >= p.scheduled_at
                                   and a.valid_received_at < p.scheduled_at + interval '30 minutes'
                                   and part.lifecycle_status <> 'Withdrawn')
-                """, nextStatus, request.result().name(), request.rejectionReason(),
+                """, nextStatus, result.name(), rejectionReason,
                 request.technicalErrorType(), request.modelVersion(), Timestamp.from(now), attemptId, promiseId, participantId);
         if (updated != 1) {
             throw error(HttpStatus.CONFLICT, "ATTEMPT_NOT_CURRENT_OR_WITHDRAWN");
         }
-        if (request.result() == Result.COMPLETED) {
+        if (result == Result.COMPLETED) {
             jdbc.update("update promise set lifecycle_status = 'AuthCompleted', auth_completed_at = ?, "
                             + "final_outcome = null, updated_at = ? where id = ? and participant_id = ? "
                             + "and lifecycle_status <> 'Cancelled' and final_outcome is distinct from 'Withdrawn'",
                     Timestamp.from(now), Timestamp.from(now), promiseId, participantId);
             // 인증 완료도 실제 시작 자기보고 대상이다(R-36). 이전에는 AuthIncomplete만 설문이 생성됐다.
             com.dodu.survey.CompletedPromiseSurveyOpener.open(jdbc, promiseId);
-        } else if (request.result() == Result.TECH_ERROR) {
+        } else if (result == Result.TECH_ERROR) {
             jdbc.update("update promise set lifecycle_status = 'Closed', final_outcome = 'TechFailed', "
                             + "closed_at = ?, updated_at = ? where id = ? and participant_id = ? "
                             + "and lifecycle_status not in ('AuthCompleted', 'Cancelled') "
                             + "and final_outcome is distinct from 'Withdrawn'",
                     Timestamp.from(now), Timestamp.from(now), promiseId, participantId);
         }
-        return new ResultResponse(attemptId, promiseId, nextStatus, request.result().name(), now);
+        return new ResultResponse(attemptId, promiseId, nextStatus, result.name(), now);
     }
 
     private UUID participantFromBearer(String authorization) {
@@ -98,5 +117,4 @@ public class PhotoEvaluationResultController {
     private static ResponseStatusException error(HttpStatus status, String code) {
         return new ResponseStatusException(status, code);
     }
-
 }

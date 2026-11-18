@@ -224,7 +224,7 @@ class BackendAcceptanceChecklistIntegrationTests {
         assertTrue(Instant.now().isAfter(t.plus(Duration.ofMinutes(30))));
         mockMvc.perform(post("/api/promises/" + promise + "/photo-attempts/" + attemptId + "/result")
                         .header("Authorization", p.auth()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"result\":\"COMPLETED\",\"modelVersion\":\"acceptance-model\"}"))
+                        .content("{\"result\":\"COMPLETED\",\"modelVersion\":\"acceptance-model\",\"detectedLabel\":\"laptop\"}"))
                 .andExpect(status().isOk());
 
         assertEquals("AuthCompleted", jdbc.queryForObject(
@@ -249,7 +249,7 @@ class BackendAcceptanceChecklistIntegrationTests {
         String attemptId = attemptIdOf(submitPhoto(p, promise).andExpect(status().isOk()));
         mockMvc.perform(post("/api/promises/" + promise + "/photo-attempts/" + attemptId + "/result")
                         .header("Authorization", p.auth()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"result\":\"COMPLETED\"}"))
+                        .content("{\"result\":\"COMPLETED\",\"detectedLabel\":\"laptop\"}"))
                 .andExpect(status().isOk());
         clock.set(t.plus(Duration.ofHours(2)));
         lifecycle.reconcile(p.id());
@@ -336,7 +336,7 @@ class BackendAcceptanceChecklistIntegrationTests {
         String attemptId = attemptIdOf(submitPhoto(p, UUID.fromString(promiseId)).andExpect(status().isOk()));
         mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
                         .header("Authorization", p.auth()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"result\":\"COMPLETED\",\"modelVersion\":\"acceptance-model\"}"))
+                        .content("{\"result\":\"COMPLETED\",\"modelVersion\":\"acceptance-model\",\"detectedLabel\":\"book\"}"))
                 .andExpect(status().isOk());
 
         assertTrue(count("select count(*) from behavior_event where participant_id = ?", p.id()) > 0,

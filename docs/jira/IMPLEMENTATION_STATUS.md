@@ -19,6 +19,14 @@
 - 미반영(근거 기록): 철회 경쟁(철회의 설문 만료 문장이 커밋 후 실행되어 남는 설문 없음), Decisions 형식 제안.
 - 검증: 백엔드 전체 303건 통과(R-46 1건 건너뜀).
 
+## 2026-11-18 / SCRUM-84 AI 판정 label과 약속 도구 비교
+
+- 원인: AI가 `laptop`·`book`이면 약속 도구와 관계없이 인증 완료로 처리해 책 약속에 노트북 화면·태블릿 사진이 승인됨(검증 시트 AI 2건 실패).
+- 수정: `PhotoToolMatchPolicy`로 `COMPUTER`↔`laptop`, `BOOK`↔`book` 비교. 불일치는 `Rejected`/`AI_TOOL_MISMATCH`(T+30 전 재제출 가능). label 없는 완료는 재시도, 결과 API는 `COMPLETED`에 `detectedLabel` 필수.
+- 검증: 관련 37건 실행 후 #53·#52 반영 상태에서 백엔드 전체 309건 통과(R-46 1건 건너뜀). 실제 AI worker·실기기 확인 미실행. Jira 상태 변경 없음.
+- 남은 범위: 태블릿을 `laptop`으로 분류하는 모델 문제(AI), FE 거절 안내 문구, 결과 API 인증 주체 점검.
+
+
 ## 2026-11-13 / BE 검증 체크리스트 수행, R-27·R-36 수정
 
 - 수행: R-14·15·18·26·27·28·29·36·37·45·46을 `BackendAcceptanceChecklistIntegrationTests`(서버 시각 고정)와 기존 테스트로 확인.

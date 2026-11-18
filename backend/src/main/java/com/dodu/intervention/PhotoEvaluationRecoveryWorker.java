@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import com.dodu.intervention.domain.PhotoToolMatchPolicy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -70,10 +71,32 @@ public class PhotoEvaluationRecoveryWorker {
             } catch (RuntimeException ignored) {
                 result = PhotoEvaluationRecoveryHandler.RecoveryResult.retryable("HANDLER_EXCEPTION");
             }
-            apply(job, attemptCount, result, now);
+            apply(job, attemptCount, matchPromiseTool(job, result), now);
             processed++;
         }
         return processed;
+    }
+
+    /**
+     * AI가 허용 물건을 봤더라도 약속 도구와 다르면 거절한다(예: 책 약속에 노트북 화면 사진).
+     * 거절이므로 T+30 전이면 다시 찍어 제출할 수 있다. label이 없으면 판단할 수 없어 재시도한다.
+     */
+    private PhotoEvaluationRecoveryHandler.RecoveryResult matchPromiseTool(
+            JobRow job, PhotoEvaluationRecoveryHandler.RecoveryResult result) {
+        if (result.outcome() != PhotoEvaluationRecoveryHandler.Outcome.COMPLETED) return result;
+        if (result.detectedLabel() == null) {
+            return PhotoEvaluationRecoveryHandler.RecoveryResult.retryable("AI_LABEL_MISSING");
+        }
+        String promiseTool = jdbc.queryForObject("select tool_type from promise where id = ?",
+                String.class, job.promiseId());
+        if (PhotoToolMatchPolicy.expectedLabel(promiseTool).isEmpty()) {
+            return PhotoEvaluationRecoveryHandler.RecoveryResult.technicalFailure("PROMISE_TOOL_UNKNOWN");
+        }
+        if (!PhotoToolMatchPolicy.matches(promiseTool, result.detectedLabel())) {
+            return PhotoEvaluationRecoveryHandler.RecoveryResult.rejected(
+                    PhotoToolMatchPolicy.TOOL_MISMATCH, result.modelVersion());
+        }
+        return result;
     }
 
     private boolean eligible(JobRow job, Instant now) {

@@ -28,6 +28,21 @@
 - 영향: 판정 중 생략한 리마인더는 채널 구분 없이 다시 생성되지 않는다. DB 스키마 변경 없음.
 - 검증: 회귀 테스트(IN_APP 이미 SENT + 판정 중 생략 + 이후 구독)는 수정 전 실패, 수정 후 통과. 백엔드 전체 303건 통과(건너뜀 1건: R-46).
 
+## DEV-20261118-03 — AI 판정 label과 약속 도구 비교
+
+- 배경: 검증 시트 AI 항목(화면 속 책 이미지, 태블릿·전자책)에서 책 약속에 AI가 `laptop`으로 판정했는데도 "인증 완료"가 표시됐다. `AiPhotoEvaluationResponseMapper`가 `laptop`·`book`을 약속 도구와 비교하지 않고 모두 완료로 확정했기 때문이다. 결과 API도 `COMPLETED`를 그대로 저장했다.
+- 선택:
+  - `PhotoToolMatchPolicy`를 추가해 약속 도구(`COMPUTER`/`BOOK`, 과거 `laptop`·소문자 포함)를 AI label(`laptop`/`book`)과 대응시킨다.
+  - 매퍼는 label을 결과에 담아 넘기고(이전 식 주석 보존), 약속을 아는 복구 워커가 최종 판단한다. 불일치는 `Rejected`/`AI_TOOL_MISMATCH`라서 T+30 전이면 다시 제출할 수 있고, 마감 후 접수분은 기존 거절 정책대로 처리한다.
+  - label 없는 완료는 승인하지 않고 재시도(`AI_LABEL_MISSING`)한다. 알 수 없는 약속 도구 값은 기술 실패(`PROMISE_TOOL_UNKNOWN`)로 분리한다.
+  - 결과 API는 `COMPLETED`에 `detectedLabel`을 필수로 받고 같은 규칙을 적용한다(없으면 400).
+  - SCRUM-95(#53) 머지 후 위치에 맞춰 `adapter/AiPhotoEvaluationResponseMapper`, `dto/ResultRequest`에 적용했다.
+- 대안: AI가 본 label을 `auth_attempt` 새 컬럼에 저장하는 방법은 마이그레이션이 필요하고, 행동 로그(`behavior_event`, R-46) 구현 때 `auth_result_received` 이벤트로 남기는 편이 중복이 없어 보류했다.
+- 영향: 책 약속에 노트북·태블릿 사진(AI가 laptop으로 판정)은 거절된다. 컴퓨터 약속에 태블릿 사진은 AI가 laptop으로 보는 한 여전히 승인된다(모델 문제, AI 담당 확인 필요). DB 스키마 변경 없음.
+- 검증: JDK 21·Docker(Testcontainers PostgreSQL 16). 도구 비교 단위 2건, 매퍼·AI 핸들러 7건, 복구 워커 5건(불일치 거절·책 일치 완료·label 누락 재시도 신규 3건), 결과 API 6건(불일치 거절·label 누락 400 신규 2건), 사진 제출 5건, 인수 12건(11 통과·1 건너뜀) 실행, 실패 0. #53·#52 반영 후 백엔드 전체 309건 통과(건너뜀 1건: R-46).
+- 최신 dev 반영(11/20): #52 머지 후 rebase. 도구 불일치로 바뀐 거절도 #52의 attempt 갱신 행 수 확인(DEV-20261120-01)을 거치므로, 이미 확정된 attempt는 덮어쓰지 않는다. #52의 늦은 완료 회귀 테스트는 label 있는 완료로 맞췄다. rebase 후 백엔드 전체 313건 실행: 1건(해당 테스트) 수정 후 재실행 통과, 나머지 통과, 건너뜀 1(R-46).
+- 남은 사항: FE 거절 안내 문구(`AI_TOOL_MISMATCH`)는 별도 작업. 결과 API가 참가자 세션으로 인증되어 참가자가 직접 결과를 넣을 수 있는 구조인지는 별도 점검이 필요하다.
+
 
 ## DEV-20261118-02 — SCRUM-95 DTO·adapter 분리 브랜치 최신 dev 반영
 
@@ -36,6 +51,7 @@
 - 대안: rebase는 이미 원격에 올라간 브랜치의 이력을 바꿔 강제 push가 필요하므로 선택하지 않았다.
 - 영향: 동작 변경 없음. 진행 중인 SCRUM-84(AI 도구 비교)는 이 브랜치 머지 후 `adapter/AiPhotoEvaluationResponseMapper`, `dto/ResultRequest` 위치에 다시 적용한다.
 - 검증: JDK 21·Docker(Testcontainers PostgreSQL 16)로 백엔드 전체 테스트 290건 통과(실패·오류·건너뜀 0).
+
 
 ## DEV-20261113-04 — BE 검증 체크리스트 수행과 R-27·R-36 결함 수정
 

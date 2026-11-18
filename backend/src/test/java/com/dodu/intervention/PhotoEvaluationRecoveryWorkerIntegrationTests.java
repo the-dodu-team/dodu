@@ -43,7 +43,8 @@ class PhotoEvaluationRecoveryWorkerIntegrationTests {
             jdbc.update("update auth_attempt set processing_status = 'TechFailed', decision_result = 'TechFailed' where id = ?", fixture.attemptId());
             jdbc.update("update promise set lifecycle_status = 'Closed', final_outcome = 'TechFailed' where id = ?", fixture.promiseId());
         });
-        handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("model-test"));
+        // SCRUM-84 이후 완료는 label이 있어야 승인 대상이다(label 없는 완료는 재시도).
+        handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("laptop", "model-test"));
 
         assertEquals(1, worker.processDueJobs(NOW));
         assertEquals("TechFailed", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
@@ -76,7 +77,7 @@ class PhotoEvaluationRecoveryWorkerIntegrationTests {
         assertEquals(1, attempts(fixture.jobId()));
         assertEquals(NOW.plusSeconds(30), nextAttempt(fixture.jobId()));
 
-        handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("model-test"));
+        handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("laptop", "model-test"));
         assertEquals(1, worker.processDueJobs(NOW.plusSeconds(30)));
         assertEquals("SUCCEEDED", status(fixture.jobId()));
         assertEquals("Completed", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
@@ -93,6 +94,45 @@ class PhotoEvaluationRecoveryWorkerIntegrationTests {
         assertEquals("EXHAUSTED", status(fixture.jobId()));
         assertEquals("TechFailed", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
         assertEquals("TechFailed", value("select final_outcome from promise where id = ?", fixture.promiseId()));
+    }
+
+    @Test
+    void laptopLabelOnBookPromiseIsRejectedAndPromiseStaysOpenForResubmission() {
+        Fixture fixture = fixture(0);
+        jdbc.update("update promise set tool_type = 'BOOK' where id = ?", fixture.promiseId());
+        handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("laptop", "model-test"));
+
+        assertEquals(1, worker.processDueJobs(NOW));
+        assertEquals("SUCCEEDED", status(fixture.jobId()));
+        assertEquals("Rejected", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
+        assertEquals("AI_TOOL_MISMATCH", value("select rejection_reason from auth_attempt where id = ?", fixture.attemptId()));
+        assertEquals("Scheduled", value("select lifecycle_status from promise where id = ?", fixture.promiseId()));
+        assertEquals(0, jdbc.queryForObject("select count(*) from validation_survey where promise_id = ?", Integer.class, fixture.promiseId()));
+    }
+
+    @Test
+    void bookLabelOnBookPromiseCompletes() {
+        Fixture fixture = fixture(0);
+        jdbc.update("update promise set tool_type = 'BOOK' where id = ?", fixture.promiseId());
+        handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("book", "model-test"));
+
+        assertEquals(1, worker.processDueJobs(NOW));
+        assertEquals("Completed", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
+        assertEquals("AuthCompleted", value("select lifecycle_status from promise where id = ?", fixture.promiseId()));
+    }
+
+    @Test
+    void completedWithoutLabelIsRetriedInsteadOfApproved() {
+        Fixture fixture = fixture(0);
+        handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("model-test"));
+
+        assertEquals(1, worker.processDueJobs(NOW));
+        assertEquals("READY", status(fixture.jobId()));
+        assertEquals("Evaluating", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
+        assertEquals("Scheduled", value("select lifecycle_status from promise where id = ?", fixture.promiseId()));
+        assertEquals("AI_LABEL_MISSING", value("select last_error_code from photo_evaluation_job where id = ?", fixture.jobId()));
+        // 같은 DB를 쓰는 다른 테스트가 이 재시도 작업을 처리하지 않도록 정리한다.
+        jdbc.update("update photo_evaluation_job set lifecycle_status = 'SKIPPED' where id = ?", fixture.jobId());
     }
 
     private Fixture fixture(int attemptCount) {

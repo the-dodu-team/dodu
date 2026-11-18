@@ -1,5 +1,13 @@
 # AI worker 연결 계약
 
+## 2026-11-18 약속 도구 비교 추가
+
+- 이전에는 `laptop`·`book`이면 약속 도구와 관계없이 `Completed`였다. 책 약속에 노트북 화면 사진도 인증 완료됐다(검증 시트 AI 책 거절·비대상 판정 실패).
+- 이제 worker가 돌려준 label을 약속 도구와 비교한다(`PhotoToolMatchPolicy`). 대응: `COMPUTER`(과거 값 `laptop` 포함) ↔ `laptop`, `BOOK` ↔ `book`.
+- 결과 API(`POST .../photo-attempts/{id}/result`)로 `COMPLETED`를 넣을 때는 `detectedLabel`이 필수다. 없으면 400 `DETECTED_LABEL_REQUIRED`, 다르면 `Rejected`/`AI_TOOL_MISMATCH`로 저장한다.
+- label 없는 완료 결과는 판단할 수 없어 재시도(`AI_LABEL_MISSING`)한다. 약속 도구 값을 알 수 없으면 기술 실패(`PROMISE_TOOL_UNKNOWN`)다.
+- 남은 범위: 태블릿·전자책을 `laptop`으로 분류하는 모델 문제는 서버 비교로 막을 수 없다(컴퓨터 약속에서는 여전히 승인). AI 담당 확인 필요.
+
 ## 2026-11-12 시작 오류 수정
 
 - 후속 원인: 웹 JSON 자동설정과 별개로 AI 파서는 Jackson 2 `ObjectMapper`를 사용한다. 운영에서 해당 빈이 없으므로 필수 주입으로 두면 시작에 실패한다.
@@ -42,8 +50,9 @@
 
 | worker 결과 | Dodu 결과 |
 |---|---|
-| `laptop` | `Completed` |
-| `book` | `Completed` |
+| `laptop` + 컴퓨터 약속(`COMPUTER`) | `Completed` |
+| `book` + 책 약속(`BOOK`) | `Completed` |
+| `laptop`·`book`이 약속 도구와 다름 | `Rejected` / `AI_TOOL_MISMATCH` (T+30 전이면 재제출 가능) |
 | `other` | `Rejected` / `AI_OTHER` |
 | HTTP 408·429·5xx | 재시도 대상 |
 | 기타 HTTP 오류 | 기술 실패 |
