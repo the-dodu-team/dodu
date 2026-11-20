@@ -46,7 +46,9 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest(properties = {
         "dodu.notifications.scheduler-delay-ms=86400000",
         "dodu.photo-recovery.worker-delay-ms=86400000",
-        "dodu.photo-retention.worker-delay-ms=86400000"})
+        "dodu.photo-retention.worker-delay-ms=86400000",
+        // 판정 결과 주입용으로 기본 닫힌 결과 API를 켠다(운영 판정 경로는 복구 워커).
+        "dodu.photo-evaluation.result-api.enabled=true"})
 @Import(BackendAcceptanceChecklistIntegrationTests.TestConfig.class)
 class BackendAcceptanceChecklistIntegrationTests {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");

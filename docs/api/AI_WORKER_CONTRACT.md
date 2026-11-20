@@ -4,7 +4,8 @@
 
 - 이전에는 `laptop`·`book`이면 약속 도구와 관계없이 `Completed`였다. 책 약속에 노트북 화면 사진도 인증 완료됐다(검증 시트 AI 책 거절·비대상 판정 실패).
 - 이제 worker가 돌려준 label을 약속 도구와 비교한다(`PhotoToolMatchPolicy`). 대응: `COMPUTER`(과거 값 `laptop` 포함) ↔ `laptop`, `BOOK` ↔ `book`.
-- 결과 API(`POST .../photo-attempts/{id}/result`)로 `COMPLETED`를 넣을 때는 `detectedLabel`이 필수다. 없으면 400 `DETECTED_LABEL_REQUIRED`, 다르면 `Rejected`/`AI_TOOL_MISMATCH`, 약속 도구 값을 알 수 없으면 `TechFailed`/`PROMISE_TOOL_UNKNOWN`으로 저장한다.
+- 결과 API는 기본으로 닫혀 있다(`DODU_PHOTO_RESULT_API_ENABLED=false`). 참가자 세션 인증이라 운영에서 켜지 않으며, 다시 쓰려면 worker 전용 인증으로 바꾼 뒤 켠다.
+- 결과 API(`POST .../photo-attempts/{id}/result`)를 켠 경우 `COMPLETED`를 넣을 때는 `detectedLabel`이 필수다. 없으면 400 `DETECTED_LABEL_REQUIRED`, 다르면 `Rejected`/`AI_TOOL_MISMATCH`, 약속 도구 값을 알 수 없으면 `TechFailed`/`PROMISE_TOOL_UNKNOWN`으로 저장한다.
 - label 없는 완료 결과는 판단할 수 없어 재시도(`AI_LABEL_MISSING`)한다. 약속 도구 값을 알 수 없으면 기술 실패(`PROMISE_TOOL_UNKNOWN`)다.
 - 남은 범위: 태블릿·전자책을 `laptop`으로 분류하는 모델 문제는 서버 비교로 막을 수 없다(컴퓨터 약속에서는 여전히 승인). AI 담당 확인 필요.
 

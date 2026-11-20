@@ -30,7 +30,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-@SpringBootTest
+// 결과 API는 기본으로 닫혀 있어, 켠 상태의 기존 동작(판정 경계·동시성)을 검증한다.
+@SpringBootTest(properties = "dodu.photo-evaluation.result-api.enabled=true")
 @Import(PhotoEvaluationResultControllerIntegrationTests.ContainerConfiguration.class)
 class PhotoEvaluationResultControllerIntegrationTests {
     @Autowired

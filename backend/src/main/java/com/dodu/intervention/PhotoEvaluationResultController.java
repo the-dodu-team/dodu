@@ -12,6 +12,7 @@ import com.dodu.intervention.dto.ResultResponse;
 import com.dodu.participant.service.ParticipantAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 
+// 이전: 항상 열려 있었고 참가자 세션으로 인증해, 참가자가 COMPLETED를 직접 넣어 인증을 완료할 수 있었다.
+// 운영 판정은 복구 워커가 AI를 호출해 저장하며 이 API를 쓰지 않으므로 기본은 닫는다(PR #55 리뷰, DEV-20261120-03).
+// 다시 켜려면 참가자 세션 대신 AI worker 전용 자격 증명으로 인증을 바꾼 뒤 켠다.
+@ConditionalOnProperty(name = "dodu.photo-evaluation.result-api.enabled", havingValue = "true")
 @RestController
 @Tag(name = "사진 인증")
 @RequestMapping("/api/promises/{promiseId}/photo-attempts/{attemptId}/result")

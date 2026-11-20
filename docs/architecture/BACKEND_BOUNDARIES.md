@@ -22,7 +22,7 @@
 | ValidationSurveyController | 조회 중 만료 갱신·제출·건너뛰기 혼재. 24시간 경계와 대상 소유권 보존하며 후속 분리 |
 | PhotoAttemptHistoryController | 소유권·조회 SQL 혼재. 읽기 전용 분리 후보 |
 | PhotoSubmissionController | multipart·스토리지·원장·중복·잠금 혼재. 보상 삭제·동시성 시나리오와 함께 분리 필요 |
-| PhotoEvaluationResultController | HTTP 콜백·상태 갱신 혼재. 지연 결과·철회·현재 attempt 검사 보존 필요 |
+| PhotoEvaluationResultController | HTTP 콜백·상태 갱신 혼재. 지연 결과·철회·현재 attempt 검사 보존 필요. 기본 닫힘(`dodu.photo-evaluation.result-api.enabled`), 다시 켜려면 worker 전용 인증 필요 |
 | ParticipantAccessController | 폐기 예정 접근 API의 SQL·기존 자격 경로. 새 입장 API와 혼용하지 말고 별도 이관 판단 |
 
 ## 이번 의존성
