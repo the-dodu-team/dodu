@@ -10,6 +10,7 @@ import java.util.Optional;
  */
 public final class PhotoToolMatchPolicy {
     public static final String TOOL_MISMATCH = "AI_TOOL_MISMATCH";
+    public static final String PROMISE_TOOL_UNKNOWN = "PROMISE_TOOL_UNKNOWN";
 
     private PhotoToolMatchPolicy() { }
 

@@ -84,6 +84,19 @@ class PhotoEvaluationResultControllerIntegrationTests {
     }
 
     @Test
+    void completedOnUnknownPromiseToolIsStoredAsTechnicalFailure() throws Exception {
+        jdbc.update("update promise set tool_type = 'tablet' where id = ?", promiseId);
+        mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
+                        .header("Authorization", authorization).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"COMPLETED\",\"detectedLabel\":\"laptop\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.processingStatus").value("TechFailed"));
+        assertEquals("PROMISE_TOOL_UNKNOWN", jdbc.queryForObject("select technical_error_type from auth_attempt where id = ?", String.class, attemptId));
+        assertEquals(null, jdbc.queryForObject("select rejection_reason from auth_attempt where id = ?", String.class, attemptId));
+        assertEquals("TechFailed", jdbc.queryForObject("select final_outcome from promise where id = ?", String.class, promiseId));
+    }
+
+    @Test
     void completedWithoutLabelIsRejectedAsBadRequest() throws Exception {
         mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
                         .header("Authorization", authorization).contentType(MediaType.APPLICATION_JSON)

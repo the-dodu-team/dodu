@@ -1,5 +1,11 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-20 / PR #55 CodeRabbit 리뷰 반영
+
+- 반영: 결과 API에서 알 수 없는 약속 도구 값은 `TechFailed`/`PROMISE_TOOL_UNKNOWN`으로 저장(복구 워커와 동일).
+- 미반영(결정 필요): 결과 API가 참가자 세션으로 인증되어 참가자가 완료를 직접 넣을 수 있음. #55 이전부터 있던 문제라 worker 전용 인증 또는 API 폐쇄 결정 후 별도 작업.
+- 검증: 결과 API 7건·도구 비교 2건·복구 워커 7건 통과. Jira 상태 변경 없음.
+
 ## 2026-11-20 / PR #52 CodeRabbit 누락 지적 반영
 
 - 복구 워커가 AI 호출 중 결과 API로 먼저 확정된 attempt의 약속을 덮어쓰던 문제 수정(`complete`·`reject`·`fail` 모두 attempt 갱신 1행일 때만 후속 처리, 0행이면 작업 `SKIPPED`/`ATTEMPT_NOT_CURRENT`).

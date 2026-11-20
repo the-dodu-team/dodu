@@ -90,7 +90,7 @@ public class PhotoEvaluationRecoveryWorker {
         String promiseTool = jdbc.queryForObject("select tool_type from promise where id = ?",
                 String.class, job.promiseId());
         if (PhotoToolMatchPolicy.expectedLabel(promiseTool).isEmpty()) {
-            return PhotoEvaluationRecoveryHandler.RecoveryResult.technicalFailure("PROMISE_TOOL_UNKNOWN");
+            return PhotoEvaluationRecoveryHandler.RecoveryResult.technicalFailure(PhotoToolMatchPolicy.PROMISE_TOOL_UNKNOWN);
         }
         if (!PhotoToolMatchPolicy.matches(promiseTool, result.detectedLabel())) {
             return PhotoEvaluationRecoveryHandler.RecoveryResult.rejected(

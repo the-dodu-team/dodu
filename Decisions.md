@@ -1,5 +1,15 @@
 # 개발 결정 기록
 
+## DEV-20261120-02 — PR #55 CodeRabbit 리뷰 반영
+
+- 배경: PR #55(SCRUM-84 도구 비교)에 CodeRabbit이 2건을 지적했다. 각 건을 현재 코드로 확인했다.
+- 선택:
+  - 결과 API는 알 수 없는 약속 도구 값도 `matches`가 false라 `Rejected`/`AI_TOOL_MISMATCH`로 저장했다. 복구 워커는 같은 경우를 `TechFailed`/`PROMISE_TOOL_UNKNOWN`으로 처리하고 DEV-20261118-03도 그렇게 정했으므로, 결과 API도 도구 대응 label이 없으면 `TECH_ERROR`·`PROMISE_TOOL_UNKNOWN`으로 저장한다(거절 사유는 비움). 코드 상수는 `PhotoToolMatchPolicy.PROMISE_TOOL_UNKNOWN`으로 모아 워커와 함께 쓴다.
+- 반영하지 않음(결정 필요):
+  - 결과 API가 참가자 세션으로 인증되어 참가자가 `COMPLETED`와 `detectedLabel`을 직접 넣을 수 있다는 지적은 사실이다. 다만 이 PR 이전에도 참가자는 label 없이 `COMPLETED`를 넣어 완료할 수 있었으므로 #55가 만든 문제가 아니다. 해결은 (1) 결과 API를 worker 자격 증명 전용으로 바꾸기, (2) 운영 호출처가 없으므로 API를 닫기 중 결정이 필요해 별도 작업으로 남긴다(DEV-20261118-03 남은 사항과 같은 항목).
+- 영향: 알 수 없는 약속 도구 값의 결과 API 처리만 거절에서 기술 실패로 바뀐다. DB 스키마 변경 없음.
+- 검증: 결과 API 통합 7건(알 수 없는 도구 기술 실패 신규 1건), 도구 비교 단위 2건, 복구 워커 통합 7건 통과(JDK 21·Docker Testcontainers).
+
 ## DEV-20261120-01 — PR #52 CodeRabbit 누락 지적 반영: 복구 워커의 늦은 결과 덮어쓰기 차단
 
 - 배경: PR #52 첫 리뷰 본문에 있던 복구 워커 지적(attempt 갱신 행 수를 확인하지 않음)이 인라인 목록에서 빠져 DEV-20261118-04에서 다루지 않았다. 워커는 `eligible` 확인 후 AI를 호출하는 동안(최대 20초) attempt를 잠그지 않는다. 그 사이 결과 API가 같은 attempt를 먼저 확정하면, 워커의 attempt 갱신은 0행인데도 `complete`는 약속을 `AuthCompleted`로 바꾸고 자기보고 설문을 만들었고, `fail`은 약속을 기술 실패로 종료했다. 회귀 테스트 2건으로 재현했다(수정 전: 기술 실패로 닫힌 약속이 `AuthCompleted`로, 거절된 attempt의 약속이 `Closed`로 바뀜).

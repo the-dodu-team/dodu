@@ -58,6 +58,7 @@ public class PhotoEvaluationResultController {
         // 이전에는 COMPLETED를 그대로 저장해 책 약속에 노트북 사진도 인증 완료됐다.
         Result result = request.result();
         String rejectionReason = request.rejectionReason();
+        String technicalErrorType = request.technicalErrorType();
         if (result == Result.COMPLETED) {
             if (request.detectedLabel() == null || request.detectedLabel().isBlank()) {
                 throw error(HttpStatus.BAD_REQUEST, "DETECTED_LABEL_REQUIRED");
@@ -67,7 +68,13 @@ public class PhotoEvaluationResultController {
             if (promiseTool == null) {
                 throw error(HttpStatus.CONFLICT, "ATTEMPT_NOT_CURRENT_OR_WITHDRAWN");
             }
-            if (!PhotoToolMatchPolicy.matches(promiseTool, request.detectedLabel())) {
+            // 이전: 알 수 없는 약속 도구도 불일치(Rejected/AI_TOOL_MISMATCH)로 저장했다.
+            // 복구 워커와 같게, 도구 값을 알 수 없으면 사용자 사진 문제가 아니라 기술 실패로 분리한다.
+            if (PhotoToolMatchPolicy.expectedLabel(promiseTool).isEmpty()) {
+                result = Result.TECH_ERROR;
+                rejectionReason = null;
+                technicalErrorType = PhotoToolMatchPolicy.PROMISE_TOOL_UNKNOWN;
+            } else if (!PhotoToolMatchPolicy.matches(promiseTool, request.detectedLabel())) {
                 result = Result.REJECTED;
                 rejectionReason = PhotoToolMatchPolicy.TOOL_MISMATCH;
             }
@@ -89,7 +96,7 @@ public class PhotoEvaluationResultController {
                                   and a.valid_received_at < p.scheduled_at + interval '30 minutes'
                                   and part.lifecycle_status <> 'Withdrawn')
                 """, nextStatus, result.name(), rejectionReason,
-                request.technicalErrorType(), request.modelVersion(), Timestamp.from(now), attemptId, promiseId, participantId);
+                technicalErrorType, request.modelVersion(), Timestamp.from(now), attemptId, promiseId, participantId);
         if (updated != 1) {
             throw error(HttpStatus.CONFLICT, "ATTEMPT_NOT_CURRENT_OR_WITHDRAWN");
         }
