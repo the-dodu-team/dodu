@@ -1,11 +1,31 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-20 / PR #52 CodeRabbit 누락 지적 반영
+
+- 복구 워커가 AI 호출 중 결과 API로 먼저 확정된 attempt의 약속을 덮어쓰던 문제 수정(`complete`·`reject`·`fail` 모두 attempt 갱신 1행일 때만 후속 처리, 0행이면 작업 `SKIPPED`/`ATTEMPT_NOT_CURRENT`).
+- 검증: 회귀 테스트 2건 수정 전 실패·수정 후 통과, 복구 워커 통합 4건 통과.
+- 신규 리뷰 없음: 병합 커밋 `94f59ea`는 CodeRabbit 리뷰 한도로 검토되지 않았다.
+
 ## 2026-11-19 / SCRUM-84 AI mapper 수정 재적용
 
 - 원인: #47이 11/13 디자인 롤백 중 잘못 되돌려져 AI 활성화 Render 배포가 Jackson 2 `ObjectMapper` 빈 누락으로 계속 시작 실패. 운영은 #51 이전 빌드에 머무름(화면 번들 문구로 판단).
 - 조치: `0e5340e` cherry-pick, AI 활성화 시작 통합 테스트를 `intervention.adapter`로 이동.
 - 검증: AI 관련 10건 통과(실제 PostgreSQL 17 AI 활성화 시작 포함).
 - 남은 확인: 머지 후 Render 배포 성공, 운영 V11 적용, 실제 사진 AI 판정. Jira 상태 변경 없음.
+
+## 2026-11-18 / PR #52 CodeRabbit 리뷰 반영
+
+- 반영: 판정 중 생략 기록을 IN_APP·PUSH 모두에 남겨 늦은 PUSH 생성 차단(겹친 실행·이미 SENT인 IN_APP 경우), R-29 테스트 sleep 음수 방지.
+- 미반영(근거 기록): 철회 경쟁(철회의 설문 만료 문장이 커밋 후 실행되어 남는 설문 없음), Decisions 형식 제안.
+- 검증: 백엔드 전체 303건 통과(R-46 1건 건너뜀).
+
+## 2026-11-13 / BE 검증 체크리스트 수행, R-27·R-36 수정
+
+- 수행: R-14·15·18·26·27·28·29·36·37·45·46을 `BackendAcceptanceChecklistIntegrationTests`(서버 시각 고정)와 기존 테스트로 확인.
+- 수정: R-27 Evaluating 중 생략한 리마인더의 늦은 생성 차단(`SUPPRESSED`/`EVALUATING` 기록). R-36 인증 완료 약속에도 자기보고 설문 생성(판정 결과 API·복구 워커).
+- 미구현: R-46 행동 로그(`behavior_event` 기록 코드 없음, D05/D08 명세 대기).
+- 검증: 인수 12건(11 통과·1 건너뜀) + 영향 65건 통과, 실패 0. 실기기 Push·운영 환경 확인은 미실행. Jira 상태 변경 없음.
+
 
 ## 2026-11-13 / SCRUM-76 PR #51 리뷰 반영
 

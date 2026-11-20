@@ -118,38 +118,54 @@ public class PhotoEvaluationRecoveryWorker {
     }
 
     private void complete(JobRow job, String modelVersion, Instant now) {
-        jdbc.update("""
+        // 이전: attempt 갱신 결과와 무관하게 약속 완료·설문 생성까지 진행했다.
+        // AI 호출 중 결과 API가 attempt를 먼저 확정하면(0행) 그 결과를 덮어쓰지 않고 작업만 건너뛴다.
+        int updated = jdbc.update("""
                 update auth_attempt
                    set processing_status = 'Completed', decision_result = 'Completed',
                        model_version = ?, decided_at = ?
                  where id = ? and promise_id = ? and processing_status = 'Evaluating'
                 """, modelVersion, timestamp(now), job.attemptId(), job.promiseId());
+        if (updated != 1) {
+            mark(job.jobId(), "SKIPPED", "ATTEMPT_NOT_CURRENT", null, now);
+            return;
+        }
         jdbc.update("""
                 update promise set lifecycle_status = 'AuthCompleted', auth_completed_at = ?,
                        updated_at = ?
                  where id = ? and lifecycle_status <> 'Cancelled'
                    and final_outcome is distinct from 'Withdrawn'
                 """, timestamp(now), timestamp(now), job.promiseId());
+        // 복구 경로로 인증 완료된 약속도 자기보고 설문을 만든다(R-36).
+        com.dodu.survey.CompletedPromiseSurveyOpener.open(jdbc, job.promiseId());
         mark(job.jobId(), "SUCCEEDED", null, null, now);
     }
 
     private void reject(JobRow job, String reason, String modelVersion, Instant now) {
-        jdbc.update("""
+        int updated = jdbc.update("""
                 update auth_attempt
                    set processing_status = 'Rejected', decision_result = 'Rejected',
                        rejection_reason = ?, model_version = ?, decided_at = ?
                  where id = ? and promise_id = ? and processing_status = 'Evaluating'
                 """, reason, modelVersion, timestamp(now), job.attemptId(), job.promiseId());
-        mark(job.jobId(), "SUCCEEDED", null, null, now);
+        // 이전: 0행이어도 SUCCEEDED로 기록했다. 이미 확정된 attempt면 건너뜀으로 남긴다.
+        mark(job.jobId(), updated == 1 ? "SUCCEEDED" : "SKIPPED",
+                updated == 1 ? null : "ATTEMPT_NOT_CURRENT", null, now);
     }
 
     private void fail(JobRow job, String errorCode, Instant now) {
-        jdbc.update("""
+        // 이전: attempt 갱신 결과와 무관하게 약속을 기술 실패로 종료했다.
+        // 이미 거절 등으로 확정된 attempt(0행)라면 재촬영 기회를 막지 않도록 약속을 건드리지 않는다.
+        int updated = jdbc.update("""
                 update auth_attempt
                    set processing_status = 'TechFailed', decision_result = 'TechFailed',
                        technical_error_type = ?, decided_at = ?
                  where id = ? and promise_id = ? and processing_status = 'Evaluating'
                 """, errorCode, timestamp(now), job.attemptId(), job.promiseId());
+        if (updated != 1) {
+            mark(job.jobId(), "SKIPPED", "ATTEMPT_NOT_CURRENT", null, now);
+            return;
+        }
         jdbc.update("""
                 update promise set lifecycle_status = 'Closed', final_outcome = 'TechFailed',
                        closed_at = ?, updated_at = ?
