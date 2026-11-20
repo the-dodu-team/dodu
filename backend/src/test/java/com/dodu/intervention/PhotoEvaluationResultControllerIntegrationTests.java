@@ -2,6 +2,7 @@ package com.dodu.intervention;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.security.SecureRandom;
@@ -29,7 +30,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-@SpringBootTest
+// 결과 API는 기본으로 닫혀 있어, 켠 상태의 기존 동작(판정 경계·동시성)을 검증한다.
+@SpringBootTest(properties = "dodu.photo-evaluation.result-api.enabled=true")
 @Import(PhotoEvaluationResultControllerIntegrationTests.ContainerConfiguration.class)
 class PhotoEvaluationResultControllerIntegrationTests {
     @Autowired
@@ -71,11 +73,45 @@ class PhotoEvaluationResultControllerIntegrationTests {
     }
 
     @Test
+    void completedLabelThatDoesNotMatchPromiseToolIsStoredAsRejected() throws Exception {
+        jdbc.update("update promise set tool_type = 'BOOK' where id = ?", promiseId);
+        mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
+                        .header("Authorization", authorization).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"COMPLETED\",\"detectedLabel\":\"laptop\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.processingStatus").value("Rejected"));
+        assertEquals("AI_TOOL_MISMATCH", jdbc.queryForObject("select rejection_reason from auth_attempt where id = ?", String.class, attemptId));
+        assertEquals("Evaluating", jdbc.queryForObject("select lifecycle_status from promise where id = ?", String.class, promiseId));
+    }
+
+    @Test
+    void completedOnUnknownPromiseToolIsStoredAsTechnicalFailure() throws Exception {
+        jdbc.update("update promise set tool_type = 'tablet' where id = ?", promiseId);
+        mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
+                        .header("Authorization", authorization).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"COMPLETED\",\"detectedLabel\":\"laptop\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.processingStatus").value("TechFailed"));
+        assertEquals("PROMISE_TOOL_UNKNOWN", jdbc.queryForObject("select technical_error_type from auth_attempt where id = ?", String.class, attemptId));
+        assertEquals(null, jdbc.queryForObject("select rejection_reason from auth_attempt where id = ?", String.class, attemptId));
+        assertEquals("TechFailed", jdbc.queryForObject("select final_outcome from promise where id = ?", String.class, promiseId));
+    }
+
+    @Test
+    void completedWithoutLabelIsRejectedAsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
+                        .header("Authorization", authorization).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"COMPLETED\"}"))
+                .andExpect(status().isBadRequest());
+        assertEquals("Evaluating", jdbc.queryForObject("select processing_status from auth_attempt where id = ?", String.class, attemptId));
+    }
+
+    @Test
     void completedResultMarksPromiseAuthCompleted() throws Exception {
         mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
                         .header("Authorization", authorization)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"result\":\"COMPLETED\",\"modelVersion\":\"test-model\"}"))
+                        .content("{\"result\":\"COMPLETED\",\"modelVersion\":\"test-model\",\"detectedLabel\":\"laptop\"}"))
                 .andExpect(status().isOk());
         assertEquals("AuthCompleted", jdbc.queryForObject("select lifecycle_status from promise where id = ?", String.class, promiseId));
     }
@@ -96,7 +132,7 @@ class PhotoEvaluationResultControllerIntegrationTests {
         mockMvc.perform(post("/api/promises/" + promiseId + "/photo-attempts/" + attemptId + "/result")
                         .header("Authorization", authorization)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"result\":\"COMPLETED\"}"))
+                        .content("{\"result\":\"COMPLETED\",\"detectedLabel\":\"laptop\"}"))
                 .andExpect(status().isConflict());
         assertEquals("Evaluating", jdbc.queryForObject("select processing_status from auth_attempt where id = ?", String.class, attemptId));
     }
@@ -105,7 +141,7 @@ class PhotoEvaluationResultControllerIntegrationTests {
     void concurrentResultsAllowOnlyOneTerminalTransition() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            Future<Integer> completed = executor.submit(() -> resultStatus("{\"result\":\"COMPLETED\"}"));
+            Future<Integer> completed = executor.submit(() -> resultStatus("{\"result\":\"COMPLETED\",\"detectedLabel\":\"laptop\"}"));
             Future<Integer> rejected = executor.submit(() -> resultStatus("{\"result\":\"REJECTED\",\"rejectionReason\":\"OTHER\"}"));
 
             int first = completed.get();

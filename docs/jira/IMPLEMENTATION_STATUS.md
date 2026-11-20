@@ -1,5 +1,17 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-20 / 사진 판정 결과 API 기본 닫기
+
+- 참가자가 결과 API로 인증을 직접 완료할 수 있던 문제를 설정(`DODU_PHOTO_RESULT_API_ENABLED`, 기본 false)으로 차단. 운영 판정은 복구 워커 경로 그대로.
+- 검증: 기본 닫힘 1건, 켠 상태 결과 API 7건, 인수 13건(1 건너뜀 R-46), 워커·도구·사진 제출 14건 통과.
+- 남은 범위: 다시 켜려면 worker 전용 인증 필요. Jira 상태 변경 없음.
+
+## 2026-11-20 / PR #55 CodeRabbit 리뷰 반영
+
+- 반영: 결과 API에서 알 수 없는 약속 도구 값은 `TechFailed`/`PROMISE_TOOL_UNKNOWN`으로 저장(복구 워커와 동일).
+- 미반영(결정 필요): 결과 API가 참가자 세션으로 인증되어 참가자가 완료를 직접 넣을 수 있음. #55 이전부터 있던 문제라 worker 전용 인증 또는 API 폐쇄 결정 후 별도 작업.
+- 검증: 결과 API 7건·도구 비교 2건·복구 워커 7건 통과. Jira 상태 변경 없음.
+
 ## 2026-11-20 / PR #52 CodeRabbit 누락 지적 반영
 
 - 복구 워커가 AI 호출 중 결과 API로 먼저 확정된 attempt의 약속을 덮어쓰던 문제 수정(`complete`·`reject`·`fail` 모두 attempt 갱신 1행일 때만 후속 처리, 0행이면 작업 `SKIPPED`/`ATTEMPT_NOT_CURRENT`).
@@ -18,6 +30,14 @@
 - 반영: 판정 중 생략 기록을 IN_APP·PUSH 모두에 남겨 늦은 PUSH 생성 차단(겹친 실행·이미 SENT인 IN_APP 경우), R-29 테스트 sleep 음수 방지.
 - 미반영(근거 기록): 철회 경쟁(철회의 설문 만료 문장이 커밋 후 실행되어 남는 설문 없음), Decisions 형식 제안.
 - 검증: 백엔드 전체 303건 통과(R-46 1건 건너뜀).
+
+## 2026-11-18 / SCRUM-84 AI 판정 label과 약속 도구 비교
+
+- 원인: AI가 `laptop`·`book`이면 약속 도구와 관계없이 인증 완료로 처리해 책 약속에 노트북 화면·태블릿 사진이 승인됨(검증 시트 AI 2건 실패).
+- 수정: `PhotoToolMatchPolicy`로 `COMPUTER`↔`laptop`, `BOOK`↔`book` 비교. 불일치는 `Rejected`/`AI_TOOL_MISMATCH`(T+30 전 재제출 가능). label 없는 완료는 재시도, 결과 API는 `COMPLETED`에 `detectedLabel` 필수.
+- 검증: 관련 37건 실행 후 #53·#52 반영 상태에서 백엔드 전체 309건 통과(R-46 1건 건너뜀). 실제 AI worker·실기기 확인 미실행. Jira 상태 변경 없음.
+- 남은 범위: 태블릿을 `laptop`으로 분류하는 모델 문제(AI), FE 거절 안내 문구, 결과 API 인증 주체 점검.
+
 
 ## 2026-11-13 / BE 검증 체크리스트 수행, R-27·R-36 수정
 

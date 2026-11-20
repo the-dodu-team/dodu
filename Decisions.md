@@ -1,5 +1,23 @@
 # 개발 결정 기록
 
+## DEV-20261120-03 — 사진 판정 결과 API 기본 닫기
+
+- 배경: PR #55 리뷰(DEV-20261120-02 미반영 항목). `POST /api/promises/{id}/photo-attempts/{id}/result`는 참가자 세션으로 인증되어, 참가자가 `COMPLETED`와 `detectedLabel`을 직접 보내 자기 인증을 완료할 수 있었다. 운영 판정은 복구 워커가 AI를 호출해 DB에 저장하며, 프런트·AI 서버 모두 이 API를 호출하지 않는다.
+- 선택: 사용자 결정에 따라 삭제 대신 설정으로 끈다. `dodu.photo-evaluation.result-api.enabled`(환경변수 `DODU_PHOTO_RESULT_API_ENABLED`, 기본 `false`)가 `true`일 때만 컨트롤러를 등록한다. 꺼진 상태에서는 경로에 처리기가 없어 4xx로 끝난다. 이전 동작과 다시 켤 조건(worker 전용 인증으로 교체 후)은 컨트롤러 주석에 남겼다.
+- 대안: API 삭제는 가장 깔끔하지만 AI 서버가 결과를 보내는 구조로 바꿀 때 다시 만들어야 해서 선택하지 않았다. worker 전용 인증 추가는 자격 증명 발급·보관 결정이 필요해 이번 범위에서 제외했다.
+- 영향: 운영 사용자 흐름(사진 제출 → 복구 워커 판정 → 결과 조회) 변경 없음. 운영에서 이 설정을 켜면 같은 결함이 다시 열리므로 켜지 않는다. 결과 API·인수 테스트는 설정을 켜고 실행한다(인수 테스트의 결과 주입 용도).
+- 검증: 기본 설정에서 컨트롤러 빈 없음·요청 4xx(신규 1건), 켠 상태 결과 API 7건, 인수 13건(12 통과·1 건너뜀 R-46), 복구 워커 7건, 도구 비교 2건, 사진 제출 5건 통과.
+
+## DEV-20261120-02 — PR #55 CodeRabbit 리뷰 반영
+
+- 배경: PR #55(SCRUM-84 도구 비교)에 CodeRabbit이 2건을 지적했다. 각 건을 현재 코드로 확인했다.
+- 선택:
+  - 결과 API는 알 수 없는 약속 도구 값도 `matches`가 false라 `Rejected`/`AI_TOOL_MISMATCH`로 저장했다. 복구 워커는 같은 경우를 `TechFailed`/`PROMISE_TOOL_UNKNOWN`으로 처리하고 DEV-20261118-03도 그렇게 정했으므로, 결과 API도 도구 대응 label이 없으면 `TECH_ERROR`·`PROMISE_TOOL_UNKNOWN`으로 저장한다(거절 사유는 비움). 코드 상수는 `PhotoToolMatchPolicy.PROMISE_TOOL_UNKNOWN`으로 모아 워커와 함께 쓴다.
+- 반영하지 않음(결정 필요):
+  - 결과 API가 참가자 세션으로 인증되어 참가자가 `COMPLETED`와 `detectedLabel`을 직접 넣을 수 있다는 지적은 사실이다. 다만 이 PR 이전에도 참가자는 label 없이 `COMPLETED`를 넣어 완료할 수 있었으므로 #55가 만든 문제가 아니다. 해결은 (1) 결과 API를 worker 자격 증명 전용으로 바꾸기, (2) 운영 호출처가 없으므로 API를 닫기 중 결정이 필요해 별도 작업으로 남긴다(DEV-20261118-03 남은 사항과 같은 항목).
+- 영향: 알 수 없는 약속 도구 값의 결과 API 처리만 거절에서 기술 실패로 바뀐다. DB 스키마 변경 없음.
+- 검증: 결과 API 통합 7건(알 수 없는 도구 기술 실패 신규 1건), 도구 비교 단위 2건, 복구 워커 통합 7건 통과(JDK 21·Docker Testcontainers).
+
 ## DEV-20261120-01 — PR #52 CodeRabbit 누락 지적 반영: 복구 워커의 늦은 결과 덮어쓰기 차단
 
 - 배경: PR #52 첫 리뷰 본문에 있던 복구 워커 지적(attempt 갱신 행 수를 확인하지 않음)이 인라인 목록에서 빠져 DEV-20261118-04에서 다루지 않았다. 워커는 `eligible` 확인 후 AI를 호출하는 동안(최대 20초) attempt를 잠그지 않는다. 그 사이 결과 API가 같은 attempt를 먼저 확정하면, 워커의 attempt 갱신은 0행인데도 `complete`는 약속을 `AuthCompleted`로 바꾸고 자기보고 설문을 만들었고, `fail`은 약속을 기술 실패로 종료했다. 회귀 테스트 2건으로 재현했다(수정 전: 기술 실패로 닫힌 약속이 `AuthCompleted`로, 거절된 attempt의 약속이 `Closed`로 바뀜).
@@ -28,6 +46,21 @@
 - 영향: 판정 중 생략한 리마인더는 채널 구분 없이 다시 생성되지 않는다. DB 스키마 변경 없음.
 - 검증: 회귀 테스트(IN_APP 이미 SENT + 판정 중 생략 + 이후 구독)는 수정 전 실패, 수정 후 통과. 백엔드 전체 303건 통과(건너뜀 1건: R-46).
 
+## DEV-20261118-03 — AI 판정 label과 약속 도구 비교
+
+- 배경: 검증 시트 AI 항목(화면 속 책 이미지, 태블릿·전자책)에서 책 약속에 AI가 `laptop`으로 판정했는데도 "인증 완료"가 표시됐다. `AiPhotoEvaluationResponseMapper`가 `laptop`·`book`을 약속 도구와 비교하지 않고 모두 완료로 확정했기 때문이다. 결과 API도 `COMPLETED`를 그대로 저장했다.
+- 선택:
+  - `PhotoToolMatchPolicy`를 추가해 약속 도구(`COMPUTER`/`BOOK`, 과거 `laptop`·소문자 포함)를 AI label(`laptop`/`book`)과 대응시킨다.
+  - 매퍼는 label을 결과에 담아 넘기고(이전 식 주석 보존), 약속을 아는 복구 워커가 최종 판단한다. 불일치는 `Rejected`/`AI_TOOL_MISMATCH`라서 T+30 전이면 다시 제출할 수 있고, 마감 후 접수분은 기존 거절 정책대로 처리한다.
+  - label 없는 완료는 승인하지 않고 재시도(`AI_LABEL_MISSING`)한다. 알 수 없는 약속 도구 값은 기술 실패(`PROMISE_TOOL_UNKNOWN`)로 분리한다.
+  - 결과 API는 `COMPLETED`에 `detectedLabel`을 필수로 받고 같은 규칙을 적용한다(없으면 400).
+  - SCRUM-95(#53) 머지 후 위치에 맞춰 `adapter/AiPhotoEvaluationResponseMapper`, `dto/ResultRequest`에 적용했다.
+- 대안: AI가 본 label을 `auth_attempt` 새 컬럼에 저장하는 방법은 마이그레이션이 필요하고, 행동 로그(`behavior_event`, R-46) 구현 때 `auth_result_received` 이벤트로 남기는 편이 중복이 없어 보류했다.
+- 영향: 책 약속에 노트북·태블릿 사진(AI가 laptop으로 판정)은 거절된다. 컴퓨터 약속에 태블릿 사진은 AI가 laptop으로 보는 한 여전히 승인된다(모델 문제, AI 담당 확인 필요). DB 스키마 변경 없음.
+- 검증: JDK 21·Docker(Testcontainers PostgreSQL 16). 도구 비교 단위 2건, 매퍼·AI 핸들러 7건, 복구 워커 5건(불일치 거절·책 일치 완료·label 누락 재시도 신규 3건), 결과 API 6건(불일치 거절·label 누락 400 신규 2건), 사진 제출 5건, 인수 12건(11 통과·1 건너뜀) 실행, 실패 0. #53·#52 반영 후 백엔드 전체 309건 통과(건너뜀 1건: R-46).
+- 최신 dev 반영(11/20): #52 머지 후 rebase. 도구 불일치로 바뀐 거절도 #52의 attempt 갱신 행 수 확인(DEV-20261120-01)을 거치므로, 이미 확정된 attempt는 덮어쓰지 않는다. #52의 늦은 완료 회귀 테스트는 label 있는 완료로 맞췄다. rebase 후 백엔드 전체 313건 실행: 1건(해당 테스트) 수정 후 재실행 통과, 나머지 통과, 건너뜀 1(R-46).
+- 남은 사항: FE 거절 안내 문구(`AI_TOOL_MISMATCH`)는 별도 작업. 결과 API가 참가자 세션으로 인증되어 참가자가 직접 결과를 넣을 수 있는 구조인지는 별도 점검이 필요하다.
+
 
 ## DEV-20261118-02 — SCRUM-95 DTO·adapter 분리 브랜치 최신 dev 반영
 
@@ -36,6 +69,7 @@
 - 대안: rebase는 이미 원격에 올라간 브랜치의 이력을 바꿔 강제 push가 필요하므로 선택하지 않았다.
 - 영향: 동작 변경 없음. 진행 중인 SCRUM-84(AI 도구 비교)는 이 브랜치 머지 후 `adapter/AiPhotoEvaluationResponseMapper`, `dto/ResultRequest` 위치에 다시 적용한다.
 - 검증: JDK 21·Docker(Testcontainers PostgreSQL 16)로 백엔드 전체 테스트 290건 통과(실패·오류·건너뜀 0).
+
 
 ## DEV-20261113-04 — BE 검증 체크리스트 수행과 R-27·R-36 결함 수정
 

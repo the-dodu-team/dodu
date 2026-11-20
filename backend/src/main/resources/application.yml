@@ -30,6 +30,10 @@ dodu:
     supabase-url: ${DODU_SUPABASE_URL:}
     bucket: ${DODU_PHOTO_BUCKET:dodu-photos}
     service-role-key: ${DODU_SUPABASE_SERVICE_ROLE_KEY:}
+  photo-evaluation:
+    result-api:
+      # 사진 판정 결과 직접 저장 API. 참가자 세션 인증이라 운영에서는 끈다(복구 워커가 판정 저장).
+      enabled: ${DODU_PHOTO_RESULT_API_ENABLED:false}
 
   push:
     fcm:

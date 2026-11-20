@@ -31,7 +31,10 @@ public final class AiPhotoEvaluationResponseMapper {
                     .or(() -> findText(response, "model"))
                     .orElse(null);
             return switch (label.get()) {
-                case "laptop", "book" -> PhotoEvaluationRecoveryHandler.RecoveryResult.completed(modelVersion);
+                // 이전: laptop·book이면 약속 도구와 관계없이 완료로 확정했다.
+                // case "laptop", "book" -> PhotoEvaluationRecoveryHandler.RecoveryResult.completed(modelVersion);
+                // 이제 label을 함께 넘기고, 약속 도구와의 비교는 PhotoEvaluationRecoveryWorker가 한다.
+                case "laptop", "book" -> PhotoEvaluationRecoveryHandler.RecoveryResult.completed(label.get(), modelVersion);
                 case "other" -> PhotoEvaluationRecoveryHandler.RecoveryResult.rejected("AI_OTHER", modelVersion);
                 default -> PhotoEvaluationRecoveryHandler.RecoveryResult.retryable("AI_LABEL_UNSUPPORTED");
             };
