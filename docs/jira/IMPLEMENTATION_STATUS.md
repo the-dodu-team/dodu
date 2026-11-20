@@ -1,5 +1,11 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-20 / PR #52 CodeRabbit 누락 지적 반영
+
+- 복구 워커가 AI 호출 중 결과 API로 먼저 확정된 attempt의 약속을 덮어쓰던 문제 수정(`complete`·`reject`·`fail` 모두 attempt 갱신 1행일 때만 후속 처리, 0행이면 작업 `SKIPPED`/`ATTEMPT_NOT_CURRENT`).
+- 검증: 회귀 테스트 2건 수정 전 실패·수정 후 통과, 복구 워커 통합 4건 통과.
+- 신규 리뷰 없음: 병합 커밋 `94f59ea`는 CodeRabbit 리뷰 한도로 검토되지 않았다.
+
 ## 2026-11-19 / SCRUM-84 AI mapper 수정 재적용
 
 - 원인: #47이 11/13 디자인 롤백 중 잘못 되돌려져 AI 활성화 Render 배포가 Jackson 2 `ObjectMapper` 빈 누락으로 계속 시작 실패. 운영은 #51 이전 빌드에 머무름(화면 번들 문구로 판단).

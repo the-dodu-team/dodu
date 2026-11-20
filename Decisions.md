@@ -1,5 +1,13 @@
 # 개발 결정 기록
 
+## DEV-20261120-01 — PR #52 CodeRabbit 누락 지적 반영: 복구 워커의 늦은 결과 덮어쓰기 차단
+
+- 배경: PR #52 첫 리뷰 본문에 있던 복구 워커 지적(attempt 갱신 행 수를 확인하지 않음)이 인라인 목록에서 빠져 DEV-20261118-04에서 다루지 않았다. 워커는 `eligible` 확인 후 AI를 호출하는 동안(최대 20초) attempt를 잠그지 않는다. 그 사이 결과 API가 같은 attempt를 먼저 확정하면, 워커의 attempt 갱신은 0행인데도 `complete`는 약속을 `AuthCompleted`로 바꾸고 자기보고 설문을 만들었고, `fail`은 약속을 기술 실패로 종료했다. 회귀 테스트 2건으로 재현했다(수정 전: 기술 실패로 닫힌 약속이 `AuthCompleted`로, 거절된 attempt의 약속이 `Closed`로 바뀜).
+- 선택: `complete`·`reject`·`fail` 모두 attempt 갱신이 1행일 때만 후속 처리(약속 상태·설문·SUCCEEDED/EXHAUSTED)를 한다. 0행이면 다른 경로가 먼저 확정한 것이므로 작업을 `SKIPPED`/`ATTEMPT_NOT_CURRENT`로 남기고 약속은 건드리지 않는다. 결과 API의 `updated != 1 → 409`와 같은 기준이다.
+- 대안: AI 호출 전에 attempt 행을 잠그면 결과 API가 최대 20초 대기하므로 선택하지 않았다.
+- 영향: 정상 경로 동작 변경 없음. 늦은 결과는 확정된 attempt·약속을 덮어쓰지 않는다(AGENTS 불변 조건: 지연된 AI 결과가 최종 상태를 잘못 덮어쓰지 않음).
+- 검증: 수정 전 신규 2건 실패, 수정 후 복구 워커 통합 4건 통과. AI·판정·사진 제출·알림·설문·인수 체크리스트 관련 54건 통과(건너뜀 1: R-46 결정 필요).
+
 ## DEV-20261119-01 — SCRUM-84 AI 파서 mapper 수정(#47) 재적용
 
 - 배경: PR #47(`0e5340e`, AI 활성화 시 Jackson 2 `ObjectMapper` 빈이 없어도 시작)이 11/13 01:26 `a3f0756`에서 되돌려졌다. 담당자 확인 결과 디자인 롤백 의도였으나, 되돌림 커밋은 #47 파일만 변경했다(화면 파일 없음). 이후 `DODU_AI_ENABLED=true`인 Render 배포가 모두 `No qualifying bean of type 'com.fasterxml.jackson.databind.ObjectMapper'`로 시작 실패했다(11/18 배포 로그 확인). 운영 화면 번들에 #51 문구가 없고 #51에서 지운 문구가 남아 있어, 운영은 #47 포함·#51 이전 빌드에 머물러 있는 것으로 판단했다.

@@ -32,6 +32,39 @@ class PhotoEvaluationRecoveryWorkerIntegrationTests {
     @BeforeEach
     void resetHandler() {
         handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.retryable("WORKER_TIMEOUT"));
+        handler.during.set(null);
+    }
+
+    @Test
+    void staleCompletionDoesNotOverwriteResultSavedDuringAiCall() {
+        Fixture fixture = fixture(0);
+        // AI 호출 중 결과 API가 같은 attempt를 기술 실패로 먼저 확정한 상황.
+        handler.during.set(() -> {
+            jdbc.update("update auth_attempt set processing_status = 'TechFailed', decision_result = 'TechFailed' where id = ?", fixture.attemptId());
+            jdbc.update("update promise set lifecycle_status = 'Closed', final_outcome = 'TechFailed' where id = ?", fixture.promiseId());
+        });
+        handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("model-test"));
+
+        assertEquals(1, worker.processDueJobs(NOW));
+        assertEquals("TechFailed", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
+        assertEquals("Closed", value("select lifecycle_status from promise where id = ?", fixture.promiseId()));
+        assertEquals("TechFailed", value("select final_outcome from promise where id = ?", fixture.promiseId()));
+        assertEquals(0, jdbc.queryForObject("select count(*) from validation_survey where promise_id = ?", Integer.class, fixture.promiseId()));
+        assertEquals("SKIPPED", status(fixture.jobId()));
+    }
+
+    @Test
+    void staleExhaustionDoesNotClosePromiseWhoseAttemptWasAlreadyDecided() {
+        Fixture fixture = fixture(2);
+        // AI 호출 중 결과 API가 같은 attempt를 거절로 먼저 확정한 상황(재촬영 가능해야 함).
+        handler.during.set(() -> jdbc.update(
+                "update auth_attempt set processing_status = 'Rejected', decision_result = 'Rejected' where id = ?", fixture.attemptId()));
+
+        assertEquals(1, worker.processDueJobs(NOW));
+        assertEquals("Rejected", value("select processing_status from auth_attempt where id = ?", fixture.attemptId()));
+        assertEquals("Scheduled", value("select lifecycle_status from promise where id = ?", fixture.promiseId()));
+        assertEquals(null, value("select final_outcome from promise where id = ?", fixture.promiseId()));
+        assertEquals("SKIPPED", status(fixture.jobId()));
     }
 
     @Test
@@ -115,9 +148,12 @@ class PhotoEvaluationRecoveryWorkerIntegrationTests {
 
     static final class FakeRecoveryHandler implements PhotoEvaluationRecoveryHandler {
         private final AtomicReference<RecoveryResult> next = new AtomicReference<>();
+        private final AtomicReference<Runnable> during = new AtomicReference<>();
 
         @Override
         public RecoveryResult recover(RecoveryJob job) {
+            Runnable concurrentChange = during.get();
+            if (concurrentChange != null) concurrentChange.run();
             return next.get();
         }
     }
