@@ -75,6 +75,8 @@
 | 401 | UNAUTHENTICATED / `ACCESS_REQUIRED`, `SESSION_REPLACED`, `CREDENTIAL_REVOKED`, `ACCESS_REVOKED` | 접근 계약에 따라 처리. 자동 코드 재입력·업무 요청 재전송 금지 |
 | 404 | NOT_FOUND / `RESOURCE_NOT_FOUND` | 없음/타인 자원 동일 안내. 소유자 정보 노출 금지 |
 | 409 | CONFLICT / `PROMISE_ACTIVE_EXISTS`, `PROMISE_DATE_ALREADY_USED` | 현재 약속 재조회, 입력 유실 없이 안내 |
+
+하루 1약속 설정(DEV-20261120-04): `dodu.promise.daily-limit.enabled`(환경변수 `DODU_PROMISE_DAILY_LIMIT_ENABLED`, 기본 `true`). `false`이면 `PROMISE_DATE_ALREADY_USED`를 반환하지 않고 같은 KST 날짜 생성·날짜 변경을 허용한다. 동시 활성 1개(`PROMISE_ACTIVE_EXISTS`)와 실패 약속 대체(`RECREATED`)는 그대로다. `GET /api/participant/me`의 `data.dailyPromiseLimit`로 현재 값을 알려 FE의 날짜 사전 차단을 맞춘다. 개발자 QA 기간 전용이며 참가자 운영 전 반드시 다시 켠다.
 | 409 | CONFLICT / `PROMISE_RESCHEDULE_LIMIT_REACHED`, `PROMISE_NOT_MODIFIABLE`, `STUDY_PERIOD_ENDED` | 재조회 후 가능 동작 갱신. 브라우저 시간을 바꿔 재시도하지 않음 |
 | 409 | CONFLICT / `PROMISE_VERSION_CONFLICT`, `IDEMPOTENCY_KEY_REUSED` (추가 제안) | 자동 덮어쓰기 금지. 같은 키에 다른 본문을 재전송하지 않음 |
 | 503 | TECHNICAL / `SERVICE_UNAVAILABLE` | 성공·저장완료로 표시하지 않음. retryable은 자동 재시도 허가가 아님 |

@@ -53,8 +53,13 @@ export function creationBlockCode(payload: PromisePayload, now: number, active: 
 
 // 하루 1약속. 인증 미완료·기술 실패로 끝난 날짜만 다시 만들 수 있다. 최종 판단은 서버가 한다.
 const REPLACEABLE_STATUSES = new Set(['unverified', 'technical'])
-export function dailyPromiseBlockReason(date: string, records: { date: string; status: string }[], blockedDates: Set<string>): string {
-  if (blockedDates.has(date) || records.some(record => record.date === date && !REPLACEABLE_STATUSES.has(record.status))) {
+// 서버가 제한을 끈 경우(dailyLimit=false, 개발자 QA)에는 기록으로 미리 막지 않는다. 최종 판단은 서버가 한다.
+export function dailyPromiseBlockReason(date: string, records: { date: string; status: string }[], blockedDates: Set<string>,
+                                        dailyLimit = true): string {
+  if (blockedDates.has(date)) return messages.PROMISE_DATE_ALREADY_USED
+  if (!dailyLimit) return ''
+  // 이전: if (blockedDates.has(date) || records.some(...))
+  if ( records.some(record => record.date === date && !REPLACEABLE_STATUSES.has(record.status))) {
     return messages.PROMISE_DATE_ALREADY_USED
   }
   return ''

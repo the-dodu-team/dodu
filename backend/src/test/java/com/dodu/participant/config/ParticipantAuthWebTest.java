@@ -131,6 +131,7 @@ class ParticipantAuthWebTest {
                 .andExpect(jsonPath("$.status").value("success"))
                 .andExpect(jsonPath("$.data.onboardingCompleted").value(true))
                 .andExpect(jsonPath("$.data.expiresAt").value("2026-11-19T12:00:00+09:00"))
+                .andExpect(jsonPath("$.data.dailyPromiseLimit").value(true))
                 .andExpect(jsonPath("$.data.participantId").doesNotExist())
                 .andExpect(jsonPath("$.data.sessionId").doesNotExist());
     }
