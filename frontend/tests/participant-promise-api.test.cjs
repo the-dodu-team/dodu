@@ -78,6 +78,15 @@ test('하루 1약속은 인증 미완료·기술 실패 날짜만 다시 열어 
   assert.equal(dailyPromiseBlockReason('2026-11-06', [{ date: '2026-11-05', status: 'verified' }], none), '')
   assert.match(dailyPromiseBlockReason('2026-11-06', [], new Set(['2026-11-06'])), /하루에 약속은 1개/)
 })
+
+test('서버가 하루 1약속 제한을 끄면 기록으로 날짜를 미리 막지 않는다', () => {
+  const none = new Set()
+  for (const status of ['verified', 'cancelled', 'withdrawn']) {
+    assert.equal(dailyPromiseBlockReason('2026-11-05', [{ date: '2026-11-05', status }], none, false), '')
+  }
+  // 서버가 실제로 409를 돌려준 날짜는 계속 막는다.
+  assert.match(dailyPromiseBlockReason('2026-11-06', [], new Set(['2026-11-06']), false), /하루에 약속은 1개/)
+})
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
 
 test('참가자 envelope와 빈 active 응답을 구분한다', async () => {

@@ -278,7 +278,8 @@ export default function LiveParticipantApp() {
       if (mounted.current && version === epoch.current) { setBusy(false); if ((succeeded || reconcile) && session.token()) void refresh() }
     }
   }
-  const dateBlockedReason = (date: string) => dailyPromiseBlockReason(date, savedHistory, blockedDates.current)
+  const dateBlockedReason = (date: string) =>
+    dailyPromiseBlockReason(date, savedHistory, blockedDates.current, participant?.dailyPromiseLimit !== false)
   const clockNow = () => serverClock ? serverClock.value + performance.now() - serverClock.measured : Date.now()
   const home = useCallback(() => {
     setError(''); setScreen('home'); setSurveyId(null)

@@ -1,5 +1,11 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-20 / SCRUM-76 하루 1약속 제한 설정 토글
+
+- 개발자 QA용으로 하루 1약속 제한을 `DODU_PROMISE_DAILY_LIMIT_ENABLED`(기본 true)로 끌 수 있게 함. 꺼도 동시 활성 1개와 실패 약속 대체는 유지. `/me`의 `dailyPromiseLimit`로 FE 사전 차단을 맞춤.
+- 검증: 백엔드 36건·FE 19건·빌드 통과. Render 적용 미확인. Jira 상태 변경 없음.
+- 남은 범위: QA 종료 후 환경변수를 true로 되돌리기.
+
 ## 2026-11-20 / 사진 판정 결과 API 기본 닫기
 
 - 참가자가 결과 API로 인증을 직접 완료할 수 있던 문제를 설정(`DODU_PHOTO_RESULT_API_ENABLED`, 기본 false)으로 차단. 운영 판정은 복구 워커 경로 그대로.

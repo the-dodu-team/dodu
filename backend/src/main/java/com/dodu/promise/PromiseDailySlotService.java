@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.dodu.promise.domain.PromiseDailySlotPolicy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -19,8 +20,17 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class PromiseDailySlotService {
     private final JdbcTemplate jdbc;
+    private final boolean dailyLimitEnabled;
 
-    public PromiseDailySlotService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    // 이전: public PromiseDailySlotService(JdbcTemplate jdbc) — 하루 1약속을 항상 적용했다.
+    // 개발자 QA 기간에만 끌 수 있게 설정을 받는다(기본 켜짐, DODU_PROMISE_DAILY_LIMIT_ENABLED).
+    public PromiseDailySlotService(JdbcTemplate jdbc,
+                                   @Value("${dodu.promise.daily-limit.enabled:true}") boolean dailyLimitEnabled) {
+        this.jdbc = jdbc;
+        this.dailyLimitEnabled = dailyLimitEnabled;
+    }
+
+    public boolean dailyLimitEnabled() { return dailyLimitEnabled; }
 
     /**
      * 날짜를 사용할 수 있으면 대체할 실패 약속 ID 목록(최근 예정순)을 돌려준다.
@@ -39,6 +49,8 @@ public class PromiseDailySlotService {
         for (Slot slot : slots) {
             if (slot.id().equals(excludedPromiseId)) continue;
             if (!PromiseDailySlotPolicy.isReplaceable(slot.lifecycleStatus(), slot.finalOutcome())) {
+                // 제한을 끈 경우 사용 중인 날짜도 허용하고 그 약속은 그대로 둔다(실패 약속만 대체).
+                if (!dailyLimitEnabled) continue;
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "PROMISE_DATE_ALREADY_USED");
             }
             replaceable.add(slot.id());

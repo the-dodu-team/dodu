@@ -2,7 +2,8 @@
 import type { PromisePayload } from '../shared/apiTypes'
 export type { PromisePayload } from '../shared/apiTypes'
 export type PromiseResponse = PromisePayload & { promiseId: string; version: number }
-export type ParticipantState = { expiresAt: string; onboardingCompleted: boolean }
+// dailyPromiseLimit: 서버의 하루 1약속 제한 여부(/me). 없으면 제한 적용으로 본다.
+export type ParticipantState = { expiresAt: string; onboardingCompleted: boolean; dailyPromiseLimit?: boolean }
 export type ParticipantSession = ParticipantState & { sessionToken: string; firstEntry?: boolean }
 export type ApiResult<T> = { data: T; serverTime: string | null }
 export type ApiErrorKind = 'authentication' | 'permission' | 'conflict' | 'network' | 'validation' | 'technical' | 'cancelled'
