@@ -65,6 +65,14 @@ class PhotoEvaluationImmediateIntegrationTests {
     }
 
     @Test
+    void immediateExecutorDoesNotReplaceDefaultApplicationTaskExecutor() {
+        // FCM이 켜진 운영에서 DeviceChangeNotificationListener가 이 빈을 주입받는다. 즉시 판정 실행기를 빈으로 등록하면
+        // Spring Boot가 기본 실행기를 만들지 않아 서버가 시작하지 못했다(Render 배포 실패, 2026-11-22).
+        assertTrue(context.containsBean("applicationTaskExecutor"));
+        assertTrue(context.getBean("applicationTaskExecutor") instanceof org.springframework.core.task.TaskExecutor);
+    }
+
+    @Test
     void submittedPhotoIsEvaluatedRightAfterCommitWithoutWaitingForWorker() throws Exception {
         Session session = session();
         MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
