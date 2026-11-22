@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -39,19 +40,24 @@ public class PhotoSubmissionController {
     private final InterventionLifecycleGate lifecycleGate = new InterventionLifecycleGate();
     private final ParticipantAuthService authService;
     private final PhotoObjectWriter photoObjectWriter;
+    private final ApplicationEventPublisher events;
+    // 이전: (JdbcTemplate, ParticipantAuthService, ObjectProvider<PhotoObjectWriter>).
+    // 커밋 직후 판정을 시작하도록 이벤트 발행기를 함께 받는다.
     @Autowired
     public PhotoSubmissionController(JdbcTemplate jdbc, ParticipantAuthService authService,
-                                     ObjectProvider<PhotoObjectWriter> photoObjectWriters) {
-        this(jdbc, authService, Clock.systemUTC(), photoObjectWriters.getIfAvailable());
+                                     ObjectProvider<PhotoObjectWriter> photoObjectWriters,
+                                     ApplicationEventPublisher events) {
+        this(jdbc, authService, Clock.systemUTC(), photoObjectWriters.getIfAvailable(), events);
     }
 
     PhotoSubmissionController(JdbcTemplate jdbc, ParticipantAuthService authService, Clock clock,
-                              PhotoObjectWriter photoObjectWriter) {
+                              PhotoObjectWriter photoObjectWriter, ApplicationEventPublisher events) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.windowPolicy = new InterventionWindowPolicy(clock);
         this.authService = authService;
         this.photoObjectWriter = photoObjectWriter;
+        this.events = events;
     }
 
     @Operation(summary = "사진 제출")
@@ -193,6 +199,8 @@ public class PhotoSubmissionController {
                  where id = ? and promise_id = ? and processing_status = 'Evaluating'
                 on conflict (auth_attempt_id) do nothing
                 """, timestamp(now), attemptId, promiseId);
+        // 커밋 후에만 전달된다(롤백되면 판정을 시작하지 않음). 이미 처리 중·완료된 작업이면 받는 쪽이 아무것도 하지 않는다.
+        events.publishEvent(new PhotoEvaluationRequested(attemptId));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
