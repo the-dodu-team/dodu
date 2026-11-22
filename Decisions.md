@@ -1,5 +1,14 @@
 # 개발 결정 기록
 
+## DEV-20261122-02 — 즉시 판정 실행기를 빈으로 등록하지 않음(Render 시작 실패 수정, SCRUM-85)
+
+- 배경: PR #57 머지 후 Render 배포가 시작 단계에서 실패했다(`No qualifying bean of type 'TaskExecutor' ... @Qualifier("applicationTaskExecutor")`, `DeviceChangeNotificationListener`). `photoEvaluationExecutor`를 `ThreadPoolTaskExecutor` 빈으로 등록하자 Spring Boot가 Executor 빈이 이미 있다고 보고 기본 `applicationTaskExecutor`를 만들지 않았다. 이 리스너는 `dodu.push.fcm.enabled=true`(운영)에서만 생성돼 테스트에서 드러나지 않았다. 실패한 배포 동안 운영은 이전 빌드로 동작했다.
+- 선택: `PhotoEvaluationExecutorConfig`를 지우고 `PhotoEvaluationImmediateDispatcher`가 전용 실행기를 직접 만들고(`DisposableBean`으로) 종료한다. 스레드·대기열 설정과 종료 대기는 그대로다.
+- 근거: 실행기를 빈으로 노출하지 않으면 기본 실행기 자동 구성이 그대로 유지되고 다른 코드의 주입에 영향이 없다.
+- 대안: `spring.task.execution.mode=force`나 기본 실행기를 직접 정의하는 방법은 Boot 자동 구성 동작을 바꾸므로 선택하지 않았다. 리스너의 Qualifier 변경은 원인을 남겨 둔다.
+- 영향: 즉시 판정 동작·설정값(`DODU_PHOTO_EVAL_*`) 변화 없음. 이전 코드 의도는 디스패처 주석에 남겼다.
+- 검증: 기본 `applicationTaskExecutor` 존재 회귀 테스트 추가. 백엔드 전체 327건 통과(건너뜀 1, R-46). FCM 활성 상태 시작은 자격증명이 필요해 로컬에서 실행하지 않았고 Render 배포로 확인한다. 회귀 테스트가 이전 코드에서 실패하는지는 실행하지 않았다.
+
 ## DEV-20261122-01 — 사진 제출 커밋 직후 판정 시작(SCRUM-85)
 
 - 배경: AI 판정은 30초 주기 복구 워커에서만 시작됐다. Render 측정(20회, 무작위 제출 시점)에서 워커 대기 평균 16.3초·p95 31.2초, 실제 처리(사진 읽기+AI+저장) 평균 3.0초, 제출→화면 평균 23.8초·p95 38.5초. 또 워커는 `@Transactional` 하나 안에서 최대 10건의 AI 호출을 차례로 해, AI 대기 중 DB 연결·행 잠금을 잡고 뒤 작업이 앞 작업만큼 늦었다. 결과 API로 AI가 결과를 보내는 경로는 연결된 적이 없고 기본 닫힘(DEV-20261120-03)이라, 안전망이던 워커가 유일한 판정 경로였다.
