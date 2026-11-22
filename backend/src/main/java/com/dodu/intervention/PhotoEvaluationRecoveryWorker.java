@@ -27,6 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class PhotoEvaluationRecoveryWorker {
     static final int BATCH_LIMIT = 10;
     static final Duration LEASE = Duration.ofSeconds(60);
+    private static final String WITHDRAWN = "Withdrawn";
 
     private static final RowMapper<ClaimedJob> CLAIMED = (rs, rowNum) -> new ClaimedJob(
             rs.getObject("id", UUID.class), rs.getObject("auth_attempt_id", UUID.class),
@@ -56,10 +57,18 @@ public class PhotoEvaluationRecoveryWorker {
         processDueJobs(clock.instant());
     }
 
-    /** 기한이 된 작업을 한 건씩 차지해 처리한다(최대 {@value #BATCH_LIMIT}건). */
-    public int processDueJobs(Instant now) {
+    /**
+     * 기한이 된 작업을 한 건씩 차지해 처리한다(최대 {@value #BATCH_LIMIT}건).
+     *
+     * <p>{@code batchStart}는 배치 시작 시각이다. 작업마다 그 뒤로 흐른 시간을 더한 시각으로 차지·점유·판정 시각을 정한다.
+     * 이전에는 배치 시작 시각 하나를 모든 작업에 썼다. 앞 작업의 AI가 오래 걸리면 뒤 작업은 이미 만료된 점유로 차지되어,
+     * AI를 기다리는 동안 다른 쪽이 다시 잡아 AI를 중복 호출할 수 있었다.
+     */
+    public int processDueJobs(Instant batchStart) {
+        Instant startedAt = clock.instant();
         int processed = 0;
         while (processed < BATCH_LIMIT) {
+            Instant now = batchStart.plus(Duration.between(startedAt, clock.instant()));
             ClaimedJob claimed = claimNextDue(now);
             if (claimed == null) break;
             process(claimed, now);
@@ -136,6 +145,9 @@ public class PhotoEvaluationRecoveryWorker {
     /**
      * 결과 저장은 내가 차지한 그 회차(attempt_count)가 아직 PROCESSING일 때만 한다.
      * AI가 점유 시간(60초)보다 오래 걸려 다른 쪽이 다시 차지했다면 늦은 결과를 버린다.
+     *
+     * <p>AI를 기다리는 사이 참가자가 철회했다면 결과를 attempt에 쓰지 않고 작업을 건너뜀으로 끝낸다.
+     * 참가자 행을 공유 잠금으로 읽으므로 철회(참가자 행 UPDATE)와 동시에 와도 둘 중 하나가 먼저 끝난 뒤 판단한다.
      */
     private void inOwnedJob(JobRow job, Runnable action) {
         tx.executeWithoutResult(status -> {
@@ -144,7 +156,19 @@ public class PhotoEvaluationRecoveryWorker {
                      where id = ? and lifecycle_status = 'PROCESSING' and attempt_count = ?
                      for update
                     """, (ResultSetExtractor<Boolean>) ResultSet::next, job.jobId(), job.attemptCount());
-            if (Boolean.TRUE.equals(owned)) action.run();
+            if (!Boolean.TRUE.equals(owned)) return;
+            String participantStatus = jdbc.query("""
+                    select part.lifecycle_status
+                      from promise p
+                      join participant part on part.id = p.participant_id
+                     where p.id = ?
+                     for share of part
+                    """, (ResultSetExtractor<String>) rs -> rs.next() ? rs.getString(1) : null, job.promiseId());
+            if (WITHDRAWN.equals(participantStatus)) {
+                mark(job.jobId(), "SKIPPED", "PARTICIPANT_WITHDRAWN", null, clock.instant());
+                return;
+            }
+            action.run();
         });
     }
 

@@ -146,6 +146,27 @@ class PhotoEvaluationImmediateIntegrationTests {
     }
 
     @Test
+    void resultArrivingAfterParticipantWithdrewIsNotSaved() throws Exception {
+        Fixture fixture = fixture();
+        handler.release = new CountDownLatch(1);
+        CompletableFuture<Boolean> slow = CompletableFuture.supplyAsync(() -> worker.processNow(fixture.attemptId()));
+        assertTrue(handler.entered.await(5, TimeUnit.SECONDS));
+
+        // AI를 기다리는 사이 참가자가 철회한다.
+        jdbc.update("""
+                update participant set lifecycle_status = 'Withdrawn', withdrawn_at = now()
+                 where id = (select participant_id from promise where id = ?)
+                """, fixture.promiseId());
+        handler.release.countDown();
+
+        assertTrue(slow.get(5, TimeUnit.SECONDS));
+        assertEquals("Evaluating", attemptStatus(fixture.attemptId()));
+        assertEquals("Scheduled", value("select lifecycle_status from promise where id = ?", fixture.promiseId()));
+        assertEquals("SKIPPED", jobStatus(fixture.jobId()));
+        assertEquals("PARTICIPANT_WITHDRAWN", value("select last_error_code from photo_evaluation_job where id = ?", fixture.jobId()));
+    }
+
+    @Test
     void fullExecutorLeavesJobForWorker() {
         Fixture fixture = fixture();
         PhotoEvaluationImmediateDispatcher saturated = new PhotoEvaluationImmediateDispatcher(worker, task -> {
