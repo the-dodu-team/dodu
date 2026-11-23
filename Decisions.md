@@ -1,5 +1,14 @@
 # 개발 결정 기록
 
+## DEV-20261123-01 — 즉시 판정 개선 후 측정 결과 기록(SCRUM-85)
+
+- 배경: DEV-20261122-01의 효과를 운영(Render)에서 확인해야 SCRUM-85 완료 여부를 판단할 수 있다. 첫 시도들은 측정 준비 문제(전날 쓴 사진의 해시 중복으로 409, 응답 시간 초과 시 스크립트 종료)와 #57 배포 실패(DEV-20261122-02)로 무효였다.
+- 선택: #58 배포 확인 후 개선 전과 같은 조건으로 20회 측정한 결과(정상 19건)를 기록한다. 실패 1건(500)은 수치에서 빼고 미해결로 남긴다.
+- 근거: 19건이면 개선 전 20건과 비교하기 충분하고, 차이(평균 16초 대기 제거)가 측정 편차보다 크다.
+- 대안: 500 원인 확인 후 재측정 — Render 로그 접근이 담당자에게만 있어 미룸. 필요하면 같은 스크립트로 다시 측정한다.
+- 영향: 코드 변경 없음. 제출→화면 평균 23.8초→9.0초. 다음 개선 후보는 업로드·처리·FE 확인 주기.
+- 검증: 측정 원자료는 로컬 스크립트 출력(참가자 코드·토큰 미저장). 500 원인과 SCRUM-85 완료 처리는 미확인.
+
 ## DEV-20261122-02 — 즉시 판정 실행기를 빈으로 등록하지 않음(Render 시작 실패 수정, SCRUM-85)
 
 - 배경: PR #57 머지 후 Render 배포가 시작 단계에서 실패했다(`No qualifying bean of type 'TaskExecutor' ... @Qualifier("applicationTaskExecutor")`, `DeviceChangeNotificationListener`). `photoEvaluationExecutor`를 `ThreadPoolTaskExecutor` 빈으로 등록하자 Spring Boot가 Executor 빈이 이미 있다고 보고 기본 `applicationTaskExecutor`를 만들지 않았다. 이 리스너는 `dodu.push.fcm.enabled=true`(운영)에서만 생성돼 테스트에서 드러나지 않았다. 실패한 배포 동안 운영은 이전 빌드로 동작했다.

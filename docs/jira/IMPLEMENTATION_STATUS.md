@@ -1,5 +1,10 @@
 # 구현 및 티켓 동기화 기록
 
+## 2026-11-23 / SCRUM-85 개선 후 Render 측정
+
+- 결과(정상 19/20): 판정 시작까지 대기 평균 16.3초→1.5초, 제출→화면 평균 23.8초→9.0초(p95 38.5초→20.2초). 상세는 `docs/jira/SCRUM-85_STATUS.md`.
+- 미해결: 1건 사진 제출 `500 INTERNAL_ERROR`, Render 로그 확인 필요(담당자 대기). Jira 상태 변경 없음.
+
 ## 2026-11-22 / SCRUM-85 Render 시작 실패 수정
 
 - 원인: PR #57의 즉시 판정 실행기 빈이 Spring Boot 기본 `applicationTaskExecutor` 생성을 막아, FCM이 켜진 운영에서 `DeviceChangeNotificationListener` 주입 실패로 시작 실패(배포 실패, 이전 빌드 유지).
