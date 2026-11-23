@@ -50,17 +50,28 @@ public final class AiPhotoEvaluationRecoveryHandler implements PhotoEvaluationRe
 
     @Override
     public RecoveryResult recover(RecoveryJob job) {
+        return recover(job, null);
+    }
+
+    /**
+     * {@code preloaded}가 있으면 저장소에서 다시 내려받지 않는다(사진 제출 직후 경로: 같은 요청에서 방금 올린 사진).
+     * 없으면 이전처럼 저장소에서 읽는다(30초 워커·재시도·서버 재시작 후).
+     */
+    @Override
+    public RecoveryResult recover(RecoveryJob job, PhotoObjectReader.PhotoObject preloaded) {
         if (endpoint == null || apiKey.isBlank()) {
             return RecoveryResult.retryable("AI_WORKER_UNCONFIGURED");
         }
-        if (photoObjectReader == null || job.storageKey() == null || job.contentType() == null) {
-            return RecoveryResult.retryable("PHOTO_STORAGE_UNCONFIGURED");
-        }
-        PhotoObjectReader.PhotoObject photo;
-        try {
-            photo = photoObjectReader.read(job.storageKey(), job.contentType());
-        } catch (RuntimeException ignored) {
-            return RecoveryResult.retryable("PHOTO_STORAGE_UNAVAILABLE");
+        PhotoObjectReader.PhotoObject photo = preloaded;
+        if (photo == null) {
+            if (photoObjectReader == null || job.storageKey() == null || job.contentType() == null) {
+                return RecoveryResult.retryable("PHOTO_STORAGE_UNCONFIGURED");
+            }
+            try {
+                photo = photoObjectReader.read(job.storageKey(), job.contentType());
+            } catch (RuntimeException ignored) {
+                return RecoveryResult.retryable("PHOTO_STORAGE_UNAVAILABLE");
+            }
         }
 
         String boundary = "DoduBoundary" + UUID.randomUUID();

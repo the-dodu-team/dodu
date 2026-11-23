@@ -71,7 +71,7 @@ public class PhotoEvaluationRecoveryWorker {
             Instant now = batchStart.plus(Duration.between(startedAt, clock.instant()));
             ClaimedJob claimed = claimNextDue(now);
             if (claimed == null) break;
-            process(claimed, now);
+            process(claimed, now, null);
             processed++;
         }
         return processed;
@@ -82,10 +82,15 @@ public class PhotoEvaluationRecoveryWorker {
      * 이미 다른 쪽이 차지했거나 재시도 대기(next_attempt_at 미래)면 아무것도 하지 않고 false를 돌려준다.
      */
     public boolean processNow(UUID attemptId) {
+        return processNow(attemptId, null);
+    }
+
+    /** {@code preloaded}: 같은 제출 요청에서 받은 사진. 있으면 AI 호출 전 저장소 재조회를 건너뛴다. */
+    public boolean processNow(UUID attemptId, PhotoObjectReader.PhotoObject preloaded) {
         Instant now = clock.instant();
         ClaimedJob claimed = claimReady(attemptId, now);
         if (claimed == null) return false;
-        process(claimed, now);
+        process(claimed, now, preloaded);
         return true;
     }
 
@@ -123,7 +128,7 @@ public class PhotoEvaluationRecoveryWorker {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    private void process(ClaimedJob claimed, Instant now) {
+    private void process(ClaimedJob claimed, Instant now, PhotoObjectReader.PhotoObject preloaded) {
         JobRow job = load(claimed);
         if (!eligible(job, now)) {
             inOwnedJob(job, () -> mark(job.jobId(), "SKIPPED", null, null, now));
@@ -134,7 +139,7 @@ public class PhotoEvaluationRecoveryWorker {
         try {
             result = handler.recover(new PhotoEvaluationRecoveryHandler.RecoveryJob(
                     job.jobId(), job.attemptId(), job.promiseId(), job.attemptCount(),
-                    job.storageKey(), job.contentType()));
+                    job.storageKey(), job.contentType()), preloaded);
         } catch (RuntimeException ignored) {
             result = PhotoEvaluationRecoveryHandler.RecoveryResult.retryable("HANDLER_EXCEPTION");
         }

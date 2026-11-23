@@ -62,6 +62,48 @@ class PhotoEvaluationImmediateIntegrationTests {
         handler.next.set(PhotoEvaluationRecoveryHandler.RecoveryResult.completed("laptop", "model-test"));
         handler.entered = new CountDownLatch(1);
         handler.release = null;
+        handler.lastPreloaded.set(null);
+        handler.preloadedCalls.set(0);
+    }
+
+    @Test
+    void submittedPhotoIsHandedToEvaluationFromMemory() throws Exception {
+        Session session = session();
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        byte[] photo = {7, 7, 7, 1};
+        mockMvc.perform(multipart("/api/promises/" + session.promiseId() + "/photo-attempts")
+                        .file(new MockMultipartFile("photo", "sample.jpg", "image/jpeg", photo))
+                        .param("clientRequestId", UUID.randomUUID().toString()).param("toolType", "laptop")
+                        .header("Authorization", session.authorization()))
+                .andExpect(status().isOk());
+
+        UUID attemptId = jdbc.queryForObject("select id from auth_attempt where promise_id = ?", UUID.class, session.promiseId());
+        assertTrue(waitUntil(() -> "Completed".equals(attemptStatus(attemptId))));
+        // 즉시 경로는 방금 올린 그 사진을 받아 저장소 재조회 없이 판정한다.
+        assertEquals(1, handler.preloadedCalls.get());
+        org.junit.jupiter.api.Assertions.assertArrayEquals(photo, handler.lastPreloaded.get().bytes());
+        assertEquals("image/jpeg", handler.lastPreloaded.get().contentType());
+    }
+
+    @Test
+    void workerPathReadsPhotoFromStorage() {
+        Fixture fixture = fixture();
+        assertEquals(1, worker.processDueJobs(Instant.now()));
+        assertEquals(1, handler.calls.get());
+        assertEquals(0, handler.preloadedCalls.get());
+    }
+
+    @Test
+    void photoLargerThanInlineLimitIsNotHeldInQueue() {
+        Fixture fixture = fixture();
+        PhotoEvaluationImmediateDispatcher dispatcher = new PhotoEvaluationImmediateDispatcher(worker, Runnable::run, 3);
+
+        dispatcher.afterCommit(new PhotoEvaluationRequested(fixture.attemptId(),
+                new PhotoObjectReader.PhotoObject("image/jpeg", new byte[] {1, 2, 3, 4})));
+
+        assertEquals("Completed", attemptStatus(fixture.attemptId()));
+        assertEquals(1, handler.calls.get());
+        assertEquals(0, handler.preloadedCalls.get());
     }
 
     @Test
@@ -278,6 +320,15 @@ class PhotoEvaluationImmediateIntegrationTests {
 
         @Bean @Primary
         ControlledHandler controlledHandler() { return new ControlledHandler(); }
+
+        /** 저장소가 설정된 운영처럼 제출 경로가 사진을 올린 뒤 즉시 판정에 넘기도록 한다(메모리만 사용). */
+        @Bean
+        PhotoObjectWriter inMemoryPhotoWriter() {
+            return new PhotoObjectWriter() {
+                @Override public String write(String storageKey, String contentType, byte[] bytes) { return storageKey; }
+                @Override public void delete(String storageKey) { }
+            };
+        }
     }
 
     /** 호출 횟수를 세고, release가 있으면 첫 호출만 늦춰(느린 AI) 경쟁 상황을 만든다. */
@@ -286,6 +337,17 @@ class PhotoEvaluationImmediateIntegrationTests {
         private final AtomicReference<RecoveryResult> next = new AtomicReference<>();
         private volatile CountDownLatch entered = new CountDownLatch(1);
         private volatile CountDownLatch release;
+        private final AtomicReference<PhotoObjectReader.PhotoObject> lastPreloaded = new AtomicReference<>();
+        private final AtomicInteger preloadedCalls = new AtomicInteger();
+
+        @Override
+        public RecoveryResult recover(RecoveryJob job, PhotoObjectReader.PhotoObject preloaded) {
+            if (preloaded != null) {
+                preloadedCalls.incrementAndGet();
+                lastPreloaded.set(preloaded);
+            }
+            return recover(job);
+        }
 
         @Override
         public RecoveryResult recover(RecoveryJob job) {

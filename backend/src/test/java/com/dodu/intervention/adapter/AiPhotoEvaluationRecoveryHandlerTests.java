@@ -70,6 +70,37 @@ class AiPhotoEvaluationRecoveryHandlerTests {
         assertTrue(result.toString().indexOf("9") < 0);
     }
 
+    @Test
+    void preloadedPhotoIsSentWithoutReadingStorageAgain() {
+        AtomicReference<byte[]> received = new AtomicReference<>();
+        server.createContext("/predict/batch", exchange -> {
+            received.set(exchange.getRequestBody().readAllBytes());
+            respond(exchange, 200, "{\"model\":\"m\",\"results\":[{\"filename\":\"photo\",\"prediction\":\"laptop\"}]}");
+        });
+        var handler = new AiPhotoEvaluationRecoveryHandler(new ObjectMapper(),
+                (key, contentType) -> { throw new AssertionError("storage must not be read"); },
+                endpoint(), "test-secret", HttpClient.newHttpClient());
+
+        var result = handler.recover(job(), new PhotoObjectReader.PhotoObject("image/jpeg", "inline-photo".getBytes(StandardCharsets.UTF_8)));
+
+        assertEquals(PhotoEvaluationRecoveryHandler.Outcome.COMPLETED, result.outcome());
+        assertTrue(new String(received.get(), StandardCharsets.UTF_8).contains("inline-photo"));
+    }
+
+    @Test
+    void withoutPreloadedPhotoReadsStorageAsBefore() {
+        server.createContext("/predict/batch", exchange ->
+                respond(exchange, 200, "{\"model\":\"m\",\"results\":[{\"filename\":\"photo\",\"prediction\":\"laptop\"}]}"));
+        java.util.concurrent.atomic.AtomicInteger reads = new java.util.concurrent.atomic.AtomicInteger();
+        var handler = new AiPhotoEvaluationRecoveryHandler(new ObjectMapper(),
+                (key, contentType) -> { reads.incrementAndGet(); return new PhotoObjectReader.PhotoObject(contentType, new byte[] {1}); },
+                endpoint(), "test-secret", HttpClient.newHttpClient());
+
+        handler.recover(job(), null);
+
+        assertEquals(1, reads.get());
+    }
+
     private URI endpoint() {
         return URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/predict/batch");
     }
