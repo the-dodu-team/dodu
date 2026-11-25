@@ -81,10 +81,13 @@ public class PhotoEvaluationImmediateDispatcher implements DisposableBean {
     public void afterCommit(PhotoEvaluationRequested event) {
         PhotoObjectReader.PhotoObject photo = event.photo();
         PhotoObjectReader.PhotoObject inline = photo != null && photo.bytes().length <= inlinePhotoMaxBytes ? photo : null;
+        // 이전: 람다 안에서 event.attemptId()를 불러 event(상한 초과 사진 포함)까지 대기열에 붙잡혔다(PR #59 리뷰).
+        // attemptId를 먼저 꺼내 람다는 attemptId와 inline만 잡는다.
+        java.util.UUID attemptId = event.attemptId();
         try {
-            executor.execute(() -> run(event.attemptId(), inline));
+            executor.execute(() -> run(attemptId, inline));
         } catch (RejectedExecutionException rejected) {
-            log.warn("DODU_PHOTO_EVAL stage=DEFERRED code=EXECUTOR_FULL attempt={}", event.attemptId());
+            log.warn("DODU_PHOTO_EVAL stage=DEFERRED code=EXECUTOR_FULL attempt={}", attemptId);
         }
     }
 
