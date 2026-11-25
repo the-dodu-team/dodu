@@ -6,7 +6,7 @@
 - 선택: 타당하다고 판단해 반영. `attemptId`를 람다 밖에서 꺼내 람다는 `attemptId`와 `inline`만 잡는다. 이전 코드 의도는 주석으로 남겼다.
 - 대안: 이벤트에서 사진을 비우는 방식은 record 불변성을 깨고 다른 리스너에 영향을 줄 수 있어 선택하지 않았다.
 - 영향: 판정 동작 변화 없음. 상한을 넘는 사진은 이벤트 전달 후 대기열에 남지 않는다.
-- 검증: 신규 단위 테스트 1건(`PhotoEvaluationImmediateDispatcherTests`, 대기열 작업이 잡은 필드에 이벤트 타입이 없는지 확인)이 수정 전 실패(`arg$2`가 `PhotoEvaluationRequested`), 수정 후 통과. Docker 미실행으로 `PhotoEvaluationImmediateIntegrationTests`는 이번에 다시 실행하지 못했다.
+- 검증: 신규 단위 테스트 1건(`PhotoEvaluationImmediateDispatcherTests`, 대기열 작업이 잡은 필드에 이벤트 타입이 없는지 확인)이 수정 전 실패(`arg$2`가 `PhotoEvaluationRequested`), 수정 후 통과. 이후 Docker를 켜고 사진 판정 영향 범위 31건(즉시 판정 통합 12, 복구 워커 7, 사진 제출 5, AI 어댑터 6, 신규 1) 통과.
 
 ## DEV-20261123-02 — 즉시 판정에서 제출 사진 재조회 제거(SCRUM-85)
 
