@@ -32,21 +32,36 @@ public class PhotoEvaluationImmediateDispatcher implements DisposableBean {
     private final PhotoEvaluationRecoveryWorker worker;
     private final TaskExecutor executor;
     private final ThreadPoolTaskExecutor ownedExecutor;
+    /**
+     * 대기열에 사진을 함께 실어 둘 최대 크기. 넘으면 사진 없이 넣어 처리 시 저장소에서 읽는다.
+     * 대기열(기본 20)×이 값이 즉시 판정이 붙잡는 사진 메모리의 상한이다(기본 2MB → 최대 약 44MB).
+     */
+    static final int DEFAULT_INLINE_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+    private final int inlinePhotoMaxBytes;
 
     @Autowired
     public PhotoEvaluationImmediateDispatcher(PhotoEvaluationRecoveryWorker worker,
             @Value("${dodu.photo-evaluation.immediate.threads:2}") int threads,
-            @Value("${dodu.photo-evaluation.immediate.queue-capacity:20}") int queueCapacity) {
+            @Value("${dodu.photo-evaluation.immediate.queue-capacity:20}") int queueCapacity,
+            @Value("${dodu.photo-evaluation.immediate.inline-photo-max-bytes:" + DEFAULT_INLINE_PHOTO_MAX_BYTES + "}")
+            int inlinePhotoMaxBytes) {
         this.worker = worker;
         this.ownedExecutor = newExecutor(threads, queueCapacity);
         this.executor = ownedExecutor;
+        this.inlinePhotoMaxBytes = inlinePhotoMaxBytes;
     }
 
     /** 테스트용: 실행기를 직접 넘긴다(종료는 호출한 쪽 책임). */
     PhotoEvaluationImmediateDispatcher(PhotoEvaluationRecoveryWorker worker, TaskExecutor executor) {
+        this(worker, executor, DEFAULT_INLINE_PHOTO_MAX_BYTES);
+    }
+
+    PhotoEvaluationImmediateDispatcher(PhotoEvaluationRecoveryWorker worker, TaskExecutor executor,
+                                       int inlinePhotoMaxBytes) {
         this.worker = worker;
         this.ownedExecutor = null;
         this.executor = executor;
+        this.inlinePhotoMaxBytes = inlinePhotoMaxBytes;
     }
 
     private static ThreadPoolTaskExecutor newExecutor(int threads, int queueCapacity) {
@@ -64,20 +79,26 @@ public class PhotoEvaluationImmediateDispatcher implements DisposableBean {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void afterCommit(PhotoEvaluationRequested event) {
+        PhotoObjectReader.PhotoObject photo = event.photo();
+        PhotoObjectReader.PhotoObject inline = photo != null && photo.bytes().length <= inlinePhotoMaxBytes ? photo : null;
+        // 이전: 람다 안에서 event.attemptId()를 불러 event(상한 초과 사진 포함)까지 대기열에 붙잡혔다(PR #59 리뷰).
+        // attemptId를 먼저 꺼내 람다는 attemptId와 inline만 잡는다.
+        java.util.UUID attemptId = event.attemptId();
         try {
-            executor.execute(() -> run(event));
+            executor.execute(() -> run(attemptId, inline));
         } catch (RejectedExecutionException rejected) {
-            log.warn("DODU_PHOTO_EVAL stage=DEFERRED code=EXECUTOR_FULL attempt={}", event.attemptId());
+            log.warn("DODU_PHOTO_EVAL stage=DEFERRED code=EXECUTOR_FULL attempt={}", attemptId);
         }
     }
 
-    private void run(PhotoEvaluationRequested event) {
+    // 이전: run(PhotoEvaluationRequested)로 이벤트를 통째로 넘겼다. 크기 상한을 넘은 사진을 대기열에 붙잡지 않도록 필요한 값만 넘긴다.
+    private void run(java.util.UUID attemptId, PhotoObjectReader.PhotoObject inline) {
         try {
-            worker.processNow(event.attemptId());
+            worker.processNow(attemptId, inline);
         } catch (RuntimeException failed) {
             // 예외 내용에 사진·접근정보가 섞이지 않도록 종류만 남긴다. 작업은 점유 만료 후 워커가 다시 잡는다.
             log.warn("DODU_PHOTO_EVAL stage=DEFERRED code=IMMEDIATE_FAILED type={} attempt={}",
-                    failed.getClass().getSimpleName(), event.attemptId());
+                    failed.getClass().getSimpleName(), attemptId);
         }
     }
 

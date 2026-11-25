@@ -43,6 +43,8 @@ dodu:
       enabled: ${DODU_PHOTO_EVAL_IMMEDIATE_ENABLED:true}
       threads: ${DODU_PHOTO_EVAL_THREADS:2}
       queue-capacity: ${DODU_PHOTO_EVAL_QUEUE_CAPACITY:20}
+      # 대기열에 제출 사진을 함께 실을 최대 바이트(넘으면 처리 시 저장소에서 다시 읽음).
+      inline-photo-max-bytes: ${DODU_PHOTO_EVAL_INLINE_PHOTO_MAX_BYTES:2097152}
 
   push:
     fcm:

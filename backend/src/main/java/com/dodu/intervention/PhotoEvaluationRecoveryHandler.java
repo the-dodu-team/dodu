@@ -2,9 +2,18 @@ package com.dodu.intervention;
 
 import java.util.UUID;
 
-/** Adapter boundary for the external AI worker. It never receives raw photo bytes here. */
+/**
+ * Adapter boundary for the external AI worker. The job carries only the storage key; the adapter reads the photo itself.
+ * 이전: 사진 바이트를 전혀 받지 않았다. 이제 사진 제출 직후 경로에서는 같은 요청의 사진을 {@code preloaded}로 넘겨
+ * 저장소 재조회를 건너뛸 수 있다(없으면 기존처럼 저장소에서 읽는다).
+ */
 public interface PhotoEvaluationRecoveryHandler {
     RecoveryResult recover(RecoveryJob job);
+
+    /** 이미 메모리에 있는 사진으로 판정한다. 기본 구현은 사진을 무시하고 저장소 경로를 쓴다. */
+    default RecoveryResult recover(RecoveryJob job, PhotoObjectReader.PhotoObject preloaded) {
+        return recover(job);
+    }
 
     record RecoveryJob(UUID jobId, UUID attemptId, UUID promiseId, int attemptCount,
                        String storageKey, String contentType) { }

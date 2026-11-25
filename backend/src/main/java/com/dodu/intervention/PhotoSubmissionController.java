@@ -143,7 +143,7 @@ public class PhotoSubmissionController {
             if (!existing.requestFingerprint().equals(fingerprint)) {
                 throw error(HttpStatus.CONFLICT, "PHOTO_REQUEST_KEY_REUSED");
             }
-            ensureRecoveryJob(existing.id(), promiseId, now);
+            ensureRecoveryJob(existing.id(), promiseId, now, null);
             return new PhotoAttemptResponse(existing.id(), promiseId, existing.processingStatus(),
                     existing.requestReceivedAt());
         }
@@ -187,11 +187,14 @@ public class PhotoSubmissionController {
                 try { photoObjectWriter.delete(storageKey); } catch (RuntimeException ignored) { }
             }
         }
-        ensureRecoveryJob(inserted.id(), promiseId, now);
+        // 이 요청이 새 attempt를 만든 경우에만 방금 올린 사진을 넘긴다. 동시 요청에 밀렸다면(0행) 다른 요청의 attempt다.
+        PhotoObjectReader.PhotoObject uploaded = insertedCount == 1 && photoObjectWriter != null
+                ? new PhotoObjectReader.PhotoObject(contentType, content) : null;
+        ensureRecoveryJob(inserted.id(), promiseId, now, uploaded);
         return new PhotoAttemptResponse(inserted.id(), promiseId, inserted.processingStatus(), inserted.requestReceivedAt());
     }
 
-    private void ensureRecoveryJob(UUID attemptId, UUID promiseId, Instant now) {
+    private void ensureRecoveryJob(UUID attemptId, UUID promiseId, Instant now, PhotoObjectReader.PhotoObject uploaded) {
         jdbc.update("""
                 insert into photo_evaluation_job(auth_attempt_id, promise_id, lifecycle_status, next_attempt_at)
                 select id, promise_id, 'READY', ?
@@ -200,7 +203,7 @@ public class PhotoSubmissionController {
                 on conflict (auth_attempt_id) do nothing
                 """, timestamp(now), attemptId, promiseId);
         // 커밋 후에만 전달된다(롤백되면 판정을 시작하지 않음). 이미 처리 중·완료된 작업이면 받는 쪽이 아무것도 하지 않는다.
-        events.publishEvent(new PhotoEvaluationRequested(attemptId));
+        events.publishEvent(new PhotoEvaluationRequested(attemptId, uploaded));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
